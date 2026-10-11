@@ -1,4 +1,4 @@
-# StatusPulse
+# Pulse
 
 Public repository. Keep it generic: no organization hostnames, machine names, room
 numbers, tenant identifiers, staff names or internal ticket ids, in code, commits,

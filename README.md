@@ -1,6 +1,6 @@
-# StatusPulse
+# Pulse
 
-StatusPulse is an intranet status platform. A hub page summarizes everything, and each
+Pulse is an intranet status platform. A hub page summarizes everything, and each
 kind of resource is its own product on a subdomain:
 
 | Product | Example host | Shows | Collector |
@@ -15,7 +15,7 @@ role it requires.
 
 ## Layout (planned)
 
-- `core/`: event contract, space catalog schema, web shell, and the `statuspulse-product` Terraform module
+- `core/`: event contract, space catalog schema, web shell, and the `pulse-product` Terraform module
 - `hub/`: the summary page
 - `products/computers/`: `agent-mac`, `agent-win`, `api`, `web`
 - `products/printers/`, `products/servers/`
