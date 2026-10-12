@@ -7,13 +7,14 @@ and never sends who is signed in.
 Three programs, published together into one folder:
 
 - **The command-line agent** (`managedpulse.exe`) runs as SYSTEM from boot through a scheduled
-  task. Every 15 seconds it reads the signed-in session; a sign-in, sign-out, lock or unlock is
+  task. Every 15 seconds it reads the console session, the one at the keyboard and screen (a
+  remote desktop session leaves the seat free, so it does not count); a sign-in, sign-out, lock or unlock is
   sent at once, and otherwise a heartbeat goes every 60 seconds. A failed send is dropped: the next
   heartbeat catches up, and the server shows a silent computer as off after five minutes.
 - **The idle helper** (`managedpulse-idle.exe`) runs in each signed-in user's session from log on
   and writes that session's keyboard and mouse idle time to `ProgramData\<product>\idle\`. Windows
   does not give a SYSTEM process the console session's input time; without the helper the agent
-  falls back to the session's own figure, which is reliable for remote sessions only.
+  falls back to the session's own figure.
 - **The GUI** (`Managed Presence Beacon.exe`) has the Prefs, Run and Logs tabs of the other
   management tools.
   - **Prefs** shows the settings. A value set by policy appears greyed out with a lock and the word *Managed*. Prefs is read-only until **Unlock** relaunches the app as administrator.
