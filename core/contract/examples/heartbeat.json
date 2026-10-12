@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "type": "heartbeat",
+  "ts": "2027-01-04T17:05:00Z",
+  "device": { "hostname": "LAB-MAC-01", "serial": "EXAMPLE-SERIAL" },
+  "session": { "active": true, "locked": false, "idleSeconds": 42 },
+  "agent": { "version": "2027.01.04", "platform": "mac" }
+}

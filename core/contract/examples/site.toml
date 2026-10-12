@@ -1,0 +1,23 @@
+[inventory]
+provider = "snipeit"
+url = "https://inventory.example.edu/api/v1"
+categories = ["Desktop", "Laptop"]
+
+[inventory.fields]
+hostname_field = "Hostname"
+platform_field = "Platform"
+group_field = "Fleet"
+
+[[spaces]]
+id = "open-mac-lab"
+name = "Open Mac Lab"
+kind = "lab"
+building = "A"
+floor = "1"
+floorplan = "floorplans/a1.svg"
+match = { group = "Open Mac Lab", locations = ["A1100"] }
+out_of_service = ["LAB-MAC-03"]
+
+[spaces.seats]
+"LAB-MAC-01" = [120, 340]
+"LAB-MAC-02" = [160, 340]

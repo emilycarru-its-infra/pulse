@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/emilycarru-its-infra/pulse/core/contract/catalog.schema.json",
+  "title": "Pulse space catalog",
+  "description": "The spaces a product shows and the seats in each, built from an inventory system plus a site config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "generatedAt", "source", "spaces"],
+  "properties": {
+    "v": { "const": 1 },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider"],
+      "properties": {
+        "provider": { "type": "string", "description": "Inventory provider name, such as snipeit." }
+      }
+    },
+    "spaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "kind", "seats"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+          "name": { "type": "string" },
+          "kind": { "enum": ["lab", "station", "kiosk", "podium"] },
+          "building": { "type": "string" },
+          "floor": { "type": "string" },
+          "floorplan": { "type": "string", "description": "Path of the SVG floorplan, relative to the catalog." },
+          "seats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["hostname", "platform"],
+              "properties": {
+                "hostname": { "type": "string" },
+                "assetTag": { "type": "string" },
+                "serial": { "type": "string" },
+                "platform": { "enum": ["mac", "windows", "other"] },
+                "room": { "type": "string" },
+                "outOfService": { "type": "boolean" },
+                "x": { "type": "number" },
+                "y": { "type": "number" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
