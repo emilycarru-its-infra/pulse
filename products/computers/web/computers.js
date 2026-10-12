@@ -218,11 +218,14 @@ function renderList() {
         tiles.className = "tiles";
         tiles.replaceChildren(...own.map((s) => tile(s, names)));
         if (spaces.length === 1) return [tiles];
-        const label = document.createElement("p");
-        label.className = "seat-room";
-        label.textContent = space.room ?? "";
-        return [label, tiles];
+        const group = document.createElement("div");
+        group.className = "room-seats";
+        group.innerHTML = `<p class="seat-room"></p>`;
+        group.firstChild.textContent = space.room ?? "";
+        group.append(tiles);
+        return [group];
       }));
+      card.querySelector(".seats").classList.toggle("rooms", spaces.length > 1);
       return card;
     });
   document.getElementById("spaces").replaceChildren(...cards);
