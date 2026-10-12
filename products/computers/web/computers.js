@@ -87,7 +87,7 @@ function renderFloors() {
     b.dataset.id = f.id;
     b.setAttribute("aria-selected", String(f.id === state.floor));
     const name = f.name.replace(/ Floor$/, '<span class="word"> Floor</span>');
-    b.innerHTML = `${name}<small>${seats.filter((s) => s.state === "available").length} free<span class="word"> of ${seats.length}</span></small>`;
+    b.innerHTML = `${name}<small>${seats.filter((s) => s.state === "available").length}<span class="tight"> free</span><span class="word"> of ${seats.length}</span></small>`;
     return b;
   }));
 }
