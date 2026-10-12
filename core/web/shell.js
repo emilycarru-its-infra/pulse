@@ -1,13 +1,14 @@
 // The shared masthead: the theme's logo, the site name, a context line and the product links.
-// Pages call Pulse.shell({ current, context }) once and get the theme's brand back.
+// Pages call Pulse.shell({ current, context, title }) once and get the theme's brand back; title
+// replaces the site name in the heading, as in "Computer Status".
 
 window.Pulse = window.Pulse || {};
 
-Pulse.shell = async function ({ current, context }) {
+Pulse.shell = async function ({ current, context, title }) {
   const brand = await fetch("/theme/brand.json").then((r) => r.json()).catch(() => ({}));
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   const site = brand.site || "Status";
-  document.title = current === "hub" ? site : `${products.find((p) => p.id === current)?.title ?? ""} · ${site}`;
+  document.title = title ?? (current === "hub" ? site : `${products.find((p) => p.id === current)?.title ?? ""} · ${site}`);
 
   const header = document.createElement("header");
   header.className = "masthead";
@@ -18,7 +19,8 @@ Pulse.shell = async function ({ current, context }) {
   }
   const text = document.createElement("div");
   text.className = "masthead-text";
-  text.innerHTML = `<h1><a href="/">${site}</a></h1><p class="context"></p>`;
+  text.innerHTML = `<h1><a href="/"></a></h1><p class="context"></p>`;
+  text.querySelector("h1 a").textContent = title ?? site;
   text.querySelector(".context").textContent = context ?? "";
   header.append(text);
 
