@@ -1,0 +1,11 @@
+.products { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.product { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; min-height: 150px; }
+a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow: inset 0 -4px 0 var(--accent-band); }
+.product .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.product h3 { font-size: 20px; font-weight: 700; }
+.product .line { font-size: 17px; font-weight: 600; }
+.product .about { color: var(--text-secondary); font-size: 13px; margin-top: auto; }
+.product.soon { background: transparent; border-style: dashed; }
+.product.soon h3, .product.soon .line { color: var(--text-muted); }
+.meter { display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: var(--surface-2); }
+.meter span { display: block; height: 100%; }

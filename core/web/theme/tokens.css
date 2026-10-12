@@ -1,0 +1,39 @@
+/*
+ * The neutral default theme. A site replaces this folder with its own: same token names,
+ * its own colours, font and logo. Status colours keep their meaning in every theme.
+ */
+
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --page: #f4f4f2;
+  --surface-1: #ffffff;
+  --surface-2: #ebebeb;
+  --text-primary: #000000;
+  --text-secondary: #3d3d3d;
+  --text-muted: #767676;
+  --rule: #000000;
+  --hair: #d4d4d4;
+  --accent-band: #3b82f6;
+  --band: linear-gradient(90deg, #3b82f6 0 50%, #94a3b8 50%);
+  --ok: #1a7f37;
+  --warn: #d98a00;
+  --bad: #d03b3b;
+  --idle: #9a9a9a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #000000;
+    --surface-1: #0d0d0d;
+    --surface-2: #1c1c1c;
+    --text-primary: #ffffff;
+    --text-secondary: #c9c9c9;
+    --text-muted: #8f8f8f;
+    --rule: #ffffff;
+    --hair: #333333;
+    --ok: #2fbf5b;
+    --warn: #f0a31c;
+    --bad: #e66767;
+    --idle: #6e6e6e;
+  }
+}

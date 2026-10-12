@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Status</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="/hub.css">
+</head>
+<body>
+  <main class="doc">
+    <section class="intro">
+      <div class="intro-text">
+        <h2>What is working right now</h2>
+        <p>Live status of shared university systems. Each product checks itself every few seconds; open one for the detail.</p>
+      </div>
+      <p class="fine" id="updated" aria-live="polite"></p>
+    </section>
+    <section>
+      <p class="kicker">Products</p>
+      <ul class="products" id="products"></ul>
+    </section>
+    <p class="fine foot">Signed-in members of the university only. Pulse shows live state; history lives in the data warehouse.</p>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="/hub.js"></script>
+</body>
+</html>

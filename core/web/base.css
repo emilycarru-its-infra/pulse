@@ -1,0 +1,99 @@
+/*
+ * The Pulse web shell: editorial black-and-white chrome, hard rules, 4px radii and a band
+ * under the masthead. Colours, font and logo come from the theme's tokens.css. Every
+ * status colour is paired with a word or a pattern, so colour is never the only signal.
+ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a { color: inherit; }
+
+main.doc { width: 100%; padding: 16px 0 64px; }
+main.doc > * { width: 90%; margin-left: auto; margin-right: auto; }
+@media (max-width: 700px) {
+  main.doc > * { width: auto; margin-left: 16px; margin-right: 16px; }
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* --- Masthead and band ------------------------------------------------------ */
+
+.masthead {
+  display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap;
+  border-bottom: 2px solid var(--rule); padding-bottom: 10px;
+}
+.masthead-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.masthead h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.015em; }
+.masthead h1 a { color: inherit; text-decoration: none; }
+.masthead h1 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.masthead .context { color: var(--text-secondary); font-size: 13px; }
+.masthead-nav { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.masthead-nav a {
+  display: inline-block; font-size: 14px; font-weight: 700; color: var(--text-primary);
+  background: var(--surface-1); text-decoration: none; padding: 7px 14px;
+  border: 1px solid var(--rule); border-radius: 4px;
+}
+.masthead-nav a[aria-current="page"], .masthead-nav a:hover, .masthead-nav a:focus-visible {
+  background: var(--accent-band); color: #000000;
+}
+
+.logo { height: 44px; width: auto; flex-shrink: 0; }
+.logo-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  .logo-light.has-dark { display: none; }
+  .logo-dark { display: block; }
+}
+
+.band { height: 6px; background: var(--band); margin: 0 0 22px; }
+
+/* --- Shared pieces ---------------------------------------------------------- */
+
+.intro { margin-bottom: 24px; display: flex; flex-wrap: wrap; align-items: end; gap: 12px 32px; }
+.intro-text { flex: 1 1 280px; min-width: 0; }
+.intro h2 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+.intro p { max-width: 760px; color: var(--text-secondary); }
+
+.kicker {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-secondary); margin-bottom: 6px;
+}
+
+.card {
+  background: var(--surface-1); border: 1px solid var(--hair); border-radius: 4px; padding: 20px 24px;
+}
+
+.fine, .empty { color: var(--text-muted); font-size: 13px; }
+
+.notice { border-left: 4px solid var(--warn); background: var(--surface-1); padding: 10px 14px; margin: 12px 0; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  padding: 2px 9px; border: 1px solid currentColor; border-radius: 999px; white-space: nowrap;
+}
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.chip.ok { color: var(--ok); }
+.chip.warn { color: var(--warn); }
+.chip.bad { color: var(--bad); }
+.chip.idle { color: var(--idle); }
+
+.segmented { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.segmented button {
+  font: inherit; font-size: 13px; font-weight: 700; background: var(--surface-1); color: var(--text-primary);
+  border: 0; border-left: 1px solid var(--rule); padding: 6px 12px; cursor: pointer;
+}
+.segmented button:first-child { border-left: 0; }
+.segmented button[aria-pressed="true"] { background: var(--text-primary); color: var(--page); }
+.segmented button:hover:not([aria-pressed="true"]), .segmented button:focus-visible { background: var(--accent-band); color: #000; }
+
+.foot { margin-top: 40px; border-top: 1px solid var(--hair); padding-top: 12px; }

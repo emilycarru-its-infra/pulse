@@ -17,7 +17,7 @@ role it requires.
 
 - `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell and the `pulse-product` Terraform module to come
 - `hub/`: the summary page
-- `products/computers/`: `agent-mac`, `agent-win`, `api`, `web`
+- `products/computers/`: `api` (with a simulator and local dev server) and `web`; `agent-mac` and `agent-win` to come ([products/computers/README.md](products/computers/README.md))
 - `products/printers/`, `products/servers/`
 
 This repo holds only generic code. Site-specific values (hostnames, catalogs,
