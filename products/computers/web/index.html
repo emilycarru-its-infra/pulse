@@ -29,13 +29,6 @@
         </div>
       </div>
       <div class="toolbar-end">
-        <ul class="legend" aria-label="Legend">
-          <li><span class="key available"></span>Free</li>
-          <li><span class="key possibly_free"></span>Possibly free</li>
-          <li><span class="key in_use"></span>In use</li>
-          <li><span class="key offline"></span>Off</li>
-          <li><span class="key out_of_service"></span>Out of service</li>
-        </ul>
         <p class="total" id="total" aria-live="polite"></p>
       </div>
     </div>
@@ -57,10 +50,20 @@
           </defs>
           <g id="content"></g>
         </svg>
-        <p class="canvas-hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a room for its seats</p>
       </div>
       <div class="list-view" id="list-view" hidden><div class="spaces" id="spaces"></div></div>
       <aside class="drawer" id="drawer" aria-label="Room details" hidden></aside>
+    </div>
+
+    <div class="map-foot">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="key available"></span>Free</li>
+        <li><span class="key possibly_free"></span>Possibly free</li>
+        <li><span class="key in_use"></span>In use</li>
+        <li><span class="key offline"></span>Off</li>
+        <li><span class="key out_of_service"></span>Out of service</li>
+      </ul>
+      <p class="canvas-hint" id="hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a room for its seats</p>
     </div>
   </main>
   <script src="/core/shell.js"></script>
