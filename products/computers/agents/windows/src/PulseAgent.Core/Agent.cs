@@ -38,7 +38,8 @@ public sealed class Agent
         {
             var woke = WaitHandle.WaitAny(handles, TimeSpan.FromSeconds(settings.CheckIntervalSeconds));
             if (cancel.IsCancellationRequested) break;
-            var forced = woke == 1;
+            // Any signed-in user may signal Send now, so it is honoured at most every 10 seconds.
+            var forced = woke == 1 && DateTimeOffset.UtcNow - lastSentAt >= TimeSpan.FromSeconds(10);
             if (forced) AgentLog.Info("Send now requested");
 
             var fresh = SettingsStore.Load();

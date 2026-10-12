@@ -46,8 +46,10 @@ public static class SessionProbe
     {
         try
         {
-            var path = Path.Combine(Identity.IdleDirectory, $"{sessionId}.json");
-            if (!File.Exists(path)) return null;
+            // Users write these files and the agent reads them as SYSTEM, so a link is never followed.
+            var file = new FileInfo(Path.Combine(Identity.IdleDirectory, $"{sessionId}.json"));
+            if (!file.Exists || file.Attributes.HasFlag(FileAttributes.ReparsePoint) || file.Length > 4096) return null;
+            var path = file.FullName;
             return IdleReport.Parse(File.ReadAllText(path), now ?? DateTimeOffset.UtcNow, IdleFreshness);
         }
         catch

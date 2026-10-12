@@ -5,8 +5,10 @@
 .DESCRIPTION
     Run as an administrator (a package's postinstall) from the install folder, which holds the
     published build and names.json. It:
-      - creates the data folder under ProgramData, readable by users, with an idle\ folder signed-in
-        users can write their idle reports to;
+      - refuses to run from a folder users can write to, since its tasks run those programs as SYSTEM;
+      - creates the data folder under ProgramData owned by Administrators, writable only by SYSTEM and
+        Administrators, taking it over safely if it already exists, with an idle\ folder in which each
+        signed-in user may create and change only their own idle report;
       - registers the agent task: the command-line agent as SYSTEM from boot, restarted if it stops;
       - registers the idle task: the idle helper in each user's session at log on;
       - registers the shutdown task: one shutdown event when Windows logs a shutdown or restart;
@@ -15,18 +17,21 @@
     HKLM\SOFTWARE\Policies\<product>; this script does not set them.
 #>
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'safety.ps1')
 $here = $PSScriptRoot
 $names = Get-Content (Join-Path $here 'names.json') -Raw | ConvertFrom-Json
 $cli = Join-Path $here "$($names.cli).exe"
 $idle = Join-Path $here "$($names.idle).exe"
-foreach ($exe in $cli, $idle) { if (-not (Test-Path $exe)) { throw "Missing $exe" } }
+foreach ($exe in $cli, $idle) { if (-not (Test-Path -LiteralPath $exe)) { throw "Missing $exe" } }
+foreach ($path in @($here) + (Get-ChildItem -LiteralPath $here -Filter *.exe | ForEach-Object FullName)) {
+    if (Test-UserWritable $path) { throw "$path can be changed by users; install to a folder only administrators can write, such as Program Files." }
+}
 
 $data = Join-Path $env:ProgramData $names.product
-$idleDir = Join-Path $data 'idle'
-New-Item -ItemType Directory $data, (Join-Path $data 'logs'), $idleDir -Force | Out-Null
-# Data: SYSTEM and Administrators full, Users read. Idle reports: authenticated users may write.
-icacls $data /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
-icacls $idleDir /grant '*S-1-5-11:(OI)(CI)M' | Out-Null
+New-SecureDirectory $data $env:ProgramData @('*S-1-5-32-545:(OI)(CI)RX')
+New-SecureDirectory (Join-Path $data 'logs') $data @('*S-1-5-32-545:(OI)(CI)RX')
+# Idle reports: signed-in users may add files and change only the ones they created.
+New-SecureDirectory (Join-Path $data 'idle') $data @('*S-1-5-11:(RX,WD)', '*S-1-3-0:(OI)(CI)(IO)M')
 
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew

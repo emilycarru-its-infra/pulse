@@ -85,7 +85,7 @@ foreach ($arch in $arches) {
     Invoke-Dotnet publish src\PulseAgent.App @common
     Publish-AppResources -Arch $arch -OutputDir $out -ProjectDir (Join-Path $PSScriptRoot 'src\PulseAgent.App')
     $names | ConvertTo-Json | Set-Content (Join-Path $out 'names.json') -Encoding UTF8
-    Copy-Item packaging\install.ps1, packaging\uninstall.ps1 $out
+    Copy-Item packaging\install.ps1, packaging\uninstall.ps1, packaging\safety.ps1 $out
 
     Get-ChildItem $out -Filter *.exe | Where-Object Name -ne 'createdump.exe' | ForEach-Object { Write-Host "  $($_.Name)" }
 }

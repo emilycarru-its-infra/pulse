@@ -65,7 +65,8 @@ From the install folder, as an administrator (a package's postinstall):
 .\install.ps1
 ```
 
-It creates the data folder and registers three tasks: the agent, the idle helper and a
+It refuses an install folder users can write to, takes over the data folder safely (owned by
+Administrators, links never followed), and registers three tasks: the agent, the idle helper and a
 shutdown sender triggered by event 1074. Then it starts the agent. `uninstall.ps1` reverses this.
 
 ## Commands
