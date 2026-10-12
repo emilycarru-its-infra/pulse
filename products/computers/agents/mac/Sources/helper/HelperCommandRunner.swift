@@ -87,7 +87,7 @@ final class HelperCommandRunner: NSObject, HelperXPCProtocol, @unchecked Sendabl
     private func write(_ key: String, _ value: CFPropertyList?, _ kind: PulseSettings.Key.Kind?, _ domain: String) -> Bool {
         let decision = HelperPolicy.evaluate(domain: domain, key: key, kind: kind) { PulseSettings.isManaged($0) }
         guard decision == .allow else {
-            NSLog("managedpulse helper refused a write to %@ in %@: %@", key, domain, String(describing: decision))
+            NSLog("managedpresencebeacon helper refused a write to %@ in %@: %@", key, domain, String(describing: decision))
             return false
         }
         let d = PulseConstants.domain as CFString

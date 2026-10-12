@@ -1,7 +1,7 @@
 # ComputerPulse uninstall
 #
 # Runs the agent's uninstall.ps1, which removes the three scheduled tasks and the install folder
-# and deletes status.json by full path; the logs under C:\ProgramData\ManagedPulse\logs stay.
+# and deletes status.json by full path; the logs under C:\ProgramData\ManagedPresence\logs stay.
 # Then removes the Start Menu shortcut.
 $ErrorActionPreference = 'Continue'
 

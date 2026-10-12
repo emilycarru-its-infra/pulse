@@ -10,10 +10,10 @@
          PulseIdleName    the small per-user helper that reports keyboard and mouse idle time -->
   <PropertyGroup>
     <PulseProductKey>ComputerPulse</PulseProductKey>
-    <PulseDataName>ManagedPulse</PulseDataName>
+    <PulseDataName>ManagedPresence</PulseDataName>
     <PulseGuiName>Managed Presence Beacon</PulseGuiName>
-    <PulseCliName>managedpulse</PulseCliName>
-    <PulseIdleName>managedpulse-idle</PulseIdleName>
+    <PulseCliName>managedpresencebeacon</PulseCliName>
+    <PulseIdleName>managedpresencebeacon-idle</PulseIdleName>
     <PulseIconName>ManagedPresenceBeacon</PulseIconName>
     <BuildTimestamp Condition="'$(BuildTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyy.MM.dd.HHmm"))</BuildTimestamp>
     <Nullable>enable</Nullable>

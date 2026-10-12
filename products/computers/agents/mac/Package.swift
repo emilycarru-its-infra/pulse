@@ -7,7 +7,7 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "managedpulse", targets: ["PulseAgentCLI"]),
+        .executable(name: "managedpresencebeacon", targets: ["PulseAgentCLI"]),
         .executable(name: "ManagedPresenceBeaconApp", targets: ["PulseAgentApp"]),
         .executable(name: "ManagedPresenceBeaconHelper", targets: ["PulseAgentHelper"]),
         .library(name: "PulseAgentCore", targets: ["PulseAgentCore"])

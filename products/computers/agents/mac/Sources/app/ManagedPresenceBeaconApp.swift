@@ -1,5 +1,5 @@
 //
-//  Managed Presence Beacon: the Prefs / Run / Logs window for the managedpulse agent.
+//  Managed Presence Beacon: the Prefs / Run / Logs window for the managedpresencebeacon agent.
 //
 
 import AppKit

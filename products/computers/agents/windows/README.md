@@ -6,12 +6,12 @@ and never sends who is signed in.
 
 Three programs, published together into one folder:
 
-- **The command-line agent** (`managedpulse.exe`) runs as SYSTEM from boot through a scheduled
+- **The command-line agent** (`managedpresencebeacon.exe`) runs as SYSTEM from boot through a scheduled
   task. Every 15 seconds it reads the console session, the one at the keyboard and screen (a
   remote desktop session leaves the seat free, so it does not count); a sign-in, sign-out, lock or unlock is
   sent at once, and otherwise a heartbeat goes every 60 seconds. A failed send is dropped: the next
   heartbeat catches up, and the server shows a silent computer as off after five minutes.
-- **The idle helper** (`managedpulse-idle.exe`) runs in each signed-in user's session from log on
+- **The idle helper** (`managedpresencebeacon-idle.exe`) runs in each signed-in user's session from log on
   and writes that session's keyboard and mouse idle time to `ProgramData\<data>\idle\`. Windows
   does not give a SYSTEM process the console session's input time; without the helper the agent
   falls back to the session's own figure.
@@ -23,8 +23,8 @@ Three programs, published together into one folder:
 
 The names are all set in [`Directory.Build.props`](Directory.Build.props). The tool is
 ComputerPulse (`<product>` below): its install folder, registry and policy keys and scheduled
-tasks. Managed Presence Beacon is the GUI and `managedpulse` the command line, and data and logs
-live in `ProgramData\ManagedPulse` (`<data>`).
+tasks. Managed Presence Beacon is the GUI and `managedpresencebeacon` the command line, and data and logs
+live in `ProgramData\ManagedPresence` (`<data>`).
 
 ## Settings
 
@@ -83,8 +83,8 @@ reads its settings only from HKLM.
 ## Commands
 
 ```text
-managedpulse                 run the agent loop
-managedpulse status [--json] show what the agent sees and the event it would send
-managedpulse send [--type T] send one event now
-managedpulse --version
+managedpresencebeacon                 run the agent loop
+managedpresencebeacon status [--json] show what the agent sees and the event it would send
+managedpresencebeacon send [--type T] send one event now
+managedpresencebeacon --version
 ```

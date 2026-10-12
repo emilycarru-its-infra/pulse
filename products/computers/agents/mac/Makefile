@@ -51,7 +51,7 @@ app: swift $(ACTOOL_OUT)/Assets.car
 	@mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources" "$(APP)/Contents/Library/LaunchDaemons" \
 		$(ROOT)/Library/LaunchDaemons
 	cp $(SWIFT_OUT)/ManagedPresenceBeaconApp "$(APP)/Contents/MacOS/ManagedPresenceBeacon"
-	cp $(SWIFT_OUT)/managedpulse "$(APP)/Contents/MacOS/managedpulse"
+	cp $(SWIFT_OUT)/managedpresencebeacon "$(APP)/Contents/MacOS/managedpresencebeacon"
 	cp $(SWIFT_OUT)/ManagedPresenceBeaconHelper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
 	sed -e 's/{{MARKETING_VERSION}}/$(MARKETING_VERSION)/g' -e 's/{{BUILD_NUMBER}}/$(BUILD_NUMBER)/g' \
 		packaging/resources/Info.plist.template > "$(APP)/Contents/Info.plist"
@@ -64,7 +64,7 @@ app: swift $(ACTOOL_OUT)/Assets.car
 sign:
 	@test -n "$(SIGNING_IDENTITY_APP)" || { echo "Set SIGNING_IDENTITY_APP"; exit 1; }
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" \
-		--identifier com.github.computerpulse.cli "$(APP)/Contents/MacOS/managedpulse"
+		--identifier com.github.computerpulse.cli "$(APP)/Contents/MacOS/managedpresencebeacon"
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" \
 		--identifier com.github.computerpulse.helper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" "$(APP)"

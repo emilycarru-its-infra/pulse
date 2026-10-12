@@ -11,13 +11,13 @@ public enum PulseConstants {
     public static let helperPlistName = "com.github.computerpulse.helper.plist"
 
     public static let appName = "Managed Presence Beacon"
-    public static let cliName = "managedpulse"
+    public static let cliName = "managedpresencebeacon"
     public static let appPath = "/Applications/Utilities/Managed Presence Beacon.app"
-    public static let cliPath = appPath + "/Contents/MacOS/managedpulse"
+    public static let cliPath = appPath + "/Contents/MacOS/managedpresencebeacon"
 
-    public static let dataDirectory = "/Library/Managed Pulse"
+    public static let dataDirectory = "/Library/Managed Presence"
     public static let logDirectory = dataDirectory + "/logs"
-    public static let logPath = logDirectory + "/managedpulse.log"
+    public static let logPath = logDirectory + "/managedpresencebeacon.log"
     /// The last send, written by the agent for the app's Run tab.
     public static let lastSendPath = dataDirectory + "/last-send.json"
 

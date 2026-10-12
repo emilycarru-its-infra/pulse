@@ -1,6 +1,6 @@
 import Foundation
 
-/// The agent's log, one line per entry, in /Library/Managed Pulse/logs. Lines read
+/// The agent's log, one line per entry, in /Library/Managed Presence/logs. Lines read
 /// `[2026-10-12 14:03:22] INFO  message`, the layout the suite's log views colour.
 public final class PulseLog: @unchecked Sendable {
     public enum Level: String, Sendable { case debug = "DEBUG", info = "INFO ", warn = "WARN ", error = "ERROR" }
@@ -11,7 +11,7 @@ public final class PulseLog: @unchecked Sendable {
     public var verbose = false
     /// Also print each line, for the CLI run by hand or by the app's Send now.
     public var echo = false
-    private let queue = DispatchQueue(label: "managedpulse.log")
+    private let queue = DispatchQueue(label: "managedpresencebeacon.log")
     private let maxBytes: UInt64 = 5 * 1024 * 1024
 
     public func debug(_ m: String) { write(.debug, m) }

@@ -6,7 +6,7 @@
     <string>com.github.computerpulse</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Applications/Utilities/Managed Presence Beacon.app/Contents/MacOS/managedpulse</string>
+        <string>/Applications/Utilities/Managed Presence Beacon.app/Contents/MacOS/managedpresencebeacon</string>
         <string>run</string>
     </array>
     <key>RunAtLoad</key>

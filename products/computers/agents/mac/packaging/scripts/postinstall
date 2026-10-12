@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Managed Presence Beacon postinstall: data folder, the managedpulse link on PATH,
+# Managed Presence Beacon postinstall: data folder, the managedpresencebeacon links,
 # then (re)load the agent and the prefs helper.
 #
 # PULSE_TEST_ROOT runs this against a scratch directory: every path is prefixed with
@@ -7,13 +7,13 @@
 
 ROOT="${PULSE_TEST_ROOT:-}"
 APP="${ROOT}/Applications/Utilities/Managed Presence Beacon.app"
-CLI="${APP}/Contents/MacOS/managedpulse"
-DATA="${ROOT}/Library/Managed Pulse"
+CLI="${APP}/Contents/MacOS/managedpresencebeacon"
+DATA="${ROOT}/Library/Managed Presence"
 AGENT_PLIST="${ROOT}/Library/LaunchDaemons/com.github.computerpulse.plist"
 HELPER_SRC="${APP}/Contents/Library/LaunchDaemons/com.github.computerpulse.helper.plist"
 HELPER_PLIST="${ROOT}/Library/LaunchDaemons/com.github.computerpulse.helper.plist"
 
-log() { echo "managedpulse postinstall: $1"; }
+log() { echo "managedpresencebeacon postinstall: $1"; }
 launchctl_run() {
     if [[ -n "${ROOT}" ]]; then log "(test root) skipped: launchctl $*"; return 0; fi
     /bin/launchctl "$@"
@@ -28,8 +28,11 @@ if [[ ! -x "${CLI}" ]]; then
     log "ERROR: ${CLI} is missing"
     exit 1
 fi
-mkdir -p "${ROOT}/usr/local/bin"
-ln -sf "${CLI#${ROOT}}" "${ROOT}/usr/local/bin/managedpulse"
+# The CLI lives in the app bundle; like the other management tools it is linked from
+# /usr/local/<tool> and onto PATH from /usr/local/bin.
+mkdir -p "${ROOT}/usr/local/computerpulse" "${ROOT}/usr/local/bin"
+ln -sf "${CLI#${ROOT}}" "${ROOT}/usr/local/computerpulse/managedpresencebeacon"
+ln -sf "${CLI#${ROOT}}" "${ROOT}/usr/local/bin/managedpresencebeacon"
 
 chmod 644 "${AGENT_PLIST}"
 chown root:wheel "${AGENT_PLIST}" 2>/dev/null || [[ -n "${ROOT}" ]]
