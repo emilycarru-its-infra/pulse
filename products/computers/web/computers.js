@@ -211,7 +211,8 @@ function renderList() {
         <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
       card.querySelector(".room").textContent = roomsLine(rooms);
       card.querySelector("h3").textContent = spaces[0].name;
-      card.querySelector(".kicker").textContent = KIND[spaces[0].kind] ?? "";
+      const floorName = state.floor ? null : state.status.floors.find((f) => f.id === spaces[0].floor)?.name;
+      card.querySelector(".kicker").textContent = [floorName, KIND[spaces[0].kind]].filter(Boolean).join(" · ");
       const mapped = spaces.find((s) => s.floor && s.label);
       if (mapped) {
         const go = document.createElement("button");
@@ -283,7 +284,10 @@ function renderDrawer() {
 
 function render() {
   if (!state.status) return;
-  if (!state.floor || !state.status.floors.some((f) => f.id === state.floor)) state.floor = state.status.floors[0]?.id ?? null;
+  // The map always shows one floor; the list can show every floor at once.
+  const known = state.status.floors.some((f) => f.id === state.floor);
+  if (state.mode === "map" && !known) state.floor = state.status.floors[0]?.id ?? null;
+  else if (state.floor && !known) state.floor = null;
   renderFloors();
   const seats = state.status.spaces.flatMap(seatsOf);
   document.getElementById("total").innerHTML =
@@ -329,13 +333,20 @@ function pick(id, zoom = true) {
   try { history.replaceState(null, "", `#floor=${state.floor}${id ? `&room=${id}` : ""}`); } catch {}
 }
 
+// Picking the floor already shown clears the filter in the list, which then shows every floor.
 function setFloor(id) {
-  if (id === state.floor) return;
+  if (id === state.floor) {
+    if (state.mode !== "list") return;
+    id = null;
+  }
   state.floor = id;
   state.picked = null;
   state.drawn = null;
   render();
-  try { history.replaceState(null, "", `#floor=${id}`); localStorage.setItem("pulse.floor", id); } catch {}
+  try {
+    history.replaceState(null, "", id ? `#floor=${id}` : location.pathname);
+    if (id) localStorage.setItem("pulse.floor", id); else localStorage.removeItem("pulse.floor");
+  } catch {}
 }
 
 document.getElementById("floors").addEventListener("click", (e) => {
@@ -352,8 +363,10 @@ for (const [id, key] of [["platform", "platform"], ["mode", "mode"]]) {
   document.getElementById(id).addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b) return;
-    state[key] = b.dataset.v;
-    for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b));
+    // Mac and Windows filter; pressing the one already on shows every platform again.
+    const off = key === "platform" && state.platform === b.dataset.v;
+    state[key] = off ? "all" : b.dataset.v;
+    for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b && !off));
     if (key === "mode") state.drawn = null;
     render();
   });
