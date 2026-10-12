@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Computers</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="computers.css">
+</head>
+<body>
+  <main class="doc">
+    <section class="intro">
+      <div class="intro-text">
+        <h2>Find a free computer</h2>
+        <p>Every shared computer in labs, open-access stations, kiosks and podiums, updated every 15 seconds. Nothing here says who is using a machine.</p>
+      </div>
+      <div class="total" id="total" aria-live="polite"></div>
+    </section>
+
+    <section class="toolbar">
+      <div class="segmented" role="group" aria-label="Platform" id="platform">
+        <button type="button" data-v="all" aria-pressed="true">All</button>
+        <button type="button" data-v="mac" aria-pressed="false">Mac</button>
+        <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+      </div>
+      <ul class="legend" aria-label="Legend">
+        <li><span class="seat available"></span>Free</li>
+        <li><span class="seat possibly_free"></span>Possibly free (idle 15 min or locked)</li>
+        <li><span class="seat in_use"></span>In use</li>
+        <li><span class="seat offline"></span>Off or not reporting</li>
+        <li><span class="seat out_of_service"></span>Out of service</li>
+      </ul>
+    </section>
+
+    <section class="spaces" id="spaces"></section>
+    <p class="fine foot" id="updated"></p>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="computers.js"></script>
+</body>
+</html>

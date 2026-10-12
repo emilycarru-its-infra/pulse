@@ -1,0 +1,16 @@
+[project]
+name = "pulse-computers"
+version = "0.1.0"
+description = "ComputersPulse API, simulator and local dev server"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["pulse-core", "jsonschema"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["pulse_computers*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

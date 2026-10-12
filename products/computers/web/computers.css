@@ -1,0 +1,41 @@
+.total { text-align: right; }
+.total .big { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.total .of { color: var(--text-secondary); font-size: 14px; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; margin-bottom: 20px; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text-secondary); }
+.legend li { display: flex; align-items: center; gap: 6px; }
+.legend .seat { width: 16px; height: 16px; }
+
+.spaces { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); }
+@media (max-width: 700px) { .spaces { grid-template-columns: 1fr; } }
+
+.space { display: flex; flex-direction: column; gap: 12px; }
+.space .head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.space h3 { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.space .free { text-align: right; white-space: nowrap; }
+.space .free b { font-size: 28px; line-height: 1; display: block; }
+.space .free span { font-size: 12px; color: var(--text-secondary); }
+.space .counts { font-size: 13px; color: var(--text-secondary); }
+.space .counts b { color: var(--text-primary); }
+
+.seats { list-style: none; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+.seat {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 4px;
+  font-size: 12px; font-weight: 700; border: 2px solid transparent;
+}
+.seat.available { background: var(--ok); color: #fff; }
+.seat.possibly_free {
+  background: repeating-linear-gradient(135deg, var(--warn) 0 5px, color-mix(in srgb, var(--warn) 55%, var(--surface-1)) 5px 10px);
+  color: #000;
+}
+.seat.in_use { background: var(--text-primary); color: var(--page); }
+.seat.offline { background: transparent; border: 2px dashed var(--idle); color: var(--text-muted); }
+.seat.out_of_service {
+  background: var(--surface-2); border-color: var(--bad); color: var(--bad);
+  background-image: linear-gradient(to top right, transparent 47%, var(--bad) 47% 53%, transparent 53%);
+}
+.seats .seat { cursor: default; }
+.seats .seat:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 2px; }
+.space.empty-filter { display: none; }
+@media (max-width: 700px) { .total { text-align: left; } }
