@@ -4,7 +4,8 @@ const WORD = { available: "free", possibly_free: "possibly free", in_use: "in us
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
 const ORDER = ["available", "possibly_free", "in_use", "offline", "out_of_service"];
 
-const state = { floor: null, platform: "all", mode: "map", picked: null, status: null, drawn: null };
+const state = { floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
+const phone = window.matchMedia("(max-width: 700px)");
 const svg = document.getElementById("map");
 const content = document.getElementById("content");
 const vp = Pulse.viewport(svg, content, {
@@ -37,6 +38,7 @@ const tintPlan = () => {
   else plan?.removeAttribute("filter");
 };
 dark.addEventListener("change", tintPlan);
+phone.addEventListener("change", () => { state.drawn = null; render(); });
 
 const el = (name, attrs = {}, parent) => {
   const node = document.createElementNS(NS, name);
@@ -84,7 +86,8 @@ function renderFloors() {
     b.role = "tab";
     b.dataset.id = f.id;
     b.setAttribute("aria-selected", String(f.id === state.floor));
-    b.innerHTML = `${f.name}<small>${seats.filter((s) => s.state === "available").length} free of ${seats.length}</small>`;
+    const name = f.name.replace(/ Floor$/, '<span class="word"> Floor</span>');
+    b.innerHTML = `${name}<small>${seats.filter((s) => s.state === "available").length} free<span class="word"> of ${seats.length}</span></small>`;
     return b;
   }));
 }
@@ -98,13 +101,17 @@ function drawFloor() {
     el("g", { id: "spaces-layer" }, content);
     tintPlan();
     state.drawn = floor.id;
-    vp.setHome({ x: 0, y: 0, w: floor.width, h: floor.height });
+    const home = homeFor(floor);
+    // A phone's map is as tall as the floor's rooms need at full width, so no empty bands.
+    svg.style.height = phone.matches
+      ? `${Math.round(Math.min(Math.max(svg.clientWidth * home.h / home.w + 48, 220), innerHeight * 0.62))}px` : "";
+    vp.setHome(home);
   }
   const layer = document.getElementById("spaces-layer");
   const focused = document.activeElement?.closest?.(".seat-g")?.dataset.host;
   layer.replaceChildren();
   const labels = el("g", { class: "labels" });
-  const font = 13;
+  const font = phone.matches ? 11 : 13;
   for (const space of floorSpaces(floor.id)) {
     const seats = seatsOf(space);
     const c = countsOf(seats);
@@ -124,21 +131,46 @@ function drawFloor() {
       el("title", {}, seat).textContent = `${s.hostname}: ${WORD[s.state]}`;
       el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, one).textContent = names.get(s.hostname);
     }
+    // A badge shows the room number; hovering or picking the room opens it to the full name.
     const badge = el("g", { class: `badge${c.available ? "" : " none"}`, "data-x": r.x, "data-y": r.y - 4, "data-seats": seats.length,
       "data-id": space.id }, labels);
-    const text = el("text", { x: 7, y: -7, "font-size": font }, badge);
-    el("tspan", {}, text).textContent = `${space.name} `;
-    el("tspan", { class: "free" }, text).textContent = `${c.available}/${seats.length} free`;
+    const faces = [["short", [[space.room || space.name]]], ["long", [[`${space.name} `], [`${c.available}/${seats.length} free`, "free"]]]];
+    for (const [face, parts] of faces) {
+      const text = el("text", { x: 7, y: -7, "font-size": font }, el("g", { class: face }, badge));
+      for (const [words, cls] of parts) el("tspan", cls ? { class: cls } : {}, text).textContent = words;
+    }
   }
   layer.append(labels);
   if (focused) layer.querySelector(`.seat-g[data-host="${CSS.escape(focused)}"]`)?.focus();
   for (const badge of labels.children) {
-    const bb = badge.firstChild.getBBox();
-    badge.prepend(el("rect", { x: 0, y: bb.y - 4, width: bb.width + 14, height: bb.height + 8, rx: 3 }));
-    badge.dataset.w = bb.width + 14;
-    badge.dataset.h = bb.height + 8;
+    for (const face of badge.children) {
+      const bb = face.firstChild.getBBox();
+      face.prepend(el("rect", { x: 0, y: bb.y - 4, width: bb.width + 14, height: bb.height + 8, rx: 3 }));
+      if (face.classList.contains("short")) Object.assign(badge.dataset, { w: bb.width + 14, h: bb.height + 8 });
+    }
   }
   placeBadges();
+  openBadges();
+}
+
+// The hovered and the picked room show their full names, drawn above every other label.
+function openBadges() {
+  for (const b of content.querySelectorAll(".badge")) {
+    const open = b.dataset.id === state.hover || b.dataset.id === state.picked;
+    b.classList.toggle("open", open);
+    if (open) b.parentNode.append(b);
+  }
+}
+
+// On a phone a floor opens on its rooms rather than the whole plan, which is too small to read.
+function homeFor(floor) {
+  const spaces = floorSpaces(floor.id);
+  if (!phone.matches || !spaces.length) return { x: 0, y: 0, w: floor.width, h: floor.height };
+  const rs = spaces.map(bounds);
+  const x0 = Math.min(...rs.map((r) => r.x)), y0 = Math.min(...rs.map((r) => r.y));
+  const x1 = Math.max(...rs.map((r) => r.x + r.w)), y1 = Math.max(...rs.map((r) => r.y + r.h));
+  const m = Math.max(x1 - x0, y1 - y0) * 0.05;
+  return { x: x0 - m, y: y0 - m, w: x1 - x0 + m * 2, h: y1 - y0 + m * 2 };
 }
 
 function renderList() {
@@ -154,6 +186,14 @@ function renderList() {
         <p class="counts">${countsLine(c)}</p><ul class="tiles"></ul>`;
       card.querySelector(".kicker").textContent = [space.room, KIND[space.kind]].filter(Boolean).join(" · ");
       card.querySelector("h3").textContent = space.name;
+      if (space.floor && space.label) {
+        const go = document.createElement("button");
+        go.type = "button";
+        go.className = "on-map";
+        go.textContent = "Show on map";
+        go.onclick = () => showOnMap(space);
+        card.querySelector(".head > div").append(go);
+      }
       const names = labelsFor(seats);
       card.querySelector(".tiles").replaceChildren(...seats.map((s) => tile(s, names)));
       return card;
@@ -216,15 +256,33 @@ function render() {
   renderDrawer();
 }
 
+function showOnMap(space) {
+  state.mode = "map";
+  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "map"));
+  if (space.floor !== state.floor) setFloor(space.floor);
+  state.drawn = null;
+  render();
+  document.getElementById("map-view").scrollIntoView({ block: "start" });
+  requestAnimationFrame(() => pick(space.id));
+}
+
 function pick(id, zoom = true) {
   state.picked = id;
   render();
+  openBadges();
   const space = state.status.spaces.find((s) => s.id === id);
   if (space && zoom) {
     const r = bounds(space);
     const m = Math.max(r.w, r.h) * 0.6;
+    const box = { x: r.x - m, y: r.y - m, w: r.w + m * 2, h: r.h + m * 2 };
+    // On a phone the details sheet covers the lower half of the map, so bring the map to the top
+    // of the screen and frame the room in the part above the sheet.
+    if (phone.matches) {
+      svg.scrollIntoView({ block: "start" });
+      box.h *= 2;
+    }
     vp.touch();
-    vp.frameRect({ x: r.x - m, y: r.y - m, w: r.w + m * 2, h: r.h + m * 2 });
+    vp.frameRect(box, true, 2.5);
   }
   try { history.replaceState(null, "", `#floor=${state.floor}${id ? `&room=${id}` : ""}`); } catch {}
 }
@@ -267,6 +325,14 @@ svg.addEventListener("click", (e) => {
   const g = e.target.closest(".space, .badge");
   pick(g ? g.dataset.id : null, !!g);
 });
+const hover = (e) => {
+  const id = e.target.closest?.(".space, .badge")?.dataset.id ?? null;
+  if (id !== state.hover) { state.hover = id; openBadges(); }
+};
+content.addEventListener("pointerover", hover);
+content.addEventListener("focusin", hover);
+svg.addEventListener("pointerleave", () => { state.hover = null; openBadges(); });
+
 svg.addEventListener("keydown", (e) => {
   const g = e.target.closest?.(".space");
   if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); e.stopPropagation(); pick(g.dataset.id); }
