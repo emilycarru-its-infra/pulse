@@ -272,7 +272,7 @@ function render() {
   renderFloors();
   const seats = state.status.spaces.flatMap(seatsOf);
   document.getElementById("total").innerHTML =
-    `<b>${seats.filter((s) => s.state === "available").length}</b> free of ${seats.length} on campus`;
+    `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length} on campus</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
   document.getElementById("edit-wrap").hidden = !state.status.editable;

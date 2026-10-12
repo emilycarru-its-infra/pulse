@@ -122,6 +122,19 @@ body.app .band { margin-bottom: 12px; }
   .drawer { width: auto; }
 }
 
+/* Tablets and narrow windows: the toolbar stays on one row, so the floor tabs and the campus
+   total drop their extra words, and a touch screen drops the zoom buttons for pinch. */
+@media (min-width: 701px) and (max-width: 1279px) {
+  .map-toolbar { flex-wrap: nowrap; gap: 10px; }
+  .views { flex-wrap: nowrap; gap: 6px; }
+  .floors { flex-shrink: 0; }
+  .floors button { padding: 6px 12px; text-align: center; }
+  .floors .word, .total .word { display: none; }
+  .segmented button { padding: 6px 10px; }
+}
+@media (pointer: coarse) and (min-width: 701px) { .zoom { display: none; } }
+@media (min-width: 701px) and (max-width: 899px) { .zoom .zoom-level { display: none; } .floors button { padding: 6px 9px; } }
+
 /* Phones: most visits come from one. The page scrolls, the map takes the screen below the
    toolbar, pinch replaces the zoom buttons, and a room's details rise as a sheet over the map. */
 @media (max-width: 700px) {
