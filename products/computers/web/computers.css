@@ -3,19 +3,20 @@ body.app { height: 100vh; overflow: hidden; }
 body.app main.doc.wide { height: 100%; display: flex; flex-direction: column; padding: 16px 24px 12px; }
 body.app main.doc.wide > * { width: auto; margin: 0; }
 @media (max-width: 700px) { body.app main.doc.wide { padding: 12px 16px; } }
-body.app .band { margin-bottom: 12px; }
+body.app .band { margin-bottom: 16px; }
 
 .map-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
 .views { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .toolbar-end { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-left: auto; }
 
-.floors { display: inline-flex; border: 2px solid var(--rule); border-radius: 4px; overflow: hidden; }
+/* The floor tabs sit on one line at the height of the other toolbar controls. */
+.floors { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
 .floors button {
-  font: inherit; font-size: 15px; font-weight: 700; background: var(--surface-1); color: var(--text-primary);
-  border: 0; border-left: 1px solid var(--rule); padding: 8px 16px; cursor: pointer; line-height: 1.2; text-align: left;
+  font: inherit; font-size: 13px; font-weight: 700; background: var(--surface-1); color: var(--text-primary);
+  border: 0; border-left: 1px solid var(--rule); padding: 6px 12px; cursor: pointer; line-height: inherit; white-space: nowrap;
 }
 .floors button:first-child { border-left: 0; }
-.floors button small { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.floors button small { margin-left: 6px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
 .floors button[aria-selected="true"] { background: var(--text-primary); color: var(--page); }
 .floors button[aria-selected="true"] small { color: var(--page); opacity: 0.8; }
 .floors button:hover:not([aria-selected="true"]), .floors button:focus-visible { background: var(--accent-band); color: #000; }
@@ -49,9 +50,9 @@ body.app .band { margin-bottom: 12px; }
 }
 .floormap.panning { cursor: grabbing; }
 .floormap:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 1px; }
-.floormap .plan { opacity: 0.75; }
+.floormap .plan { opacity: 0.4; }
 @media (prefers-color-scheme: dark) {
-  .floormap .plan { opacity: 0.7; }
+  .floormap .plan { opacity: 0.45; }
   .floormap .room { fill: color-mix(in srgb, var(--accent-band) 8%, transparent); }
   .floormap .space:hover .room, .floormap .space:focus-visible .room, .floormap .space.picked .room {
     fill: color-mix(in srgb, var(--accent-band) 16%, transparent);
@@ -128,12 +129,11 @@ body.app .band { margin-bottom: 12px; }
   .map-toolbar { flex-wrap: nowrap; gap: 10px; }
   .views { flex-wrap: nowrap; gap: 6px; }
   .floors { flex-shrink: 0; }
-  .floors button { padding: 6px 12px; text-align: center; }
   .floors .word, .total .word { display: none; }
   .segmented button { padding: 6px 10px; }
 }
 @media (pointer: coarse) and (min-width: 701px) { .zoom { display: none; } }
-@media (min-width: 701px) and (max-width: 899px) { .zoom .zoom-level { display: none; } .floors button { padding: 6px 9px; } }
+@media (min-width: 701px) and (max-width: 899px) { .zoom .zoom-level { display: none; } .floors button { padding: 6px 9px; } .floors .tight { display: none; } }
 
 /* Phones: most visits come from one. The page scrolls, the map takes the screen below the
    toolbar, pinch replaces the zoom buttons, and a room's details rise as a sheet over the map. */
@@ -143,7 +143,8 @@ body.app .band { margin-bottom: 12px; }
   body.app .masthead h1 { font-size: 22px; }
   .map-toolbar { gap: 8px; }
   .floors { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
-  .floors button { padding: 8px 6px; font-size: 15px; text-align: center; min-height: 48px; }
+  .floors button { padding: 8px 4px; font-size: 14px; min-height: 44px; }
+  .floors button small { margin-left: 4px; }
   .floors .word { display: none; }
   .views { width: 100%; justify-content: space-between; }
   .segmented button { padding: 9px 14px; font-size: 14px; }
