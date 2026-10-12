@@ -65,11 +65,12 @@ class ComputersService:
                     **({"x": seat["x"], "y": seat["y"]} if "x" in seat else {}),
                 })
             spaces.append({
-                **{k: space[k] for k in ("id", "name", "kind", "building", "floor", "floorplan") if k in space},
+                **{k: space[k] for k in ("id", "name", "kind", "building", "floor", "floorplan", "room", "label",
+                                         "box", "seatSize") if k in space},
                 "counts": counts,
                 "seats": seats,
             })
-        return {"generatedAt": _iso(now), "spaces": spaces}
+        return {"generatedAt": _iso(now), "floors": self.catalog.get("floors", []), "spaces": spaces}
 
     def summary(self, now: datetime | None = None) -> dict:
         status = self.status(now)

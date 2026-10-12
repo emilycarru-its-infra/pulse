@@ -5,16 +5,31 @@
   "description": "The spaces a product shows and the seats in each, built from an inventory system plus a site config.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["v", "generatedAt", "source", "spaces"],
+  "required": [
+    "v",
+    "generatedAt",
+    "source",
+    "spaces"
+  ],
   "properties": {
-    "v": { "const": 1 },
-    "generatedAt": { "type": "string", "format": "date-time" },
+    "v": {
+      "const": 1
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["provider"],
+      "required": [
+        "provider"
+      ],
       "properties": {
-        "provider": { "type": "string", "description": "Inventory provider name, such as snipeit." }
+        "provider": {
+          "type": "string",
+          "description": "Inventory provider name, such as snipeit."
+        }
       }
     },
     "spaces": {
@@ -22,31 +37,138 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "kind", "seats"],
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "seats"
+        ],
         "properties": {
-          "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
-          "name": { "type": "string" },
-          "kind": { "enum": ["lab", "station", "kiosk", "podium"] },
-          "building": { "type": "string" },
-          "floor": { "type": "string" },
-          "floorplan": { "type": "string", "description": "Path of the SVG floorplan, relative to the catalog." },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "lab",
+              "station",
+              "kiosk",
+              "podium"
+            ]
+          },
+          "building": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string",
+            "description": "The id of a floor in floors."
+          },
+          "floorplan": {
+            "type": "string",
+            "description": "Path of the SVG floorplan, relative to the catalog."
+          },
           "seats": {
             "type": "array",
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["hostname", "platform"],
+              "required": [
+                "hostname",
+                "platform"
+              ],
               "properties": {
-                "hostname": { "type": "string" },
-                "assetTag": { "type": "string" },
-                "serial": { "type": "string" },
-                "platform": { "enum": ["mac", "windows", "other"] },
-                "room": { "type": "string" },
-                "outOfService": { "type": "boolean" },
-                "x": { "type": "number" },
-                "y": { "type": "number" }
+                "hostname": {
+                  "type": "string"
+                },
+                "assetTag": {
+                  "type": "string"
+                },
+                "serial": {
+                  "type": "string"
+                },
+                "platform": {
+                  "enum": [
+                    "mac",
+                    "windows",
+                    "other"
+                  ]
+                },
+                "room": {
+                  "type": "string"
+                },
+                "outOfService": {
+                  "type": "boolean"
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                }
               }
             }
+          },
+          "room": {
+            "type": "string"
+          },
+          "label": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Where the room's name sits on the plan."
+          },
+          "box": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "The room's outline as x0, y0, x1, y1."
+          },
+          "seatSize": {
+            "type": "number",
+            "description": "Seat square size in plan pixels."
+          }
+        }
+      }
+    },
+    "floors": {
+      "type": "array",
+      "description": "Every floor with a plan, in display order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "plan",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "plan": {
+            "type": "string",
+            "description": "Plan image path, relative to the catalog."
+          },
+          "width": {
+            "type": "number",
+            "description": "Plan width in plan pixels; every x below is in these units."
+          },
+          "height": {
+            "type": "number"
           }
         }
       }
