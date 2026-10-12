@@ -65,11 +65,14 @@ From the install folder, as an administrator (a package's postinstall):
 .\install.ps1
 ```
 
-It runs only from `Program Files\<product>`. It creates the data folder with its ACL in one step,
-owned by Administrators, and stops if a folder a user owns, or a link, is already there. Then it
-registers three tasks: the agent, the idle helper and a
-shutdown sender triggered by event 1074, and starts the agent. `uninstall.ps1` removes the tasks
-and deletes only the files the agent wrote, by name.
+It runs only from `Program Files\<product>`, which only administrators can write. If a data
+folder is already in ProgramData and is a link, or is owned by anyone but SYSTEM or
+Administrators, it stops and says so; otherwise it creates the folder and gives it a protected
+ACL before anything is written. Users may read `logs\` (the log and `status.json`), and each
+signed-in user may add and change only their own report in `idle\`. It then registers three
+tasks (the agent, the idle helper, and a shutdown sender triggered by event 1074) and starts the
+agent. `uninstall.ps1` removes the tasks and the install folder and keeps the logs. The agent
+reads its settings only from HKLM.
 
 ## Commands
 

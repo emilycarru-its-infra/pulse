@@ -40,7 +40,8 @@ public static class Identity
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), ProductKey);
     public static string LogDirectory => Path.Combine(DataDirectory, "logs");
     public static string IdleDirectory => Path.Combine(DataDirectory, "idle");
-    public static string StatusFile => Path.Combine(DataDirectory, "status.json");
+    /// <summary>In logs\, the one folder users may read, so the GUI can show it unelevated.</summary>
+    public static string StatusFile => Path.Combine(LogDirectory, "status.json");
 
     public static string AgentTaskName => ProductKey;
     public static string IdleTaskName => $"{ProductKey} Idle";

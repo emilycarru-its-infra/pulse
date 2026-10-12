@@ -3,80 +3,88 @@
     Registers the agent on this computer, from the folder it was installed to.
 
 .DESCRIPTION
-    Run as an administrator (a package's postinstall) from the install folder, which holds the
-    published build and names.json. It:
-      - runs only from Program Files\<product>, since its tasks run those programs as SYSTEM;
-      - creates the data folder under ProgramData with its ACL in one step (owned by Administrators,
-        writable only by SYSTEM and Administrators), and stops if a folder a user owns or a link is
-        already there; in its idle\ folder each signed-in user may add and change only their own report;
-      - registers the agent task: the command-line agent as SYSTEM from boot, restarted if it stops;
-      - registers the idle task: the idle helper in each user's session at log on;
-      - registers the shutdown task: one shutdown event when Windows logs a shutdown or restart;
-      - starts the agent now.
-    Settings (the ingest address, intervals) come from HKLM\SOFTWARE\<product> or from policy under
-    HKLM\SOFTWARE\Policies\<product>; this script does not set them.
+    Run as an administrator (a package's postinstall) from Program Files\<product>, which only
+    administrators can write. It:
+      - checks the data folder under ProgramData: if one is already there and is a link or is owned
+        by anyone but SYSTEM or Administrators, it stops and says so; otherwise it creates the folder
+        and at once gives it a protected ACL (SYSTEM and Administrators full control), before anything
+        is written in it;
+      - creates logs\ inside it, which users may read (the agent's log and status.json), and idle\,
+        where each signed-in user may add and change only their own idle report;
+      - registers the agent task (SYSTEM, from boot), the idle task (each user's session, at log on)
+        and the shutdown task (Windows event 1074), and starts the agent.
+    The agent reads its settings only from HKLM, never from ProgramData.
 #>
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'safety.ps1')
-$here = $PSScriptRoot
-$names = Get-Content (Join-Path $here 'names.json') -Raw | ConvertFrom-Json
-if ($names.product -notmatch '^[A-Za-z0-9]+$') { throw "Unexpected product name in names.json" }
+$names = Get-Content (Join-Path $PSScriptRoot 'names.json') -Raw | ConvertFrom-Json
+if ($names.product -notmatch '^[A-Za-z0-9]+$') { throw 'Unexpected product name in names.json' }
 
-# The tasks run these programs as SYSTEM, so they must sit where only administrators can write:
-# exactly Program Files\<product>, not through a link.
-$expected = Join-Path $env:ProgramFiles $names.product
-if ([IO.Path]::GetFullPath($here).TrimEnd('\') -ne $expected -or -not (Test-TrustedDirectory $expected)) {
-    throw "Install to $expected; this copy is in $here."
-}
+$here = Join-Path $env:ProgramFiles $names.product
+if ([IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\') -ne $here) { throw "Install to $here; this copy is in $PSScriptRoot." }
 $cli = Join-Path $here "$($names.cli).exe"
 $idle = Join-Path $here "$($names.idle).exe"
 foreach ($exe in $cli, $idle) { if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw "Missing $exe" } }
 
-# Data: SYSTEM and Administrators write, Users read. The idle folder lets each signed-in user add
-# a report and change only the ones they created; it does not let them add folders.
+function New-Rule([string]$Sid, [string]$Rights, [string]$Inherit = 'ContainerInherit,ObjectInherit', [string]$Propagate = 'None') {
+    New-Object System.Security.AccessControl.FileSystemAccessRule(
+        (New-Object Security.Principal.SecurityIdentifier $Sid), $Rights, $Inherit, $Propagate, 'Allow')
+}
+
+# Uses the folder at $Path, creating it if needed, and gives it a protected ACL: owned by
+# Administrators, SYSTEM and Administrators full control, plus $Extra rules. An existing folder
+# that is a link or that anyone else owns stops the install; it is never repaired or deleted.
+function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
+    if (Test-Path -LiteralPath $Path) {
+        $item = Get-Item -LiteralPath $Path -Force
+        $owner = $item.GetAccessControl().GetOwner([Security.Principal.SecurityIdentifier]).Value
+        if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @('S-1-5-18', 'S-1-5-32-544') -notcontains $owner) {
+            throw "$Path already exists and is a link or is not owned by SYSTEM or Administrators. Remove it, then install again."
+        }
+    } else {
+        $item = New-Item -ItemType Directory -Path $Path
+    }
+    $acl = New-Object System.Security.AccessControl.DirectorySecurity
+    $acl.SetOwner((New-Object Security.Principal.SecurityIdentifier 'S-1-5-32-544'))
+    $acl.SetAccessRuleProtection($true, $false)
+    foreach ($rule in @((New-Rule 'S-1-5-18' 'FullControl'), (New-Rule 'S-1-5-32-544' 'FullControl')) + $Extra) { $acl.AddAccessRule($rule) }
+    $item.SetAccessControl($acl)
+}
+
 $data = Join-Path $env:ProgramData $names.product
-$read = @('S-1-5-32-545', 'ReadAndExecute', 'ContainerInherit,ObjectInherit', 'None')
-Initialize-Directory $data @(, $read)
-Initialize-Directory (Join-Path $data 'logs') @(, $read)
-Initialize-Directory (Join-Path $data 'idle') @(
-    @('S-1-5-11', 'ReadAndExecute, CreateFiles', 'None', 'None'),
-    @('S-1-3-0', 'Modify', 'ObjectInherit', 'InheritOnly'))
+Set-ProtectedDirectory $data
+Set-ProtectedDirectory (Join-Path $data 'logs') @(New-Rule 'S-1-5-32-545' 'ReadAndExecute')
+Set-ProtectedDirectory (Join-Path $data 'idle') @(
+    (New-Rule 'S-1-5-11' 'ReadAndExecute, CreateFiles' 'None'),
+    (New-Rule 'S-1-3-0' 'Modify' 'ObjectInherit' 'InheritOnly'))
 
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
     -ExecutionTimeLimit ([TimeSpan]::Zero) -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
+$system = New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest
 
-# The agent: SYSTEM, from boot, for as long as the computer runs.
 Register-ScheduledTask -TaskName $names.product -Force `
     -Description 'Sends this computer''s seat state (free, in use, locked, idle) to the campus status page. Sends no usernames.' `
     -Action (New-ScheduledTaskAction -Execute "`"$cli`"" -Argument 'run' -WorkingDirectory $here) `
-    -Trigger (New-ScheduledTaskTrigger -AtStartup) `
-    -Principal (New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest) `
-    -Settings $settings | Out-Null
+    -Trigger (New-ScheduledTaskTrigger -AtStartup) -Principal $system -Settings $settings | Out-Null
 
-# The idle helper: in each signed-in user's session, from log on.
-$idleSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-    -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances Parallel
 Register-ScheduledTask -TaskName "$($names.product) Idle" -Force `
     -Description 'Reports keyboard and mouse idle time for this session to the agent. Sends nothing itself.' `
     -Action (New-ScheduledTaskAction -Execute "`"$idle`"" -WorkingDirectory $here) `
     -Trigger (New-ScheduledTaskTrigger -AtLogOn) `
     -Principal (New-ScheduledTaskPrincipal -GroupId 'S-1-5-32-545' -RunLevel Limited) `
-    -Settings $idleSettings | Out-Null
+    -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero) -MultipleInstances Parallel) | Out-Null
 
-# Shutdown: Windows logs event 1074 (User32) when a shutdown or restart starts.
+# Windows logs event 1074 (User32) when a shutdown or restart starts.
 $shutdownTask = "$($names.product) Shutdown"
 Register-ScheduledTask -TaskName $shutdownTask -Force `
     -Description 'Sends one shutdown event so the status page shows this computer off at once.' `
     -Action (New-ScheduledTaskAction -Execute "`"$cli`"" -Argument 'send --type shutdown' -WorkingDirectory $here) `
-    -Principal (New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAccount -RunLevel Highest) `
-    -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 1)) | Out-Null
+    -Principal $system -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 1)) | Out-Null
 $task = Get-ScheduledTask -TaskName $shutdownTask
-$trigger = Get-CimClass -Namespace Root/Microsoft/Windows/TaskScheduler -ClassName MSFT_TaskEventTrigger |
+$task.Triggers = @(Get-CimClass -Namespace Root/Microsoft/Windows/TaskScheduler -ClassName MSFT_TaskEventTrigger |
     New-CimInstance -ClientOnly -Property @{
         Enabled = $true
         Subscription = '<QueryList><Query Id="0" Path="System"><Select Path="System">*[System[Provider[@Name=''User32''] and EventID=1074]]</Select></Query></QueryList>'
-    }
-$task.Triggers = @($trigger)
+    })
 $task | Set-ScheduledTask | Out-Null
 
 Stop-ScheduledTask -TaskName $names.product -ErrorAction SilentlyContinue

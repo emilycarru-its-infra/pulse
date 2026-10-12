@@ -1,22 +1,23 @@
 <#
 .SYNOPSIS
-    Removes the agent's scheduled tasks and its data folder. The install folder is the package's to remove.
-    The data folder is deleted without following links, and only when it sits directly in ProgramData.
+    Removes the agent: its scheduled tasks, its running processes and its install folder,
+    Program Files\<product>. The logs under ProgramData stay; status.json is deleted by full path.
 #>
 $ErrorActionPreference = 'Continue'
-. (Join-Path $PSScriptRoot 'safety.ps1')
 $names = Get-Content (Join-Path $PSScriptRoot 'names.json') -Raw | ConvertFrom-Json
+if ($names.product -notmatch '^[A-Za-z0-9]+$') { throw 'Unexpected product name in names.json' }
+
 foreach ($task in $names.product, "$($names.product) Idle", "$($names.product) Shutdown") {
     Stop-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue
     Unregister-ScheduledTask -TaskName $task -Confirm:$false -ErrorAction SilentlyContinue
 }
-Get-Process -Name $names.cli, $names.idle -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-# Only the files the agent writes are deleted, by name, and then the folders if they are empty.
-if ($names.product -match '^[A-Za-z0-9]+$') {
-    $data = Join-Path $env:ProgramData $names.product
-    Remove-KnownFiles (Join-Path $data 'idle') @('*.json', '*.json.tmp')
-    Remove-KnownFiles (Join-Path $data 'logs') @("$($names.cli)-*.log")
-    Remove-KnownFiles $data @('status.json', 'status.json.tmp')
-    foreach ($dir in (Join-Path $data 'idle'), (Join-Path $data 'logs'), $data) { Remove-EmptyDirectory $dir }
+Get-Process -Name $names.cli, $names.idle, $names.gui -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+
+$logs = Join-Path (Join-Path $env:ProgramData $names.product) 'logs'
+foreach ($name in 'status.json', 'status.json.tmp') {
+    $file = Join-Path $logs $name
+    if (Test-Path -LiteralPath $file -PathType Leaf) { [IO.File]::Delete($file) }
 }
-Write-Host "Removed $($names.product)."
+
+Remove-Item -LiteralPath (Join-Path $env:ProgramFiles $names.product) -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "Removed $($names.product); its logs are kept in $logs."

@@ -39,7 +39,7 @@ public sealed record AgentStatus
     {
         try
         {
-            Directory.CreateDirectory(Identity.DataDirectory);
+            Directory.CreateDirectory(Identity.LogDirectory);
             var temp = Identity.StatusFile + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
             File.Move(temp, Identity.StatusFile, overwrite: true);
