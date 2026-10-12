@@ -173,29 +173,56 @@ function homeFor(floor) {
   return { x: x0 - m, y: y0 - m, w: x1 - x0 + m * 2, h: y1 - y0 + m * 2 };
 }
 
+// The list has one card per space name on the floor, so a lab or a set of stations spread over
+// several rooms reads as one place; the rooms are named on the card and above their seats.
+// Cards with the most free seats come first, then by room number.
+const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0]} +${rooms.length - 1} rooms`;
+
 function renderList() {
-  const cards = state.status.spaces
-    .filter((s) => (!state.floor || s.floor === state.floor) && seatsOf(s).length)
-    .map((space) => {
-      const seats = seatsOf(space);
-      const c = countsOf(seats);
+  const groups = new Map();
+  for (const space of state.status.spaces) {
+    if ((state.floor && space.floor !== state.floor) || !seatsOf(space).length) continue;
+    const key = `${space.floor}|${space.name}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(space);
+  }
+  const cards = [...groups.values()]
+    .map((spaces) => {
+      spaces.sort((a, b) => (a.room ?? "").localeCompare(b.room ?? ""));
+      const seats = spaces.flatMap(seatsOf);
+      return { spaces, seats, c: countsOf(seats), rooms: spaces.map((s) => s.room).filter(Boolean) };
+    })
+    .sort((a, b) => b.c.available - a.c.available || (a.rooms[0] ?? "").localeCompare(b.rooms[0] ?? ""))
+    .map(({ spaces, seats, c, rooms }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
-      card.innerHTML = `<div class="head"><div><p class="kicker"></p><h3></h3></div>
+      card.innerHTML = `<div class="head"><div><p class="room"></p><h3></h3><p class="kicker"></p></div>
         <p class="free"><b>${c.available}</b><span>free of ${seats.length}</span></p></div>
-        <p class="counts">${countsLine(c)}</p><ul class="tiles"></ul>`;
-      card.querySelector(".kicker").textContent = [space.room, KIND[space.kind]].filter(Boolean).join(" · ");
-      card.querySelector("h3").textContent = space.name;
-      if (space.floor && space.label) {
+        <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
+      card.querySelector(".room").textContent = roomsLine(rooms);
+      card.querySelector("h3").textContent = spaces[0].name;
+      card.querySelector(".kicker").textContent = KIND[spaces[0].kind] ?? "";
+      const mapped = spaces.find((s) => s.floor && s.label);
+      if (mapped) {
         const go = document.createElement("button");
         go.type = "button";
         go.className = "on-map";
         go.textContent = "Show on map";
-        go.onclick = () => showOnMap(space);
+        go.onclick = () => showOnMap(mapped);
         card.querySelector(".head > div").append(go);
       }
-      const names = labelsFor(seats);
-      card.querySelector(".tiles").replaceChildren(...seats.map((s) => tile(s, names)));
+      card.querySelector(".seats").replaceChildren(...spaces.filter((s) => seatsOf(s).length).flatMap((space) => {
+        const own = seatsOf(space);
+        const names = labelsFor(own);
+        const tiles = document.createElement("ul");
+        tiles.className = "tiles";
+        tiles.replaceChildren(...own.map((s) => tile(s, names)));
+        if (spaces.length === 1) return [tiles];
+        const label = document.createElement("p");
+        label.className = "seat-room";
+        label.textContent = space.room ?? "";
+        return [label, tiles];
+      }));
       return card;
     });
   document.getElementById("spaces").replaceChildren(...cards);
@@ -429,7 +456,11 @@ content.addEventListener("keydown", (e) => {
   const hash = new URLSearchParams(location.hash.slice(1));
   try { state.floor = hash.get("floor") || localStorage.getItem("pulse.floor"); } catch { state.floor = hash.get("floor"); }
   const room = hash.get("room");
-  await Pulse.shell({ current: "computers", context: "Shared computers across campus" });
+  if (phone.matches && !room) {
+    state.mode = "list";
+    for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
+  }
+  await Pulse.shell({ current: "computers", title: "Computer Status", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
     const status = await fetch("api/status").then((r) => r.json());
