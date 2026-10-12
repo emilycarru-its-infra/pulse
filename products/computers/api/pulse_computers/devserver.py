@@ -12,6 +12,7 @@ plan position to that JSON file, which the catalog build reads through [plans] p
 
 import argparse
 import json
+import math
 import mimetypes
 import threading
 import urllib.parse
@@ -54,7 +55,8 @@ class Positions:
         for host, xy in moves.items():
             if host.upper() not in self.seats:
                 raise ValueError(f"{host} is not in the catalog")
-            if not (isinstance(xy, list) and len(xy) == 2 and all(isinstance(v, (int, float)) for v in xy)):
+            if not (isinstance(xy, list) and len(xy) == 2 and all(
+                    isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in xy)):
                 raise ValueError(f"{host}: position must be [x, y]")
         with self.lock:
             for host, (x, y) in moves.items():
@@ -65,6 +67,9 @@ class Positions:
             tmp = self.path.with_suffix(".tmp")
             tmp.write_text(text)
             tmp.replace(self.path)
+
+
+LOCAL = {"localhost", "127.0.0.1"}
 
 
 def make_handler(service: ComputersService, theme: Path, key: str, assets: Path, positions: Positions | None = None):
@@ -93,7 +98,18 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path,
             ctype = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             self._send(200, path.read_bytes(), ctype)
 
+        def _local(self) -> bool:
+            # Any other Host is a page on some domain that resolves to this machine (DNS rebinding);
+            # turn it away so it cannot read the seats or move them.
+            host = urllib.parse.urlsplit("//" + self.headers.get("Host", "")).hostname
+            if host in LOCAL:
+                return True
+            self._json(421, {"error": "use http://localhost"})
+            return False
+
         def do_GET(self):
+            if not self._local():
+                return
             url = urllib.parse.urlparse(self.path)
             p = url.path
             if p == "/computers/api/status":
@@ -124,6 +140,8 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path,
             return self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if not self._local():
+                return
             if self.path == "/computers/api/positions" and positions:
                 # A JSON content type forces a CORS preflight, which this server never answers, so
                 # another site open in the browser cannot post here.
