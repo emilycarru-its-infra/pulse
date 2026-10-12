@@ -71,6 +71,10 @@ body.app .band { margin-bottom: 12px; }
 .floormap .space.none .room { fill: color-mix(in srgb, var(--idle) 12%, transparent); }
 
 .floormap .badge { cursor: pointer; }
+.floormap .badge .long { display: none; }
+.floormap .badge.open { display: inline !important; }
+.floormap .badge.open .short { display: none; }
+.floormap .badge.open .long { display: inline; }
 /* Labels are black in both schemes so the lime count always reads; dark mode adds an edge. */
 .floormap .badge rect { fill: #000; stroke: var(--rule); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .floormap .badge text { fill: #fff; font-weight: 700; font-family: var(--font); }
@@ -117,6 +121,37 @@ body.app .band { margin-bottom: 12px; }
   .floormap { height: 70vh; flex: none; }
   .drawer { width: auto; }
 }
+
+/* Phones: most visits come from one. The page scrolls, the map takes the screen below the
+   toolbar, pinch replaces the zoom buttons, and a room's details rise as a sheet over the map. */
+@media (max-width: 700px) {
+  body.app .masthead .context { display: none; }
+  body.app .masthead .logo { height: 34px; }
+  body.app .masthead h1 { font-size: 22px; }
+  .map-toolbar { gap: 8px; }
+  .floors { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+  .floors button { padding: 8px 6px; font-size: 15px; text-align: center; min-height: 48px; }
+  .floors .word { display: none; }
+  .views { width: 100%; justify-content: space-between; }
+  .segmented button { padding: 9px 14px; font-size: 14px; }
+  .zoom, #edit-wrap, #hint, #edit-hint { display: none !important; }
+  .toolbar-end { margin-left: 0; }
+  .floormap { height: 62svh; min-height: 220px; }
+  .drawer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; max-height: 50svh;
+    border-radius: 12px 12px 0 0; border: 1px solid var(--rule); border-bottom: 0;
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 0.25);
+  }
+  .drawer .big { font-size: 34px; margin-top: 6px; }
+  .drawer .close { padding: 8px 14px; font-size: 14px; }
+}
+
+.space-card .on-map {
+  font: inherit; font-size: 12px; font-weight: 700; margin-top: 8px; padding: 6px 10px; cursor: pointer;
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--rule); border-radius: 4px;
+}
+.space-card .on-map:hover, .space-card .on-map:focus-visible { background: var(--accent-band); color: #000; }
 
 .list-view { flex: 1; min-height: 0; overflow-y: auto; }
 .spaces { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
