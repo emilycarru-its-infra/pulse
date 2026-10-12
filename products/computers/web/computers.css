@@ -176,6 +176,10 @@ body.app .band { margin-bottom: 16px; }
 .space-card .kicker { margin: 4px 0 0; }
 .space-card .seats { display: flex; flex-direction: column; gap: 6px; }
 .space-card .seat-room { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-top: 2px; }
+/* Several rooms in one card flow side by side, each room's number over its own seats. */
+.space-card .seats.rooms { flex-direction: row; flex-wrap: wrap; gap: 8px 14px; }
+.space-card .room-seats .tiles { display: flex; flex-wrap: wrap; }
+.space-card .room-seats .tile { width: 42px; }
 .space-card .free { text-align: right; white-space: nowrap; }
 .space-card .free b { font-size: 26px; line-height: 1; display: block; }
 .space-card .free span, .space-card .counts { font-size: 12px; color: var(--text-secondary); }
