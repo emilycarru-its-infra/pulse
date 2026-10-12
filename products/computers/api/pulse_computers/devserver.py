@@ -6,8 +6,9 @@ Paths: / is the hub, /computers/ the computers page, /computers/api/* the API,
 /core/* the shared web shell and /theme/* the site theme (--theme, or the neutral
 default). Deployed, each product is its own host behind single sign-on.
 
-With --positions, the computers page gets an Edit seats button: dragging a seat writes its
-plan position to that JSON file, which the catalog build reads through [plans] positions.
+With --positions, the computers page gets an Edit seats button: dragging a seat, or a room's
+outline or corners, writes plan positions to that JSON file, which the catalog build reads
+through [plans] positions.
 """
 
 import argparse
@@ -19,6 +20,8 @@ import urllib.parse
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from pulse_core.catalog import editor_file, grid
 
 from .service import ComputersService, ValidationError
 from .simulate import run as simulate
@@ -40,14 +43,60 @@ PRODUCTS = [
 ]
 
 
+def _number(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
 class Positions:
-    """The seat editor's file of {hostname: [x, y]}, and the catalog seats it moves."""
+    """The seat editor's file, seat positions and room outlines in plan pixels, and the catalog
+    seats and rooms it moves."""
 
     def __init__(self, path: Path, catalog: dict):
         self.path = path
-        self.saved = json.loads(path.read_text()) if path.is_file() else {}
+        data = editor_file(json.loads(path.read_text()) if path.is_file() else {})
+        self.saved, self.rooms = data["seats"], data["rooms"]
         self.lock = threading.Lock()
+        self.spaces = catalog["spaces"]
         self.seats = {seat["hostname"].upper(): seat for space in catalog["spaces"] for seat in space["seats"]}
+
+    def _write(self) -> None:
+        text = json.dumps({"rooms": dict(sorted(self.rooms.items())), "seats": dict(sorted(self.saved.items()))},
+                          indent=1) + "\n"
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(text)
+        tmp.replace(self.path)
+
+    def save_room(self, body: dict) -> None:
+        """Give a room a new outline. Its seats nobody placed are laid out again inside it; with
+        move [dx, dy] the placed ones travel with it, and with relayout every seat is laid out again."""
+        if not isinstance(body, dict):
+            raise ValueError("send {space, box}")
+        space = next((s for s in self.spaces if s["id"] == body.get("space")), None)
+        if not space or not space.get("room") or "label" not in space:
+            raise ValueError("that space has no room on a plan")
+        box, move = body.get("box"), body.get("move")
+        if not (isinstance(box, list) and len(box) == 4 and all(map(_number, box))
+                and box[0] < box[2] and box[1] < box[3]):
+            raise ValueError("box must be [x0, y0, x1, y1]")
+        if move is not None and not (isinstance(move, list) and len(move) == 2 and all(map(_number, move))):
+            raise ValueError("move must be [dx, dy]")
+        box = [round(v, 1) for v in box]
+        with self.lock:
+            self.rooms[space["room"]] = box
+            for each in (s for s in self.spaces if s.get("room") == space["room"]):
+                each["box"] = box
+                seats = each["seats"]
+                for seat in seats:
+                    if body.get("relayout") is True:
+                        self.saved.pop(seat["hostname"], None)
+                    elif move and seat["hostname"] in self.saved:
+                        seat["x"], seat["y"] = round(seat["x"] + move[0], 1), round(seat["y"] + move[1], 1)
+                        self.saved[seat["hostname"]] = [seat["x"], seat["y"]]
+                slots, each["seatSize"] = grid(len(seats), box, each["label"])
+                for seat, (x, y) in zip(seats, slots):
+                    if seat["hostname"] not in self.saved:
+                        seat["x"], seat["y"] = x, y
+            self._write()
 
     def save(self, moves: dict) -> None:
         if not isinstance(moves, dict) or not moves:
@@ -55,18 +104,14 @@ class Positions:
         for host, xy in moves.items():
             if host.upper() not in self.seats:
                 raise ValueError(f"{host} is not in the catalog")
-            if not (isinstance(xy, list) and len(xy) == 2 and all(
-                    isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in xy)):
+            if not (isinstance(xy, list) and len(xy) == 2 and all(map(_number, xy))):
                 raise ValueError(f"{host}: position must be [x, y]")
         with self.lock:
             for host, (x, y) in moves.items():
                 seat = self.seats[host.upper()]
                 seat["x"], seat["y"] = round(x, 1), round(y, 1)
                 self.saved[seat["hostname"]] = [seat["x"], seat["y"]]
-            text = json.dumps(dict(sorted(self.saved.items())), indent=1) + "\n"
-            tmp = self.path.with_suffix(".tmp")
-            tmp.write_text(text)
-            tmp.replace(self.path)
+            self._write()
 
 
 LOCAL = {"localhost", "127.0.0.1"}
@@ -142,14 +187,18 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path,
         def do_POST(self):
             if not self._local():
                 return
-            if self.path == "/computers/api/positions" and positions:
+            if self.path in ("/computers/api/positions", "/computers/api/rooms") and positions:
                 # A JSON content type forces a CORS preflight, which this server never answers, so
                 # another site open in the browser cannot post here.
                 if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
                     return self._json(415, {"error": "send application/json"})
                 try:
                     length = int(self.headers.get("Content-Length", "0"))
-                    positions.save(json.loads(self.rfile.read(min(length, 65_536))))
+                    body = json.loads(self.rfile.read(min(length, 65_536)))
+                    if self.path.endswith("/rooms"):
+                        positions.save_room(body)
+                    else:
+                        positions.save(body)
                 except ValueError as e:
                     return self._json(400, {"error": str(e)})
                 return self._send(204, b"")

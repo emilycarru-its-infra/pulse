@@ -68,8 +68,30 @@ def test_seat_editor_saves_positions(tmp_path):
     editor = Positions(path, catalog)
     editor.save({"lab-02": [10.04, 20]})
     assert catalog["spaces"][0]["seats"][1] == {"hostname": "LAB-02", "x": 10.0, "y": 20}
-    assert json.loads(path.read_text()) == {"LAB-02": [10.0, 20]}
+    assert json.loads(path.read_text()) == {"rooms": {}, "seats": {"LAB-02": [10.0, 20]}}
     for bad in ({}, {"NOPE": [1, 2]}, {"LAB-01": [1]}, {"LAB-01": "1,2"},
                 {"LAB-01": [True, 2]}, {"LAB-01": [float("nan"), 2]}, ["LAB-01"]):
         with pytest.raises(ValueError):
             editor.save(bad)
+
+
+def test_room_editor_moves_and_resizes_rooms(tmp_path):
+    from pulse_computers.devserver import Positions
+    catalog = {"spaces": [{"id": "lab", "room": "A1100", "label": [50, 50], "box": [0, 0, 100, 100], "seats": [
+        {"hostname": "LAB-01", "x": 10, "y": 10}, {"hostname": "LAB-02", "x": 20, "y": 20}]}]}
+    path = tmp_path / "positions.json"
+    path.write_text('{"LAB-01": [10, 10]}')
+    editor = Positions(path, catalog)
+    editor.save_room({"space": "lab", "box": [100, 0, 200, 100], "move": [100, 0]})
+    lab = catalog["spaces"][0]
+    assert lab["box"] == [100, 0, 200, 100]
+    assert (lab["seats"][0]["x"], lab["seats"][0]["y"]) == (110, 10)
+    assert 100 < lab["seats"][1]["x"] < 200 and lab["seatSize"] > 0
+    saved = json.loads(path.read_text())
+    assert saved == {"rooms": {"A1100": [100, 0, 200, 100]}, "seats": {"LAB-01": [110, 10]}}
+    editor.save_room({"space": "lab", "box": [100, 0, 300, 100], "relayout": True})
+    assert json.loads(path.read_text())["seats"] == {}
+    for bad in ({"space": "nope", "box": [0, 0, 1, 1]}, {"space": "lab", "box": [5, 0, 1, 1]},
+                {"space": "lab", "box": [0, 0, 1]}, {"space": "lab", "box": [0, 0, 1, 1], "move": ["a", 1]}):
+        with pytest.raises(ValueError):
+            editor.save_room(bad)

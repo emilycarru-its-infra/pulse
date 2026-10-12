@@ -67,6 +67,13 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .floormap .room { fill: color-mix(in srgb, var(--accent-band) 14%, transparent); stroke: var(--rule); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .floormap .space { cursor: pointer; }
 .floormap.editing .seat-g { cursor: move; }
+.floormap.editing .space.picked .room { cursor: move; stroke-dasharray: 6 4; }
+.floormap .handle { fill: var(--accent-band); stroke: #000; stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.floormap .handle.nw, .floormap .handle.se { cursor: nwse-resize; }
+.floormap .handle.ne, .floormap .handle.sw { cursor: nesw-resize; }
+.drawer .edit-room { font-size: 13px; color: var(--text-secondary); margin: 4px 0 6px; display: flex; flex-direction: column; align-items: start; gap: 8px; }
+.drawer .relayout { font: inherit; font-size: 13px; font-weight: 700; padding: 6px 10px; cursor: pointer; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--rule); border-radius: 4px; }
+.drawer .relayout:hover { background: var(--accent-band); color: #000; }
 .floormap.editing .seat-g:focus { outline: none; }
 .floormap.editing .seat-g:focus .seat { stroke: var(--accent-band); stroke-width: 4px; }
 .floormap .space:hover .room, .floormap .space:focus-visible .room, .floormap .space.picked .room {
@@ -138,7 +145,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 
 /* Tablets and narrow windows: the toolbar stays on one row, so the floor tabs and the campus
    total drop their extra words, and a touch screen drops the zoom buttons for pinch. */
-@media (min-width: 701px) and (max-width: 1279px) {
+@media (min-width: 701px) and (max-width: 1439px) {
   .map-toolbar { flex-wrap: nowrap; gap: 10px; }
   .views { flex-wrap: nowrap; gap: 6px; }
   .floors { flex-shrink: 0; }
