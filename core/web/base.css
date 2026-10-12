@@ -6,6 +6,11 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+:root { color-scheme: light dark; }
+
+/* A layout rule's display must never beat the hidden attribute. */
+[hidden] { display: none !important; }
+
 html, body {
   background: var(--page);
   color: var(--text-primary);

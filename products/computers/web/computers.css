@@ -49,7 +49,14 @@ body.app .band { margin-bottom: 12px; }
 .floormap.panning { cursor: grabbing; }
 .floormap:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 1px; }
 .floormap .plan { opacity: 0.75; }
-@media (prefers-color-scheme: dark) { .floormap .plan { filter: invert(1); opacity: 0.55; } }
+@media (prefers-color-scheme: dark) {
+  .floormap .plan { opacity: 0.7; }
+  .floormap .room { fill: color-mix(in srgb, var(--accent-band) 8%, transparent); }
+  .floormap .space:hover .room, .floormap .space:focus-visible .room, .floormap .space.picked .room {
+    fill: color-mix(in srgb, var(--accent-band) 16%, transparent);
+  }
+  .floormap .seat.offline { stroke: var(--text-muted); }
+}
 
 .floormap .room { fill: color-mix(in srgb, var(--accent-band) 14%, transparent); stroke: var(--rule); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .floormap .space { cursor: pointer; }
@@ -60,10 +67,11 @@ body.app .band { margin-bottom: 12px; }
 .floormap .space.none .room { fill: color-mix(in srgb, var(--idle) 12%, transparent); }
 
 .floormap .badge { cursor: pointer; }
-.floormap .badge rect { fill: var(--text-primary); }
-.floormap .badge text { fill: var(--page); font-weight: 700; font-family: var(--font); }
+/* Labels are black in both schemes so the lime count always reads; dark mode adds an edge. */
+.floormap .badge rect { fill: #000; stroke: var(--rule); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.floormap .badge text { fill: #fff; font-weight: 700; font-family: var(--font); }
 .floormap .badge .free { fill: var(--accent-band); }
-.floormap .space.none .badge .free { fill: var(--page); opacity: 0.7; }
+.floormap .space.none .badge .free, .floormap .badge.none .free { fill: #fff; opacity: 0.7; }
 
 .floormap .seat { stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .floormap .seat.available { fill: var(--ok); }
@@ -114,8 +122,8 @@ body.app .band { margin-bottom: 12px; }
 .space-card .free { text-align: right; white-space: nowrap; }
 .space-card .free b { font-size: 26px; line-height: 1; display: block; }
 .space-card .free span, .space-card .counts { font-size: 12px; color: var(--text-secondary); }
-.tiles { list-style: none; display: grid; gap: 5px; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); }
-.tile { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 4px; font-size: 11px; font-weight: 700; border: 2px solid transparent; }
+.tiles { list-style: none; display: grid; gap: 5px; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); }
+.tile { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 4px; font-size: 10px; overflow: hidden; white-space: nowrap; font-weight: 700; border: 2px solid transparent; }
 .tile.available { background: var(--ok); color: #fff; }
 .tile.possibly_free { background: repeating-linear-gradient(135deg, var(--warn) 0 5px, color-mix(in srgb, var(--warn) 55%, var(--surface-1)) 5px 10px); color: #000; }
 .tile.in_use { background: var(--text-primary); color: var(--page); }
