@@ -1,14 +1,14 @@
 import Foundation
 import PulseAgentCore
 
-/// managedpulse: reports whether this Mac's console is in use, for Pulse.
+/// managedpresencebeacon: reports whether this Mac's console is in use, for Pulse.
 ///
-///   managedpulse run       the reporting loop the LaunchDaemon starts
-///   managedpulse status    what the agent sees right now
-///   managedpulse send      send one heartbeat now
-///   managedpulse --version
+///   managedpresencebeacon run       the reporting loop the LaunchDaemon starts
+///   managedpresencebeacon status    what the agent sees right now
+///   managedpresencebeacon send      send one heartbeat now
+///   managedpresencebeacon --version
 @main
-struct ManagedPulse {
+struct ManagedPresenceBeaconCLI {
     static func main() async {
         var args = Array(CommandLine.arguments.dropFirst())
         let verbose = args.contains("--verbose")
@@ -29,7 +29,7 @@ struct ManagedPulse {
             await run()
         default:
             print("""
-            usage: managedpulse run | status [--json] | send | --version   [--verbose]
+            usage: managedpresencebeacon run | status [--json] | send | --version   [--verbose]
 
               run      the reporting loop (started by the LaunchDaemon)
               status   what this Mac reports right now

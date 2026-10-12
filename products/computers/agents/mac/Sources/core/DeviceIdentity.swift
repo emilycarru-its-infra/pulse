@@ -50,7 +50,7 @@ public struct DeviceIdentity: @unchecked Sendable {
         var key: SecKey?
         guard SecIdentityCopyPrivateKey(identity, &key) == errSecSuccess, let key else { return false }
         var error: Unmanaged<CFError>?
-        return SecKeyCreateSignature(key, .rsaSignatureMessagePKCS1v15SHA256, Data("managedpulse".utf8) as CFData, &error) != nil
+        return SecKeyCreateSignature(key, .rsaSignatureMessagePKCS1v15SHA256, Data("managedpresencebeacon".utf8) as CFData, &error) != nil
     }
 
     static func matches(_ cert: SecCertificate) -> Bool {

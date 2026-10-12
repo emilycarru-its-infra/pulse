@@ -1,6 +1,6 @@
 # ComputerPulse postinstall
 #
-# Runs the agent's own install.ps1 from the install folder. It creates C:\ProgramData\ManagedPulse
+# Runs the agent's own install.ps1 from the install folder. It creates C:\ProgramData\ManagedPresence
 # with a protected ACL (and stops if a link or a folder a user owns is already there), registers
 # the \ComputerPulse (SYSTEM, from boot), \ComputerPulse Idle (each user's session) and
 # \ComputerPulse Shutdown (event 1074) tasks, and starts the agent. It refuses to run from anywhere

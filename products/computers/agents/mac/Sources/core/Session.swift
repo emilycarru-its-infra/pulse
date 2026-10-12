@@ -31,7 +31,7 @@ public enum SessionReader {
 
     /// True when a user, not the login window, owns the console.
     public static func consoleUserPresent() -> Bool {
-        guard let store = SCDynamicStoreCreate(nil, "managedpulse" as CFString, nil, nil) else { return false }
+        guard let store = SCDynamicStoreCreate(nil, "managedpresencebeacon" as CFString, nil, nil) else { return false }
         var uid: uid_t = 0
         guard let name = SCDynamicStoreCopyConsoleUser(store, &uid, nil) as String? else { return false }
         return !name.isEmpty && name != "loginwindow" && uid != 0

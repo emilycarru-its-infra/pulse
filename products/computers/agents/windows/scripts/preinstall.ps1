@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Continue'
 foreach ($task in 'ComputerPulse', 'ComputerPulse Idle') {
     Stop-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue
 }
-foreach ($name in 'managedpulse', 'managedpulse-idle', 'Managed Presence Beacon') {
+foreach ($name in 'managedpresencebeacon', 'managedpresencebeacon-idle', 'Managed Presence Beacon') {
     Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 

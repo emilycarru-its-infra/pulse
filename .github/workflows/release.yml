@@ -4,8 +4,8 @@
 # workflow only compiles and zips. A deploying organization fetches the release, signs it and
 # packages it in its own pipeline:
 #   ComputerPulse-App-<version>.zip  the Mac app, Managed Presence Beacon.app, with the
-#                                    managedpulse CLI and the prefs helper inside it
-#   computerpulse-<arch>.zip         the Windows install folder (x64 and arm64): managedpulse.exe,
+#                                    managedpresencebeacon CLI and the prefs helper inside it
+#   computerpulse-<arch>.zip         the Windows install folder (x64 and arm64): managedpresencebeacon.exe,
 #                                    the idle helper, Managed Presence Beacon.exe and its runtime,
 #                                    names.json and the install scripts
 # The Windows package definition, build-info.yaml and scripts/, sits beside the Windows source.
@@ -82,7 +82,7 @@ jobs:
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             $zip = [IO.Compression.ZipFile]::OpenRead((Resolve-Path "out/computerpulse-$arch.zip").Path)
             try {
-              foreach ($required in 'managedpulse.exe', 'managedpulse-idle.exe', 'Managed Presence Beacon.exe', 'resources.pri', 'names.json', 'install.ps1') {
+              foreach ($required in 'managedpresencebeacon.exe', 'managedpresencebeacon-idle.exe', 'Managed Presence Beacon.exe', 'resources.pri', 'names.json', 'install.ps1') {
                 if (-not ($zip.Entries | Where-Object FullName -eq $required)) { throw "computerpulse-$arch.zip is missing $required" }
               }
             } finally { $zip.Dispose() }

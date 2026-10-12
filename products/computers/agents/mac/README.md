@@ -3,13 +3,13 @@
 The Mac agent for ComputersPulse. It tells the Pulse server whether this Mac's console is
 in use, locked or free, and never who is using it.
 
-- `managedpulse` is the agent. A LaunchDaemon runs `managedpulse run`, which looks at the
+- `managedpresencebeacon` is the agent. A LaunchDaemon runs `managedpresencebeacon run`, which looks at the
   console every 15 seconds and sends at once when someone signs in or out or the screen
   locks or unlocks, and a heartbeat every 60 seconds otherwise. A failed send is dropped;
   the next heartbeat brings the seat up to date. On shutdown it sends `shutdown`.
 - **Managed Presence Beacon.app** in /Applications/Utilities is the Prefs / Run / Logs
   window. A privileged helper inside it writes the machine-level settings and runs
-  `managedpulse send` for Send Now; it trusts only an app signed by its own team.
+  `managedpresencebeacon send` for Send Now; it trusts only an app signed by its own team.
 - Every event follows [`core/contract/event.schema.json`](../../../../core/contract/event.schema.json).
 
 ## Settings
@@ -35,14 +35,14 @@ When the server asks for a client certificate, the agent presents the Intune age
 identity from the System keychain: subject `IntuneMDMAgent-<Intune device id>`, issued by
 `Microsoft Intune MDM Agent CA`. Its key signs without a prompt. Only the System keychain
 is searched, never with user interface, so the agent can never raise a keychain dialog.
-The server checks the chain and maps the Intune device id to a seat. `managedpulse status`
+The server checks the chain and maps the Intune device id to a seat. `managedpresencebeacon status`
 shows the certificate it found and whether its key is usable.
 
 ## Files
 
-- `/Library/Managed Pulse/logs/managedpulse.log`, rolled at 5 MB.
-- `/Library/Managed Pulse/last-send.json`, the last send, which the Run tab shows.
-- `/usr/local/bin/managedpulse`, a link into the app bundle.
+- `/Library/Managed Presence/logs/managedpresencebeacon.log`, rolled at 5 MB.
+- `/Library/Managed Presence/last-send.json`, the last send, which the Run tab shows.
+- `/usr/local/computerpulse/managedpresencebeacon` and `/usr/local/bin/managedpresencebeacon`, links into the app bundle.
 
 ## Build
 
@@ -61,5 +61,5 @@ A `v*` tag publishes the unsigned app as `ComputerPulse-App-<version>.zip` on th
 for a deploying pipeline to sign and package.
 
 The helper accepts only an app signed by its own team, so an unsigned build shows the
-helper as unavailable and Send Now stays off; `managedpulse send` still works from a
+helper as unavailable and Send Now stays off; `managedpresencebeacon send` still works from a
 root shell.
