@@ -151,6 +151,8 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
         for i, d in enumerate(members):
             seat = {"hostname": d.hostname, "assetTag": d.asset_tag, "serial": d.serial,
                     "platform": d.platform, "room": d.location}
+            if d.name and d.name.upper() != d.hostname:
+                seat["name"] = d.name
             if d.hostname in out_of_service:
                 seat["outOfService"] = True
             if d.hostname in positions:

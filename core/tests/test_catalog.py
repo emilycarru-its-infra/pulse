@@ -12,9 +12,9 @@ CONTRACT = Path(__file__).parents[1] / "contract"
 
 
 def asset(tag, hostname, group="Open Mac Lab", location="A1100", category="Desktop",
-          platform="Macintosh", meta="deployed"):
+          platform="Macintosh", meta="deployed", name=None):
     return {
-        "asset_tag": tag, "serial": f"S{tag}",
+        "asset_tag": tag, "serial": f"S{tag}", "name": hostname if name is None else name,
         "category": {"name": category}, "location": {"name": location},
         "status_label": {"status_meta": meta},
         "custom_fields": {"Hostname": {"value": hostname}, "Platform": {"value": platform},
@@ -24,7 +24,7 @@ def asset(tag, hostname, group="Open Mac Lab", location="A1100", category="Deskt
 
 ROWS = [
     asset("A1", "lab-mac-01"),
-    asset("A2", "LAB-MAC-03"),
+    asset("A2", "LAB-MAC-03", name="Front Desk &amp; Scanner"),
     asset("A3", "LAB-MAC-04"),
     asset("A4", "LAB-MAC-05", category="Display"),
     asset("A5", "LAB-MAC-06", meta="archived"),
@@ -57,6 +57,7 @@ def test_provider_pages_and_normalises():
     assert devices[0].hostname == "LAB-MAC-01" and devices[0].platform == "mac"
     assert all(d.hostname for d in devices)
     assert devices[-1].group == "Staff & Faculty"
+    assert devices[1].name == "Front Desk & Scanner"
 
 
 def test_provider_raises_on_error_envelope():
@@ -79,6 +80,7 @@ def test_build_matches_places_and_reports():
     assert sorted(seats) == ["LAB-MAC-01", "LAB-MAC-03", "LAB-MAC-04"]
     assert (seats["LAB-MAC-01"]["x"], seats["LAB-MAC-01"]["y"]) == (120, 340)
     assert seats["LAB-MAC-03"]["outOfService"] is True
+    assert seats["LAB-MAC-03"]["name"] == "Front Desk & Scanner" and "name" not in seats["LAB-MAC-01"]
     assert report.unplaced["open-mac-lab"] == ["LAB-MAC-03", "LAB-MAC-04"]
     assert report.missing["open-mac-lab"] == ["LAB-MAC-02"]
     assert not report.ok()

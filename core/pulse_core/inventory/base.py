@@ -14,6 +14,7 @@ class Device:
     location: str
     group: str
     deployed: bool
+    name: str = ""  # what the inventory calls the device, such as "FMSA Control Room"
 
 
 class InventoryProvider(Protocol):

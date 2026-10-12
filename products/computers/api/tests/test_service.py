@@ -10,7 +10,7 @@ from pulse_computers.store import MemoryStore
 
 NOW = datetime(2027, 1, 4, 17, 0, tzinfo=timezone.utc)
 CATALOG = {"spaces": [{"id": "lab", "name": "Lab", "kind": "lab", "seats": [
-    {"hostname": "LAB-01", "platform": "mac"},
+    {"hostname": "LAB-01", "platform": "mac", "name": "Front Desk"},
     {"hostname": "LAB-02", "platform": "mac"},
     {"hostname": "LAB-03", "platform": "windows", "outOfService": True},
 ]}]}
@@ -28,6 +28,7 @@ def test_status_and_summary():
     svc.ingest(event("lab-01"), now=NOW - timedelta(seconds=20))
     space = svc.status(NOW)["spaces"][0]
     assert [s["state"] for s in space["seats"]] == ["in_use", "offline", "out_of_service"]
+    assert space["seats"][0]["name"] == "Front Desk" and "name" not in space["seats"][1]
     summary = svc.summary(NOW)
     assert summary["line"] == "0 of 3 seats free in 1 space"
     assert summary["level"] == "warn"

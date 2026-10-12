@@ -74,4 +74,5 @@ class SnipeItProvider:
                 location=html.unescape((row.get("location") or {}).get("name") or ""),
                 group=self._custom(row, self.group_field),
                 deployed=((row.get("status_label") or {}).get("status_meta") == "deployed"),
+                name=html.unescape(row.get("name") or "").strip(),
             )

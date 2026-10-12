@@ -83,6 +83,10 @@
                 "hostname": {
                   "type": "string"
                 },
+                "name": {
+                  "type": "string",
+                  "description": "The inventory's name for the device, shown instead of the hostname when it differs"
+                },
                 "assetTag": {
                   "type": "string"
                 },
