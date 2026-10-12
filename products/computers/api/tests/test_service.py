@@ -68,6 +68,7 @@ def test_seat_editor_saves_positions(tmp_path):
     editor.save({"lab-02": [10.04, 20]})
     assert catalog["spaces"][0]["seats"][1] == {"hostname": "LAB-02", "x": 10.0, "y": 20}
     assert json.loads(path.read_text()) == {"LAB-02": [10.0, 20]}
-    for bad in ({}, {"NOPE": [1, 2]}, {"LAB-01": [1]}, {"LAB-01": "1,2"}):
+    for bad in ({}, {"NOPE": [1, 2]}, {"LAB-01": [1]}, {"LAB-01": "1,2"},
+                {"LAB-01": [True, 2]}, {"LAB-01": [float("nan"), 2]}, ["LAB-01"]):
         with pytest.raises(ValueError):
             editor.save(bad)
