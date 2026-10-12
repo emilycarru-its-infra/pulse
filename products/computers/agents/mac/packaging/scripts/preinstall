@@ -1,0 +1,11 @@
+#!/bin/zsh
+# Refuses the install on a macOS older than the binaries are built for. Keep
+# MINIMUM_MACOS equal to the platform in Package.swift and LSMinimumSystemVersion
+# in packaging/resources/Info.plist.template.
+MINIMUM_MACOS=14
+CURRENT=$(/usr/bin/sw_vers -productVersion)
+if (( ${CURRENT%%.*} < MINIMUM_MACOS )); then
+    echo "Managed Presence Beacon requires macOS ${MINIMUM_MACOS} or later; this Mac runs ${CURRENT}." >&2
+    exit 1
+fi
+exit 0

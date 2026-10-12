@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.github.managedpulse</string>
+            <key>PayloadIdentifier</key>
+            <string>com.github.managedpulse.settings</string>
+            <key>PayloadUUID</key>
+            <string>6F1B1D9E-5C2A-4E7B-9C1F-2D6A8B3E4F01</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>PayloadDisplayName</key>
+            <string>Managed Presence Beacon</string>
+            <key>IngestURL</key>
+            <string>https://status.example.edu/computers/api/ingest</string>
+            <key>CheckInterval</key>
+            <integer>15</integer>
+            <key>HeartbeatInterval</key>
+            <integer>60</integer>
+            <key>VerboseLogging</key>
+            <false/>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>Managed Presence Beacon</string>
+    <key>PayloadIdentifier</key>
+    <string>com.github.managedpulse</string>
+    <key>PayloadScope</key>
+    <string>System</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>0C7D4A62-8E1F-4B39-A5D2-7F3E9C1B6A20</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>

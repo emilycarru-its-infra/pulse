@@ -1,0 +1,55 @@
+#!/bin/zsh
+# Managed Presence Beacon postinstall: data folder, the managedpulse link on PATH,
+# then (re)load the agent and the prefs helper.
+#
+# PULSE_TEST_ROOT runs this against a scratch directory: every path is prefixed with
+# it and launchd is left alone. The installer never sets it.
+
+ROOT="${PULSE_TEST_ROOT:-}"
+APP="${ROOT}/Applications/Utilities/Managed Presence Beacon.app"
+CLI="${APP}/Contents/MacOS/managedpulse"
+DATA="${ROOT}/Library/Managed Pulse"
+AGENT_PLIST="${ROOT}/Library/LaunchDaemons/com.github.managedpulse.plist"
+HELPER_SRC="${APP}/Contents/Library/LaunchDaemons/com.github.managedpulse.helper.plist"
+HELPER_PLIST="${ROOT}/Library/LaunchDaemons/com.github.managedpulse.helper.plist"
+
+log() { echo "managedpulse postinstall: $1"; }
+launchctl_run() {
+    if [[ -n "${ROOT}" ]]; then log "(test root) skipped: launchctl $*"; return 0; fi
+    /bin/launchctl "$@"
+}
+
+# The agent runs as root and writes here; nobody else may.
+mkdir -p "${DATA}/logs"
+chown -R root:wheel "${DATA}" 2>/dev/null || [[ -n "${ROOT}" ]]
+chmod 755 "${DATA}" "${DATA}/logs"
+
+if [[ ! -x "${CLI}" ]]; then
+    log "ERROR: ${CLI} is missing"
+    exit 1
+fi
+mkdir -p "${ROOT}/usr/local/bin"
+ln -sf "${CLI#${ROOT}}" "${ROOT}/usr/local/bin/managedpulse"
+
+chmod 644 "${AGENT_PLIST}"
+chown root:wheel "${AGENT_PLIST}" 2>/dev/null || [[ -n "${ROOT}" ]]
+# launchctl load is a no-op for a label already loaded, so boot out first; the
+# agent's SIGTERM handler reports the seat off and the new one reports it back.
+launchctl_run bootout system/com.github.managedpulse 2>/dev/null || true
+launchctl_run bootstrap system "${AGENT_PLIST}" || log "agent bootstrap returned non-zero"
+
+# The helper's plist ships inside the app for SMAppService; launchd needs a plain
+# copy with ProgramArguments.
+if [[ -f "${HELPER_SRC}" ]]; then
+    cp "${HELPER_SRC}" "${HELPER_PLIST}"
+    /usr/libexec/PlistBuddy -c "Delete :BundleProgram" "${HELPER_PLIST}" 2>/dev/null || true
+    /usr/libexec/PlistBuddy -c "Add :ProgramArguments array" "${HELPER_PLIST}"
+    /usr/libexec/PlistBuddy -c "Add :ProgramArguments:0 string ${APP#${ROOT}}/Contents/MacOS/ManagedPresenceBeaconHelper" "${HELPER_PLIST}"
+    chmod 644 "${HELPER_PLIST}"
+    chown root:wheel "${HELPER_PLIST}" 2>/dev/null || [[ -n "${ROOT}" ]]
+    launchctl_run bootout system/com.github.managedpulse.helper 2>/dev/null || true
+    launchctl_run bootstrap system "${HELPER_PLIST}" || log "helper bootstrap returned non-zero"
+fi
+
+log "installed $("${CLI}" --version 2>/dev/null)"
+exit 0
