@@ -48,12 +48,21 @@ const el = (name, attrs = {}, parent) => {
 };
 const seatsOf = (space) => space.seats.filter((s) => state.platform === "all" || s.platform === state.platform);
 const countsOf = (seats) => Object.fromEntries(ORDER.map((k) => [k, seats.filter((s) => s.state === k).length]));
-const shortName = (host) => (host.match(/(\d+|[A-Z])$/) || [, host.slice(-2)])[1];
+// A seat is shown by the inventory's name for it ("FMSA Control Room") when it has one, else
+// by its hostname.
+const seatName = (s) => s.name || s.hostname;
+// The short label on a tile: a trailing number or letter, else a name's initials.
+const shortName = (text) => {
+  const tail = text.match(/(\d+|\b[A-Z])$/);
+  if (tail) return tail[1];
+  const words = text.split(/[\s_-]+/).filter(Boolean);
+  return words.length > 1 ? words.slice(0, 3).map((w) => w[0].toUpperCase()).join("") : text.slice(-2).toUpperCase();
+};
 
-// Seat labels for one space: each hostname's trailing number, or, where two seats would share
-// one, the seats numbered in order. The full hostname is in the tooltip and the drawer.
+// Seat labels for one space: each seat name's trailing number, or, where two seats would share
+// one, the seats numbered in order. The full name is in the tooltip and the drawer.
 function labelsFor(seats) {
-  const short = seats.map((s) => shortName(s.hostname));
+  const short = seats.map((s) => shortName(seatName(s)));
   const clash = new Set(short).size !== short.length;
   return new Map(seats.map((s, i) => [s.hostname, clash ? String(i + 1).padStart(2, "0") : short[i]]));
 }
@@ -125,10 +134,10 @@ function drawFloor() {
     for (const s of seats) {
       if (!("x" in s)) continue;
       const one = el("g", { class: "seat-g", transform: `translate(${s.x},${s.y})`, "data-host": s.hostname }, g);
-      if (edit.on) Object.assign(one, { tabIndex: 0 }).setAttribute("aria-label", `Seat ${s.hostname}`);
+      if (edit.on) Object.assign(one, { tabIndex: 0 }).setAttribute("aria-label", `Seat ${seatName(s)}`);
       const seat = el("rect", { x: -size / 2, y: -size / 2, width: size, height: size, rx: size / 6,
         class: `seat ${s.state}` }, one);
-      el("title", {}, seat).textContent = `${s.hostname}: ${WORD[s.state]}`;
+      el("title", {}, seat).textContent = `${seatName(s)}: ${WORD[s.state]}`;
       el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, one).textContent = names.get(s.hostname);
     }
     // A badge shows the room number; hovering or picking the room opens it to the full name.
@@ -236,8 +245,8 @@ function tile(s, names) {
   const li = document.createElement("li");
   li.className = `tile ${s.state}`;
   li.textContent = names.get(s.hostname);
-  li.title = `${s.hostname}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}`;
-  li.setAttribute("aria-label", `${s.hostname}, ${WORD[s.state]}`);
+  li.title = `${seatName(s)}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}`;
+  li.setAttribute("aria-label", `${seatName(s)}, ${WORD[s.state]}`);
   return li;
 }
 
@@ -256,15 +265,17 @@ function renderDrawer() {
       <button type="button" class="close" aria-label="Close details">Close</button></div>
     <p class="big">${c.available}</p><p class="of">free of ${seats.length}</p>
     <p class="counts">${countsLine(c)}</p>
-    <ul class="tiles"></ul><h4>Seats</h4><ul class="rows"></ul>`;
+    <h4>Seats</h4><ul class="rows"></ul>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, space.room, KIND[space.kind]].filter(Boolean).join(" · ");
   drawer.querySelector("h3").textContent = space.name;
+  // The map beside it already draws the seats, so the drawer lists them: each with the label
+  // it carries on the map, its name and its state.
   const names = labelsFor(seats);
-  drawer.querySelector(".tiles").replaceChildren(...seats.map((s) => tile(s, names)));
   drawer.querySelector(".rows").replaceChildren(...seats.map((s) => {
     const li = document.createElement("li");
-    li.innerHTML = `<span class="host"></span><span class="state"><span class="key ${s.state}"></span>${WORD[s.state]}</span>`;
-    li.querySelector(".host").textContent = s.hostname;
+    li.innerHTML = `<span class="tag ${s.state}"></span><span class="host"></span><span class="state">${WORD[s.state]}</span>`;
+    li.querySelector(".tag").textContent = names.get(s.hostname);
+    li.querySelector(".host").textContent = seatName(s);
     return li;
   }));
   drawer.querySelector(".close").onclick = () => pick(null);

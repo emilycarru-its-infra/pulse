@@ -116,9 +116,18 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .drawer .counts b { color: var(--text-primary); }
 .drawer h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin: 14px 0 8px; }
 .drawer .rows { list-style: none; font-size: 13px; }
-.drawer .rows li { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--hair); }
-.drawer .rows .host { font-weight: 700; font-variant-numeric: tabular-nums; }
-.drawer .rows .state { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.drawer .rows li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--hair); }
+.drawer .rows .host { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drawer .rows .state { color: var(--text-secondary); white-space: nowrap; }
+.drawer .rows .tag {
+  flex-shrink: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 11px; font-weight: 700; border: 2px solid transparent;
+}
+.drawer .rows .tag.available { background: var(--ok); color: #fff; }
+.drawer .rows .tag.possibly_free { background: repeating-linear-gradient(135deg, var(--warn) 0 4px, color-mix(in srgb, var(--warn) 55%, var(--surface-1)) 4px 8px); color: #000; }
+.drawer .rows .tag.in_use { background: var(--text-primary); color: var(--page); }
+.drawer .rows .tag.offline { border: 2px dashed var(--idle); color: var(--text-muted); }
+.drawer .rows .tag.out_of_service { background: var(--surface-2); border-color: var(--bad); color: var(--bad); }
 
 @media (max-width: 900px) {
   body.app { height: auto; overflow: auto; }

@@ -59,6 +59,7 @@ class ComputersService:
                 counts[state.value] += 1
                 seats.append({
                     "hostname": seat["hostname"],
+                    **({"name": seat["name"]} if "name" in seat else {}),
                     "platform": seat["platform"],
                     "state": state.value,
                     "lastSeen": event["receivedAt"] if event else None,
