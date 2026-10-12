@@ -1,3 +1,4 @@
+import json
 import random
 from datetime import datetime, timedelta, timezone
 
@@ -57,3 +58,16 @@ def test_simulated_events_match_the_contract():
     for _ in range(200):
         for seat in seats:
             svc.ingest(seat.event(seat.step(150) or "heartbeat"))
+
+
+def test_seat_editor_saves_positions(tmp_path):
+    from pulse_computers.devserver import Positions
+    catalog = {"spaces": [{"id": "lab", "seats": [{"hostname": "LAB-01", "x": 1, "y": 1}, {"hostname": "LAB-02"}]}]}
+    path = tmp_path / "positions.json"
+    editor = Positions(path, catalog)
+    editor.save({"lab-02": [10.04, 20]})
+    assert catalog["spaces"][0]["seats"][1] == {"hostname": "LAB-02", "x": 10.0, "y": 20}
+    assert json.loads(path.read_text()) == {"LAB-02": [10.0, 20]}
+    for bad in ({}, {"NOPE": [1, 2]}, {"LAB-01": [1]}, {"LAB-01": "1,2"}):
+        with pytest.raises(ValueError):
+            editor.save(bad)

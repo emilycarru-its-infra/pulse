@@ -61,6 +61,9 @@ body.app .band { margin-bottom: 12px; }
 
 .floormap .room { fill: color-mix(in srgb, var(--accent-band) 14%, transparent); stroke: var(--rule); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .floormap .space { cursor: pointer; }
+.floormap.editing .seat-g { cursor: move; }
+.floormap.editing .seat-g:focus { outline: none; }
+.floormap.editing .seat-g:focus .seat { stroke: var(--accent-band); stroke-width: 4px; }
 .floormap .space:hover .room, .floormap .space:focus-visible .room, .floormap .space.picked .room {
   fill: color-mix(in srgb, var(--accent-band) 32%, transparent); stroke-width: 3px;
 }

@@ -39,6 +39,8 @@ the seats in each. The catalog is built, not hand-written:
 - A **plan index** (`[plans] index`) lists the floors, each with a plan image, and every
   room's floor, label point and outline as fractions of the plan. `room_pattern` pulls the
   room code out of an inventory location, and `[plans.rooms]` adds rooms the index lacks.
+  `[plans] positions` names the JSON file the seat editor saves; its positions win over
+  `[positions]`, and any seat in neither is laid out in a grid inside its room.
 
 Seats with no pinned position are laid out in a grid inside their room's outline, or under
 the room's label when there is no outline. Every x and y in the catalog is in plan pixels.

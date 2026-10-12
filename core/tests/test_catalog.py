@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 
-from pulse_core.catalog import build
+from pulse_core.catalog import build, load_positions
 from pulse_core.inventory import SnipeItProvider
 
 CONTRACT = Path(__file__).parents[1] / "contract"
@@ -128,3 +128,10 @@ def test_auto_spaces_sit_in_their_rooms():
     b = by_id["open-mac-lab-b2200"]
     assert b["floor"] == "2" and "box" not in b and b["seats"][0]["x"] == 500.0
     assert report.ok()
+
+
+def test_editor_positions_overlay_hand_pins(tmp_path):
+    (tmp_path / "positions.json").write_text('{"LAB-MAC-04": [5, 6], "LAB-MAC-05": [7, 8]}')
+    site = {"plans": {"positions": "positions.json"}, "positions": {"LAB-MAC-04": [1, 2], "LAB-MAC-01": [3, 4]}}
+    assert load_positions(site, tmp_path) == {"LAB-MAC-01": [3, 4], "LAB-MAC-04": [5, 6], "LAB-MAC-05": [7, 8]}
+    assert load_positions({"plans": {"positions": "gone.json"}}, tmp_path) == {}
