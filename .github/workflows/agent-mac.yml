@@ -1,0 +1,19 @@
+name: agent-mac
+
+on:
+  pull_request:
+    paths: ["products/computers/agents/mac/**", "core/contract/**", ".github/workflows/agent-mac.yml"]
+  push:
+    branches: [main]
+    paths: ["products/computers/agents/mac/**"]
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: products/computers/agents/mac
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build
+      - run: swift test

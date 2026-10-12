@@ -1,0 +1,66 @@
+{
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.17500,0.15300,0.45500,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "pulse.svg",
+          "name" : "Pulse",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              40
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.6
+      },
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    },
+    {
+      "layers" : [
+        {
+          "fill-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "display-p3:0.92000,0.92000,0.94000,1.00000"
+              }
+            }
+          ],
+          "image-name" : "computer.svg",
+          "name" : "Computer",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              20
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.4
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : [
+      "macOS"
+    ]
+  }
+}
