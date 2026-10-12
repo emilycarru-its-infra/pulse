@@ -95,3 +95,36 @@ def test_example_event_matches_schema():
         pass
     else:
         raise AssertionError("a username must be rejected")
+
+
+PLANS = {
+    "floors": [{"id": "1", "name": "1st Floor", "plan": "floor-1.png", "width": 1000, "height": 500},
+               {"id": "2", "name": "2nd Floor", "plan": "floor-2.png", "width": 1000, "height": 500}],
+    "rooms": {"A1100": {"floor": "1", "label": [0.2, 0.2], "box": [0.1, 0.1, 0.3, 0.5]},
+              "B2200": {"floor": "2", "label": [0.5, 0.5], "box": None}},
+}
+
+
+def test_auto_spaces_sit_in_their_rooms():
+    site = {
+        "inventory": {"categories": ["Desktop"]},
+        "plans": {"room_pattern": r"^([A-Z]\d{4})"},
+        "auto": {"groups": {"Open Mac Lab": "lab"}, "exclude_locations": []},
+        "positions": {"LAB-MAC-04": [111, 222]},
+    }
+    catalog, report = build(site, provider().devices(), "snipeit", plan_index=PLANS,
+                            now=datetime(2027, 1, 4, tzinfo=timezone.utc))
+    jsonschema.validate(catalog, json.loads((CONTRACT / "catalog.schema.json").read_text()))
+    assert [f["name"] for f in catalog["floors"]] == ["1st Floor", "2nd Floor"]
+    by_id = {s["id"]: s for s in catalog["spaces"]}
+    assert sorted(by_id) == ["open-mac-lab-a1100", "open-mac-lab-b2200"]
+    a = by_id["open-mac-lab-a1100"]
+    assert a["floor"] == "1" and a["box"] == [100.0, 50.0, 300.0, 250.0]
+    for seat in a["seats"]:
+        if seat["hostname"] == "LAB-MAC-04":
+            assert (seat["x"], seat["y"]) == (111, 222)
+        else:
+            assert 100 < seat["x"] < 300 and 50 < seat["y"] < 250
+    b = by_id["open-mac-lab-b2200"]
+    assert b["floor"] == "2" and "box" not in b and b["seats"][0]["x"] == 500.0
+    assert report.ok()

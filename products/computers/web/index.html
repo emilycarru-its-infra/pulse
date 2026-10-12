@@ -8,35 +8,58 @@
   <link rel="stylesheet" href="/core/base.css">
   <link rel="stylesheet" href="computers.css">
 </head>
-<body>
-  <main class="doc">
-    <section class="intro">
-      <div class="intro-text">
-        <h2>Find a free computer</h2>
-        <p>Every shared computer in labs, open-access stations, kiosks and podiums, updated every 15 seconds. Nothing here says who is using a machine.</p>
+<body class="app">
+  <main class="doc wide">
+    <div class="map-toolbar">
+      <div class="floors" role="tablist" aria-label="Floors" id="floors"></div>
+      <div class="views">
+        <span class="zoom" role="group" aria-label="Zoom">
+          <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" id="zoom-level" class="zoom-level" title="Show the whole floor">100%</button>
+          <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        </span>
+        <div class="segmented" role="group" aria-label="Show" id="mode">
+          <button type="button" data-v="map" aria-pressed="true">Map</button>
+          <button type="button" data-v="list" aria-pressed="false">List</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Platform" id="platform">
+          <button type="button" data-v="all" aria-pressed="true">All</button>
+          <button type="button" data-v="mac" aria-pressed="false">Mac</button>
+          <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+        </div>
       </div>
-      <div class="total" id="total" aria-live="polite"></div>
-    </section>
-
-    <section class="toolbar">
-      <div class="segmented" role="group" aria-label="Platform" id="platform">
-        <button type="button" data-v="all" aria-pressed="true">All</button>
-        <button type="button" data-v="mac" aria-pressed="false">Mac</button>
-        <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+      <div class="toolbar-end">
+        <ul class="legend" aria-label="Legend">
+          <li><span class="key available"></span>Free</li>
+          <li><span class="key possibly_free"></span>Possibly free</li>
+          <li><span class="key in_use"></span>In use</li>
+          <li><span class="key offline"></span>Off</li>
+          <li><span class="key out_of_service"></span>Out of service</li>
+        </ul>
+        <p class="total" id="total" aria-live="polite"></p>
       </div>
-      <ul class="legend" aria-label="Legend">
-        <li><span class="seat available"></span>Free</li>
-        <li><span class="seat possibly_free"></span>Possibly free (idle 15 min or locked)</li>
-        <li><span class="seat in_use"></span>In use</li>
-        <li><span class="seat offline"></span>Off or not reporting</li>
-        <li><span class="seat out_of_service"></span>Out of service</li>
-      </ul>
-    </section>
+    </div>
 
-    <section class="spaces" id="spaces"></section>
-    <p class="fine foot" id="updated"></p>
+    <div class="stage">
+      <div class="canvas-wrap" id="map-view">
+        <svg id="map" class="floormap" role="application" tabindex="0"
+             aria-label="Floor plan. Drag to pan, pinch or hold Command and scroll to zoom. Pick a room for its seats.">
+          <defs>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" class="hatch-bg"></rect>
+              <rect width="4" height="8" class="hatch-fg"></rect>
+            </pattern>
+          </defs>
+          <g id="content"></g>
+        </svg>
+        <p class="canvas-hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a room for its seats</p>
+      </div>
+      <div class="list-view" id="list-view" hidden><div class="spaces" id="spaces"></div></div>
+      <aside class="drawer" id="drawer" aria-label="Room details" hidden></aside>
+    </div>
   </main>
   <script src="/core/shell.js"></script>
+  <script src="/core/viewport.js"></script>
   <script src="computers.js"></script>
 </body>
 </html>

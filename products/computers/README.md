@@ -6,7 +6,7 @@ Shows which shared computers are free, in use, possibly free or off, space by sp
 - `api/pulse_computers/store.py`: where events are kept. `MemoryStore` for local runs; the deployed store has the same two operations.
 - `api/pulse_computers/simulate.py`: sends made-up agent events for every seat in a catalog.
 - `api/pulse_computers/devserver.py`: runs the hub, this page and the API on one local port.
-- `web/`: the page. Plain HTML, CSS and JavaScript on the shared shell in `core/web`.
+- `web/`: the page: a tab per floor, the floor's plan with each space and seat drawn on it, pan and zoom (`core/web/viewport.js`), a details drawer, and a list view. Plain HTML, CSS and JavaScript on the shared shell in `core/web`.
 
 ## Endpoints
 
@@ -29,4 +29,4 @@ python -m venv .venv && . .venv/bin/activate && pip install -e core -e 'products
 python -m pulse_computers.devserver --catalog catalog.json --simulate
 ```
 
-Open http://localhost:8400/ for the hub and http://localhost:8400/computers/ for this page. `--theme <folder>` swaps in a site theme: a `tokens.css` with the same token names as `core/web/theme`, a `brand.json` and its logos. `--speed` makes simulated idle time pass faster.
+Open http://localhost:8400/ for the hub and http://localhost:8400/computers/ for this page. `--assets <folder>` is where the catalog's plan images are (the catalog's own folder by default). `--theme <folder>` swaps in a site theme: a `tokens.css` with the same token names as `core/web/theme`, a `brand.json` and its logos. `--speed` makes simulated idle time pass faster.

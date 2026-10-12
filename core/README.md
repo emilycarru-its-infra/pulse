@@ -32,9 +32,16 @@ the seats in each. The catalog is built, not hand-written:
 
 - The **inventory system** supplies every device: hostname, asset tag, serial,
   platform, category, room and group.
-- A **site config** (TOML, kept in the deploy repo) says which group and rooms make up
-  each space, where each seat sits on the floorplan, and which seats are out of service.
-  [`contract/examples/site.toml`](contract/examples/site.toml) shows the format.
+- A **site config** (TOML, kept in the deploy repo) says which groups are shared spaces
+  (`[auto.groups]`, one space per group and room) or lists spaces by hand (`[[spaces]]`),
+  pins seat positions (`[positions]`) and marks seats out of service.
+  [`contract/examples/site.toml`](contract/examples/site.toml) shows the hand-listed form.
+- A **plan index** (`[plans] index`) lists the floors, each with a plan image, and every
+  room's floor, label point and outline as fractions of the plan. `room_pattern` pulls the
+  room code out of an inventory location, and `[plans.rooms]` adds rooms the index lacks.
+
+Seats with no pinned position are laid out in a grid inside their room's outline, or under
+the room's label when there is no outline. Every x and y in the catalog is in plan pixels.
 
 Run the builder with a read-only inventory token in the environment:
 

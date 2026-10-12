@@ -36,7 +36,7 @@ PRODUCTS = [
 ]
 
 
-def make_handler(service: ComputersService, theme: Path, key: str):
+def make_handler(service: ComputersService, theme: Path, key: str, assets: Path):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if not self.path.startswith("/computers/api/ingest"):
@@ -83,6 +83,8 @@ def make_handler(service: ComputersService, theme: Path, key: str):
                 self.send_response(301)
                 self.send_header("Location", "/computers/")
                 return self.end_headers()
+            if p.startswith("/computers/catalog/"):
+                return self._file(assets, p[len("/computers/catalog/"):])
             if p.startswith("/theme/"):
                 return self._file(theme, p[len("/theme/"):])
             for prefix, base in STATIC.items():
@@ -109,6 +111,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--catalog", required=True, help="catalog.json from pulse_core.catalog")
     parser.add_argument("--theme", default=str(ROOT / "core" / "web" / "theme"))
+    parser.add_argument("--assets", help="folder the catalog's plan paths are relative to (default: the catalog's)")
     parser.add_argument("--port", type=int, default=8400)
     parser.add_argument("--key", default="dev", help="ingest key the agents must send")
     parser.add_argument("--simulate", action="store_true", help="feed made-up events for every seat")
@@ -126,10 +129,10 @@ def main() -> None:
                 print("simulator sent a bad event:", e)
         threading.Thread(target=simulate, args=(catalog, send, 5.0, args.speed), daemon=True).start()
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(service, Path(args.theme), args.key))
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(service, Path(args.theme), args.key, Path(args.assets or Path(args.catalog).parent)))
     seats = sum(len(s["seats"]) for s in catalog["spaces"])
     print(f"Pulse on http://localhost:{args.port}/  ({len(catalog['spaces'])} spaces, {seats} seats"
-          f"{', simulated' if args.simulate else ''})")
+          f"{', simulated' if args.simulate else ''})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
