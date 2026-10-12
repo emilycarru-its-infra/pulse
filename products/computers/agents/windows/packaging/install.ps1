@@ -55,9 +55,14 @@ function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
     } else {
         $item.SetAccessControl($acl)
     }
-    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Get-ChildItem -LiteralPath $Path -Force |
+    # CreateDirectory quietly returns a folder someone made in the meantime without applying the
+    # ACL, so check what is actually there rather than trusting the call.
+    $actual = $item.GetAccessControl()
+    $owner = $actual.GetOwner([Security.Principal.SecurityIdentifier]).Value
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $actual.AreAccessRulesProtected -or
+            @('S-1-5-18', 'S-1-5-32-544') -notcontains $owner -or (Get-ChildItem -LiteralPath $Path -Force |
             Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint })) {
-        throw "$Path is or contains a link. Remove it, then install again."
+        throw "$Path is a link, holds one, or did not take the protected ACL. Remove it, then install again."
     }
 }
 
