@@ -175,7 +175,8 @@ function homeFor(floor) {
 
 // The list has one card per space name on the floor, so a lab or a set of stations spread over
 // several rooms reads as one place; the rooms are named on the card and above their seats.
-// Cards with the most free seats come first, then by room number.
+// Cards with the most free seats come first, then by room number; inside a card the biggest
+// room comes first.
 const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0]} +${rooms.length - 1} rooms`;
 
 function renderList() {
@@ -188,7 +189,7 @@ function renderList() {
   }
   const cards = [...groups.values()]
     .map((spaces) => {
-      spaces.sort((a, b) => (a.room ?? "").localeCompare(b.room ?? ""));
+      spaces.sort((a, b) => seatsOf(b).length - seatsOf(a).length || (a.room ?? "").localeCompare(b.room ?? ""));
       const seats = spaces.flatMap(seatsOf);
       return { spaces, seats, c: countsOf(seats), rooms: spaces.map((s) => s.room).filter(Boolean) };
     })
