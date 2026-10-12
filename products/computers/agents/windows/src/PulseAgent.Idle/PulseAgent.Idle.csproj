@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- A Windows app with no window: it runs in each signed-in user's session, where a console
+         program would flash a window. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PulseAgent.Idle</RootNamespace>
+    <AssemblyName>$(PulseIdleName)</AssemblyName>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PulseAgent.Core\PulseAgent.Core.csproj" />
+  </ItemGroup>
+
+</Project>

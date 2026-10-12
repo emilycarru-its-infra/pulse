@@ -30,3 +30,18 @@ jobs:
           python-version: "3.12"
       - run: pip install -e core -e 'products/computers/api[test]'
       - run: pytest -q products/computers/api
+
+  windows-agent:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: products/computers/agents/windows
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - run: dotnet test tests/PulseAgent.Core.Tests --verbosity minimal
+      - run: dotnet build src/PulseAgent.Cli --configuration Release
+      - run: dotnet build src/PulseAgent.Idle --configuration Release
+      - run: dotnet build src/PulseAgent.App --configuration Release --runtime win-x64

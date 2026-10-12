@@ -1,0 +1,197 @@
+<Page
+    x:Class="PulseAgent.App.Views.PrefsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    NavigationCacheMode="Required">
+
+    <ScrollViewer Padding="28,24,28,24">
+        <StackPanel Spacing="20" MaxWidth="960" HorizontalAlignment="Center">
+
+            <!-- Header: icon, name, description, version, links -->
+            <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,4">
+                <Image x:Name="AppIcon" Width="64" Height="64" HorizontalAlignment="Center" />
+                <TextBlock x:Name="AppName" Style="{StaticResource TitleTextBlockStyle}" HorizontalAlignment="Center" />
+                <TextBlock Text="Tells the campus status page whether this computer is free, in use or off. It never sends who is signed in."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           TextAlignment="Center" MaxWidth="520" TextWrapping="WrapWholeWords" />
+                <TextBlock Text="{x:Bind ViewModel.VersionDisplay}"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
+                    <HyperlinkButton Content="Documentation"
+                                     NavigateUri="https://github.com/emilycarru-its-infra/pulse/tree/main/products/computers/agents/windows" />
+                    <HyperlinkButton Content="Report Issue" NavigateUri="https://github.com/emilycarru-its-infra/pulse/issues" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                            Visibility="{x:Bind ViewModel.IsSaveStatusVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                    <FontIcon Glyph="{x:Bind ViewModel.SaveStatusGlyph, Mode=OneWay}" FontSize="12"
+                              Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
+                    <TextBlock Text="{x:Bind ViewModel.SaveStatusMessage, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Read-only until Unlock: the settings live in HKLM -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="16,12"
+                    Visibility="{x:Bind ViewModel.IsReadOnly, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Spacing="6">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE72E;" FontSize="16" VerticalAlignment="Center"
+                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords"
+                                   Text="Settings are read-only. Unlock to change them (requires administrator)." />
+                        <Button Grid.Column="2" Click="UnlockButton_Click"
+                                ToolTipService.ToolTip="Relaunch as administrator to edit settings">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xEA18;" FontSize="14" />
+                                <TextBlock Text="Unlock" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock Text="{x:Bind ViewModel.UnlockError, Mode=OneWay}"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                               Visibility="{x:Bind ViewModel.HasUnlockError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <!-- Two columns; the cards stack within each -->
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Spacing="16">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                            <FontIcon Glyph="&#xE774;" FontSize="20"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Connection" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="Ingest address" Style="{StaticResource CaptionTextBlockStyle}" />
+                        <TextBox Text="{x:Bind ViewModel.IngestUrl, Mode=TwoWay}"
+                                 PlaceholderText="https://status.example.edu/computers/api/ingest"
+                                 IsEnabled="{x:Bind ViewModel.CanEditIngestUrl, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsIngestUrlLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="Shared key" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
+                        <PasswordBox Password="{x:Bind ViewModel.IngestKey, Mode=TwoWay}" PasswordRevealMode="Peek"
+                                     PlaceholderText="{x:Bind ViewModel.KeyPlaceholder, Mode=OneWay}"
+                                     IsEnabled="{x:Bind ViewModel.CanEditIngestKey, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsIngestKeyLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="Only for a pilot: the device certificate is how the server knows this computer."
+                                   Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                            <FontIcon Glyph="&#xE7F4;" FontSize="20"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Device" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ToggleSwitch OnContent="Present the device certificate" OffContent="Present the device certificate"
+                                      IsOn="{x:Bind ViewModel.UseDeviceCertificate, Mode=TwoWay}"
+                                      IsEnabled="{x:Bind ViewModel.CanEditUseDeviceCertificate, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsUseDeviceCertificateLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="Certificate" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
+                        <TextBlock Text="{x:Bind ViewModel.CertificateText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <TextBlock Text="Computer" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
+                        <TextBlock Text="{x:Bind ViewModel.DeviceText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="16">
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                            <FontIcon Glyph="&#xE916;" FontSize="20"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Timing" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Text="Check the session every" Style="{StaticResource CaptionTextBlockStyle}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <NumberBox Value="{x:Bind ViewModel.CheckIntervalValue, Mode=TwoWay}" Minimum="5" Maximum="300"
+                                       SpinButtonPlacementMode="Compact" SmallChange="5" Width="120"
+                                       IsEnabled="{x:Bind ViewModel.CanEditCheckInterval, Mode=OneWay}" />
+                            <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsCheckIntervalLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="Send a heartbeat every" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <NumberBox Value="{x:Bind ViewModel.HeartbeatIntervalValue, Mode=TwoWay}" Minimum="15" Maximum="3600"
+                                       SpinButtonPlacementMode="Compact" SmallChange="15" Width="120"
+                                       IsEnabled="{x:Bind ViewModel.CanEditHeartbeatInterval, Mode=OneWay}" />
+                            <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsHeartbeatIntervalLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                        <TextBlock Text="A sign-in, sign-out, lock or unlock is sent at once, whatever these say."
+                                   Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </Border>
+                <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1" CornerRadius="8" Padding="20">
+                    <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                            <FontIcon Glyph="&#xE9D5;" FontSize="20"
+                                      Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Logging" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ToggleSwitch OnContent="Enable verbose logging" OffContent="Enable verbose logging"
+                                      IsOn="{x:Bind ViewModel.VerboseLogging, Mode=TwoWay}"
+                                      IsEnabled="{x:Bind ViewModel.CanEditVerboseLogging, Mode=OneWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="4"
+                                    Visibility="{x:Bind ViewModel.IsVerboseLoggingLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

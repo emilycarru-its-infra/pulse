@@ -1,0 +1,50 @@
+<Project>
+  <!-- Every name the agent is known by lives here. The projects take their file names from
+       these properties and stamp them into each assembly, where PulseAgent.Core's Identity
+       class reads them, so a rename is a change to this file alone.
+       PulseIconName is the base name of the app icon files under PulseAgent.App\Assets.
+         PulseProductKey  registry keys, the ProgramData folder and the scheduled task names
+         PulseGuiName     the window title and the GUI executable
+         PulseCliName     the command-line executable the agent task runs (kept lowercase)
+         PulseIdleName    the small per-user helper that reports keyboard and mouse idle time -->
+  <PropertyGroup>
+    <PulseProductKey>ManagedPulse</PulseProductKey>
+    <PulseGuiName>Managed Presence Beacon</PulseGuiName>
+    <PulseCliName>managedpulse</PulseCliName>
+    <PulseIdleName>managedpulse-idle</PulseIdleName>
+    <PulseIconName>ManagedPresenceBeacon</PulseIconName>
+    <BuildTimestamp Condition="'$(BuildTimestamp)' == ''">$([System.DateTime]::Now.ToString("yyyy.MM.dd.HHmm"))</BuildTimestamp>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <Product>$(PulseGuiName)</Product>
+    <Company>Pulse</Company>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseProductKey</_Parameter1>
+      <_Parameter2>$(PulseProductKey)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseGuiName</_Parameter1>
+      <_Parameter2>$(PulseGuiName)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseCliName</_Parameter1>
+      <_Parameter2>$(PulseCliName)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseIdleName</_Parameter1>
+      <_Parameter2>$(PulseIdleName)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseIconName</_Parameter1>
+      <_Parameter2>$(PulseIconName)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>BuildTimestamp</_Parameter1>
+      <_Parameter2>$(BuildTimestamp)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+</Project>
