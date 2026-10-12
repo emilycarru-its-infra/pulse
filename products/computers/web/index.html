@@ -45,6 +45,11 @@
         <svg id="map" class="floormap" role="application" tabindex="0"
              aria-label="Floor plan. Drag to pan, pinch or hold Command and scroll to zoom. Pick a room for its seats.">
           <defs>
+            <!-- Turns the plan's dark lines light for dark mode; an SVG filter, because Safari
+                 does not apply CSS filters to an SVG image. -->
+            <filter id="plan-light" color-interpolation-filters="sRGB">
+              <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"></feColorMatrix>
+            </filter>
             <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <rect width="8" height="8" class="hatch-bg"></rect>
               <rect width="4" height="8" class="hatch-fg"></rect>

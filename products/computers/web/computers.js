@@ -30,6 +30,14 @@ function placeBadges(k = vp.k) {
   }
 }
 
+const dark = window.matchMedia("(prefers-color-scheme: dark)");
+const tintPlan = () => {
+  const plan = content.querySelector(".plan");
+  if (dark.matches) plan?.setAttribute("filter", "url(#plan-light)");
+  else plan?.removeAttribute("filter");
+};
+dark.addEventListener("change", tintPlan);
+
 const el = (name, attrs = {}, parent) => {
   const node = document.createElementNS(NS, name);
   for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
@@ -39,6 +47,14 @@ const el = (name, attrs = {}, parent) => {
 const seatsOf = (space) => space.seats.filter((s) => state.platform === "all" || s.platform === state.platform);
 const countsOf = (seats) => Object.fromEntries(ORDER.map((k) => [k, seats.filter((s) => s.state === k).length]));
 const shortName = (host) => (host.match(/(\d+|[A-Z])$/) || [, host.slice(-2)])[1];
+
+// Seat labels for one space: each hostname's trailing number, or, where two seats would share
+// one, the seats numbered in order. The full hostname is in the tooltip and the drawer.
+function labelsFor(seats) {
+  const short = seats.map((s) => shortName(s.hostname));
+  const clash = new Set(short).size !== short.length;
+  return new Map(seats.map((s, i) => [s.hostname, clash ? String(i + 1).padStart(2, "0") : short[i]]));
+}
 const countsLine = (c) => ["in_use", "possibly_free", "offline", "out_of_service"]
   .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${WORD[k]}`).join(" · ") || "Every seat is free";
 
@@ -80,6 +96,7 @@ function drawFloor() {
     content.replaceChildren();
     el("image", { href: `catalog/${floor.plan}`, width: floor.width, height: floor.height, class: "plan" }, content);
     el("g", { id: "spaces-layer" }, content);
+    tintPlan();
     state.drawn = floor.id;
     vp.setHome({ x: 0, y: 0, w: floor.width, h: floor.height });
   }
@@ -96,14 +113,16 @@ function drawFloor() {
       "aria-label": `${space.name}, room ${space.room ?? ""}: ${c.available} of ${seats.length} free` }, layer);
     el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, rx: 4, class: "room" }, g);
     const size = space.seatSize || 20;
+    const names = labelsFor(seats);
     for (const s of seats) {
       if (!("x" in s)) continue;
       const seat = el("rect", { x: s.x - size / 2, y: s.y - size / 2, width: size, height: size, rx: size / 6,
         class: `seat ${s.state}` }, g);
       el("title", {}, seat).textContent = `${s.hostname}: ${WORD[s.state]}`;
-      el("text", { x: s.x, y: s.y + 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, g).textContent = shortName(s.hostname);
+      const name = names.get(s.hostname);
+      el("text", { x: s.x, y: s.y + 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, g).textContent = name;
     }
-    const badge = el("g", { class: "badge", "data-x": r.x, "data-y": r.y - 4, "data-seats": seats.length,
+    const badge = el("g", { class: `badge${c.available ? "" : " none"}`, "data-x": r.x, "data-y": r.y - 4, "data-seats": seats.length,
       "data-id": space.id }, labels);
     const text = el("text", { x: 7, y: -7, "font-size": font }, badge);
     el("tspan", {}, text).textContent = `${space.name} `;
@@ -132,16 +151,17 @@ function renderList() {
         <p class="counts">${countsLine(c)}</p><ul class="tiles"></ul>`;
       card.querySelector(".kicker").textContent = [space.room, KIND[space.kind]].filter(Boolean).join(" · ");
       card.querySelector("h3").textContent = space.name;
-      card.querySelector(".tiles").replaceChildren(...seats.map(tile));
+      const names = labelsFor(seats);
+      card.querySelector(".tiles").replaceChildren(...seats.map((s) => tile(s, names)));
       return card;
     });
   document.getElementById("spaces").replaceChildren(...cards);
 }
 
-function tile(s) {
+function tile(s, names) {
   const li = document.createElement("li");
   li.className = `tile ${s.state}`;
-  li.textContent = shortName(s.hostname);
+  li.textContent = names.get(s.hostname);
   li.title = `${s.hostname}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}`;
   li.setAttribute("aria-label", `${s.hostname}, ${WORD[s.state]}`);
   return li;
@@ -165,7 +185,8 @@ function renderDrawer() {
     <ul class="tiles"></ul><h4>Seats</h4><ul class="rows"></ul>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, space.room, KIND[space.kind]].filter(Boolean).join(" · ");
   drawer.querySelector("h3").textContent = space.name;
-  drawer.querySelector(".tiles").replaceChildren(...seats.map(tile));
+  const names = labelsFor(seats);
+  drawer.querySelector(".tiles").replaceChildren(...seats.map((s) => tile(s, names)));
   drawer.querySelector(".rows").replaceChildren(...seats.map((s) => {
     const li = document.createElement("li");
     li.innerHTML = `<span class="host"></span><span class="state"><span class="key ${s.state}"></span>${WORD[s.state]}</span>`;
