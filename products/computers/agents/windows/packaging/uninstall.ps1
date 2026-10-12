@@ -19,5 +19,8 @@ foreach ($name in 'status.json', 'status.json.tmp') {
     if (Test-Path -LiteralPath $file -PathType Leaf) { [IO.File]::Delete($file) }
 }
 
-Remove-Item -LiteralPath (Join-Path $env:ProgramFiles $names.product) -Recurse -Force -ErrorAction SilentlyContinue
+# rmdir removes a junction inside the folder without following it, where Remove-Item -Recurse
+# in Windows PowerShell would delete the junction's target.
+$install = Join-Path $env:ProgramFiles $names.product
+if (Test-Path -LiteralPath $install) { cmd.exe /d /c rmdir /s /q "`"$install`"" }
 Write-Host "Removed $($names.product); its logs are kept in $logs."

@@ -34,20 +34,31 @@ function New-Rule([string]$Sid, [string]$Rights, [string]$Inherit = 'ContainerIn
 # Administrators, SYSTEM and Administrators full control, plus $Extra rules. An existing folder
 # that is a link or that anyone else owns stops the install; it is never repaired or deleted.
 function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
+    $item = $null
     if (Test-Path -LiteralPath $Path) {
         $item = Get-Item -LiteralPath $Path -Force
         $owner = $item.GetAccessControl().GetOwner([Security.Principal.SecurityIdentifier]).Value
         if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @('S-1-5-18', 'S-1-5-32-544') -notcontains $owner) {
             throw "$Path already exists and is a link or is not owned by SYSTEM or Administrators. Remove it, then install again."
         }
-    } else {
-        $item = New-Item -ItemType Directory -Path $Path
     }
     $acl = New-Object System.Security.AccessControl.DirectorySecurity
     $acl.SetOwner((New-Object Security.Principal.SecurityIdentifier 'S-1-5-32-544'))
     $acl.SetAccessRuleProtection($true, $false)
     foreach ($rule in @((New-Rule 'S-1-5-18' 'FullControl'), (New-Rule 'S-1-5-32-544' 'FullControl')) + $Extra) { $acl.AddAccessRule($rule) }
-    $item.SetAccessControl($acl)
+    if (-not $item) {
+        # Created with its ACL in one call, so there is no moment when the folder carries
+        # ProgramData's inherited rights and a user could plant something inside it.
+        if ($PSVersionTable.PSEdition -eq 'Core') { [IO.FileSystemAclExtensions]::Create((New-Object IO.DirectoryInfo $Path), $acl) }
+        else { [IO.Directory]::CreateDirectory($Path, $acl) | Out-Null }
+        $item = Get-Item -LiteralPath $Path -Force
+    } else {
+        $item.SetAccessControl($acl)
+    }
+    if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or (Get-ChildItem -LiteralPath $Path -Force |
+            Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint })) {
+        throw "$Path is or contains a link. Remove it, then install again."
+    }
 }
 
 $data = Join-Path $env:ProgramData $names.product
