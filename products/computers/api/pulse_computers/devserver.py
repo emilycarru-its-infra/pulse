@@ -5,6 +5,9 @@
 Paths: / is the hub, /computers/ the computers page, /computers/api/* the API,
 /core/* the shared web shell and /theme/* the site theme (--theme, or the neutral
 default). Deployed, each product is its own host behind single sign-on.
+
+With --positions, the computers page gets an Edit seats button: dragging a seat writes its
+plan position to that JSON file, which the catalog build reads through [plans] positions.
 """
 
 import argparse
@@ -36,7 +39,35 @@ PRODUCTS = [
 ]
 
 
-def make_handler(service: ComputersService, theme: Path, key: str, assets: Path):
+class Positions:
+    """The seat editor's file of {hostname: [x, y]}, and the catalog seats it moves."""
+
+    def __init__(self, path: Path, catalog: dict):
+        self.path = path
+        self.saved = json.loads(path.read_text()) if path.is_file() else {}
+        self.lock = threading.Lock()
+        self.seats = {seat["hostname"].upper(): seat for space in catalog["spaces"] for seat in space["seats"]}
+
+    def save(self, moves: dict) -> None:
+        if not isinstance(moves, dict) or not moves:
+            raise ValueError("send {hostname: [x, y]}")
+        for host, xy in moves.items():
+            if host.upper() not in self.seats:
+                raise ValueError(f"{host} is not in the catalog")
+            if not (isinstance(xy, list) and len(xy) == 2 and all(isinstance(v, (int, float)) for v in xy)):
+                raise ValueError(f"{host}: position must be [x, y]")
+        with self.lock:
+            for host, (x, y) in moves.items():
+                seat = self.seats[host.upper()]
+                seat["x"], seat["y"] = round(x, 1), round(y, 1)
+                self.saved[seat["hostname"]] = [seat["x"], seat["y"]]
+            text = json.dumps(dict(sorted(self.saved.items())), indent=1) + "\n"
+            tmp = self.path.with_suffix(".tmp")
+            tmp.write_text(text)
+            tmp.replace(self.path)
+
+
+def make_handler(service: ComputersService, theme: Path, key: str, assets: Path, positions: Positions | None = None):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if not self.path.startswith("/computers/api/ingest"):
@@ -66,7 +97,7 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path)
             url = urllib.parse.urlparse(self.path)
             p = url.path
             if p == "/computers/api/status":
-                return self._json(200, service.status())
+                return self._json(200, {**service.status(), "editable": positions is not None})
             if p == "/computers/api/summary":
                 return self._json(200, service.summary())
             if p == "/computers/api/export/events":
@@ -93,6 +124,17 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path)
             return self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if self.path == "/computers/api/positions" and positions:
+                # A JSON content type forces a CORS preflight, which this server never answers, so
+                # another site open in the browser cannot post here.
+                if self.headers.get("Content-Type", "").split(";")[0] != "application/json":
+                    return self._json(415, {"error": "send application/json"})
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                    positions.save(json.loads(self.rfile.read(min(length, 65_536))))
+                except ValueError as e:
+                    return self._json(400, {"error": str(e)})
+                return self._send(204, b"")
             if self.path != "/computers/api/ingest":
                 return self._json(404, {"error": "not found"})
             if self.headers.get("X-Pulse-Key") != key:
@@ -116,6 +158,7 @@ def main() -> None:
     parser.add_argument("--key", default="dev", help="ingest key the agents must send")
     parser.add_argument("--simulate", action="store_true", help="feed made-up events for every seat")
     parser.add_argument("--speed", type=float, default=30.0)
+    parser.add_argument("--positions", help="JSON file the seat editor saves to; turns the editor on")
     args = parser.parse_args()
 
     with open(args.catalog) as f:
@@ -129,10 +172,12 @@ def main() -> None:
                 print("simulator sent a bad event:", e)
         threading.Thread(target=simulate, args=(catalog, send, 5.0, args.speed), daemon=True).start()
 
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(service, Path(args.theme), args.key, Path(args.assets or Path(args.catalog).parent)))
+    editor = Positions(Path(args.positions), catalog) if args.positions else None
+    handler = make_handler(service, Path(args.theme), args.key, Path(args.assets or Path(args.catalog).parent), editor)
+    server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     seats = sum(len(s["seats"]) for s in catalog["spaces"])
     print(f"Pulse on http://localhost:{args.port}/  ({len(catalog['spaces'])} spaces, {seats} seats"
-          f"{', simulated' if args.simulate else ''})", flush=True)
+          f"{', simulated' if args.simulate else ''}{', seat editor on' if editor else ''})", flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

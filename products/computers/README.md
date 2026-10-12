@@ -30,3 +30,5 @@ python -m pulse_computers.devserver --catalog catalog.json --simulate
 ```
 
 Open http://localhost:8400/ for the hub and http://localhost:8400/computers/ for this page. `--assets <folder>` is where the catalog's plan images are (the catalog's own folder by default). `--theme <folder>` swaps in a site theme: a `tokens.css` with the same token names as `core/web/theme`, a `brand.json` and its logos. `--speed` makes simulated idle time pass faster.
+
+To place seats where the desks really are, add `--positions <file>.json`. The page then shows **Edit seats**: drag a seat, or focus it and use the arrow keys (Shift for 10 px), and it is saved to that file as you go. Point the site config's `[plans] positions` at the same file and commit it; the next catalog build puts the seats there.

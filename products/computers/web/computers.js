@@ -101,6 +101,7 @@ function drawFloor() {
     vp.setHome({ x: 0, y: 0, w: floor.width, h: floor.height });
   }
   const layer = document.getElementById("spaces-layer");
+  const focused = document.activeElement?.closest?.(".seat-g")?.dataset.host;
   layer.replaceChildren();
   const labels = el("g", { class: "labels" });
   const font = 13;
@@ -116,11 +117,12 @@ function drawFloor() {
     const names = labelsFor(seats);
     for (const s of seats) {
       if (!("x" in s)) continue;
-      const seat = el("rect", { x: s.x - size / 2, y: s.y - size / 2, width: size, height: size, rx: size / 6,
-        class: `seat ${s.state}` }, g);
+      const one = el("g", { class: "seat-g", transform: `translate(${s.x},${s.y})`, "data-host": s.hostname }, g);
+      if (edit.on) Object.assign(one, { tabIndex: 0 }).setAttribute("aria-label", `Seat ${s.hostname}`);
+      const seat = el("rect", { x: -size / 2, y: -size / 2, width: size, height: size, rx: size / 6,
+        class: `seat ${s.state}` }, one);
       el("title", {}, seat).textContent = `${s.hostname}: ${WORD[s.state]}`;
-      const name = names.get(s.hostname);
-      el("text", { x: s.x, y: s.y + 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, g).textContent = name;
+      el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, one).textContent = names.get(s.hostname);
     }
     const badge = el("g", { class: `badge${c.available ? "" : " none"}`, "data-x": r.x, "data-y": r.y - 4, "data-seats": seats.length,
       "data-id": space.id }, labels);
@@ -129,6 +131,7 @@ function drawFloor() {
     el("tspan", { class: "free" }, text).textContent = `${c.available}/${seats.length} free`;
   }
   layer.append(labels);
+  if (focused) layer.querySelector(`.seat-g[data-host="${CSS.escape(focused)}"]`)?.focus();
   for (const badge of labels.children) {
     const bb = badge.firstChild.getBBox();
     badge.prepend(el("rect", { x: 0, y: bb.y - 4, width: bb.width + 14, height: bb.height + 8, rx: 3 }));
@@ -205,7 +208,9 @@ function render() {
     `<b>${seats.filter((s) => s.state === "available").length}</b> free of ${seats.length} on campus`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
-  document.getElementById("hint").hidden = state.mode !== "map";
+  document.getElementById("edit-wrap").hidden = !state.status.editable;
+  document.getElementById("hint").hidden = state.mode !== "map" || edit.on;
+  document.getElementById("edit-hint").hidden = state.mode !== "map" || !edit.on;
   if (state.mode === "map") drawFloor();
   else renderList();
   renderDrawer();
@@ -257,7 +262,8 @@ document.getElementById("zoom-in").onclick = () => { vp.touch(); vp.zoomAt(1.25,
 document.getElementById("zoom-out").onclick = () => { vp.touch(); vp.zoomAt(0.8, undefined, undefined, true); };
 document.getElementById("zoom-level").onclick = () => vp.home();
 svg.addEventListener("click", (e) => {
-  if (vp.wasDrag()) return;
+  if (vp.wasDrag() || edit.dropped) return void (edit.dropped = false);
+  if (edit.on && e.target.closest(".seat-g")) return;
   const g = e.target.closest(".space, .badge");
   pick(g ? g.dataset.id : null, !!g);
 });
@@ -267,6 +273,92 @@ svg.addEventListener("keydown", (e) => {
   if (e.key === "Escape") pick(null, false);
 });
 
+// The seat editor, offered only by a server that can save positions (the local devserver run
+// with --positions). A seat dragged or nudged is saved a moment after it stops moving.
+const edit = { on: false, drag: null, dropped: false, pending: {}, timer: 0 };
+const seatOf = (host) => state.status.spaces.flatMap((sp) => sp.seats).find((s) => s.hostname === host);
+const note = (text) => { document.getElementById("edit-note").textContent = text; };
+
+// A poll that lands before a save has gone through would put the seat back where it was.
+function keepMoves(status) {
+  if (!state.status) return;
+  for (const sp of status.spaces) for (const s of sp.seats) {
+    const xy = edit.pending[s.hostname] || edit.inFlight?.[s.hostname];
+    if (xy) [s.x, s.y] = xy;
+  }
+}
+
+function place(g, s, x, y) {
+  s.x = Math.round(x * 10) / 10;
+  s.y = Math.round(y * 10) / 10;
+  g.setAttribute("transform", `translate(${s.x},${s.y})`);
+  edit.pending[s.hostname] = [s.x, s.y];
+  clearTimeout(edit.timer);
+  edit.timer = setTimeout(save, 400);
+}
+
+async function save() {
+  const moves = edit.pending;
+  const n = Object.keys(moves).length;
+  if (!n) return;
+  edit.pending = {};
+  edit.inFlight = moves;
+  note("saving…");
+  try {
+    const r = await fetch("api/positions", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(moves) });
+    note(r.ok ? `saved ${n} seat${n === 1 ? "" : "s"}` : `not saved: ${(await r.json()).error}`);
+  } catch {
+    note("not saved: the server did not answer");
+  }
+  edit.inFlight = null;
+}
+
+document.getElementById("edit").onclick = (e) => {
+  edit.on = !edit.on;
+  e.currentTarget.setAttribute("aria-pressed", String(edit.on));
+  svg.classList.toggle("editing", edit.on);
+  render();
+};
+
+const svgPoint = (e) => new DOMPoint(e.clientX, e.clientY).matrixTransform(content.getScreenCTM().inverse());
+
+// Stopping the event here, on the canvas content, keeps the viewport underneath from panning.
+content.addEventListener("pointerdown", (e) => {
+  const g = edit.on && e.button === 0 && e.target.closest(".seat-g");
+  if (!g) return;
+  e.stopPropagation();
+  const s = seatOf(g.dataset.host);
+  const p = svgPoint(e);
+  edit.drag = { g, s, id: e.pointerId, dx: s.x - p.x, dy: s.y - p.y, moved: false };
+  g.setPointerCapture(e.pointerId);
+  g.focus();
+});
+content.addEventListener("pointermove", (e) => {
+  const d = edit.drag;
+  if (!d || d.id !== e.pointerId) return;
+  const p = svgPoint(e);
+  d.moved = true;
+  place(d.g, d.s, p.x + d.dx, p.y + d.dy);
+});
+const drop = (e) => {
+  if (!edit.drag || edit.drag.id !== e.pointerId) return;
+  edit.dropped = edit.drag.moved;
+  edit.drag = null;
+};
+content.addEventListener("pointerup", drop);
+content.addEventListener("pointercancel", drop);
+content.addEventListener("keydown", (e) => {
+  const g = edit.on && e.target.closest(".seat-g");
+  const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+  if (!g || !step) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const s = seatOf(g.dataset.host);
+  const by = e.shiftKey ? 10 : 1;
+  place(g, s, s.x + step[0] * by, s.y + step[1] * by);
+});
+
 (async () => {
   const hash = new URLSearchParams(location.hash.slice(1));
   try { state.floor = hash.get("floor") || localStorage.getItem("pulse.floor"); } catch { state.floor = hash.get("floor"); }
@@ -274,8 +366,10 @@ svg.addEventListener("keydown", (e) => {
   await Pulse.shell({ current: "computers", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
-    state.status = await fetch("api/status").then((r) => r.json());
-    render();
+    const status = await fetch("api/status").then((r) => r.json());
+    keepMoves(status);
+    state.status = status;
+    if (!edit.drag) render();
     if (first && room) requestAnimationFrame(() => pick(room));
     first = false;
   }, 15000);

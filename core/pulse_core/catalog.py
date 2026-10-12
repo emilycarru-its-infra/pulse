@@ -171,6 +171,15 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
     return catalog, report
 
 
+def load_positions(site: dict, base: Path) -> dict:
+    """Hand pins from [positions], overlaid with the seat editor's file named by [plans] positions."""
+    pinned = dict(site.get("positions", {}))
+    saved = site.get("plans", {}).get("positions")
+    if saved and (base / saved).is_file():
+        pinned.update(json.loads((base / saved).read_text()))
+    return pinned
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("site", help="site config (TOML)")
@@ -187,6 +196,7 @@ def main(argv: list[str] | None = None) -> int:
     provider = PROVIDERS[inv["provider"]](inv["url"], token, **inv.get("fields", {}))
     index_file = site.get("plans", {}).get("index")
     plan_index = json.loads((site_path.parent / index_file).read_text()) if index_file else None
+    site["positions"] = load_positions(site, site_path.parent)
 
     catalog, report = build(site, provider.devices(), provider.name, plan_index=plan_index)
     text = json.dumps(catalog, indent=1) + "\n"
