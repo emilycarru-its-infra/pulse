@@ -12,7 +12,7 @@ Three programs, published together into one folder:
   sent at once, and otherwise a heartbeat goes every 60 seconds. A failed send is dropped: the next
   heartbeat catches up, and the server shows a silent computer as off after five minutes.
 - **The idle helper** (`managedpulse-idle.exe`) runs in each signed-in user's session from log on
-  and writes that session's keyboard and mouse idle time to `ProgramData\<product>\idle\`. Windows
+  and writes that session's keyboard and mouse idle time to `ProgramData\<data>\idle\`. Windows
   does not give a SYSTEM process the console session's input time; without the helper the agent
   falls back to the session's own figure.
 - **The GUI** (`Managed Presence Beacon.exe`) has the Prefs, Run and Logs tabs of the other
@@ -21,8 +21,10 @@ Three programs, published together into one folder:
   - **Run** shows what the agent last saw and sent, and has **Send now**.
   - **Logs** follows the agent's daily log.
 
-The product's names (executables, registry keys, data folder, task names) are all set in
-[`Directory.Build.props`](Directory.Build.props).
+The names are all set in [`Directory.Build.props`](Directory.Build.props). The tool is
+ComputerPulse (`<product>` below): its install folder, registry and policy keys and scheduled
+tasks. Managed Presence Beacon is the GUI and `managedpulse` the command line, and data and logs
+live in `ProgramData\ManagedPulse` (`<data>`).
 
 ## Settings
 
@@ -55,7 +57,10 @@ Run this on Windows with the .NET 10 SDK and the Windows SDK installed:
 ```
 
 Each architecture lands in `publish\<arch>\` with `names.json` and the install scripts. Sign the
-executables before deploying them. A Defender attack surface reduction rule that blocks
+executables before deploying them. A `v*` tag publishes each install folder unsigned as
+`computerpulse-<arch>.zip` on the GitHub release; [`build-info.yaml`](build-info.yaml) and
+[`scripts/`](scripts) are the cimipkg package definition a deploying pipeline signs and wraps it
+with. A Defender attack surface reduction rule that blocks
 unprevalent executables, which is common on managed fleets, refuses unsigned builds.
 
 ## Install

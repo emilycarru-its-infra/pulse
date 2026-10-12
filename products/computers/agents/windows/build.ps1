@@ -13,22 +13,26 @@
 
 .PARAMETER Test
     Run the unit tests first.
+
+.PARAMETER Version
+    The build stamp, YYYY.MM.DD.HHMM; a release passes its tag. Defaults to now.
 #>
 param(
     [ValidateSet('x64', 'arm64', 'both')]
     [string]$Architecture = 'both',
-    [switch]$Test
+    [switch]$Test,
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 Set-Location $PSScriptRoot
 
-$stamp = Get-Date -Format 'yyyy.MM.dd.HHmm'
+$stamp = if ($Version) { $Version } else { Get-Date -Format 'yyyy.MM.dd.HHmm' }
 
 # The product's names, from Directory.Build.props, for the install scripts.
 $props = ([xml](Get-Content (Join-Path $PSScriptRoot 'Directory.Build.props') -Raw)).Project.PropertyGroup | Select-Object -First 1
-$names = [ordered]@{ product = $props.PulseProductKey; gui = $props.PulseGuiName; cli = $props.PulseCliName; idle = $props.PulseIdleName; version = $stamp }
+$names = [ordered]@{ product = $props.PulseProductKey; data = $props.PulseDataName; gui = $props.PulseGuiName; cli = $props.PulseCliName; idle = $props.PulseIdleName; version = $stamp }
 $arches = if ($Architecture -eq 'both') { @('x64', 'arm64') } else { @($Architecture) }
 
 function Invoke-Dotnet {

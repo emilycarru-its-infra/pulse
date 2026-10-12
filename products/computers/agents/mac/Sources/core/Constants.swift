@@ -5,10 +5,10 @@ import Foundation
 public enum PulseConstants {
     /// The CFPreferences domain every setting is read from, so a configuration profile
     /// for this domain manages the agent.
-    public static let domain = "com.github.managedpulse"
-    public static let agentLabel = "com.github.managedpulse"
-    public static let helperLabel = "com.github.managedpulse.helper"
-    public static let helperPlistName = "com.github.managedpulse.helper.plist"
+    public static let domain = "com.github.computerpulse"
+    public static let agentLabel = "com.github.computerpulse"
+    public static let helperLabel = "com.github.computerpulse.helper"
+    public static let helperPlistName = "com.github.computerpulse.helper.plist"
 
     public static let appName = "Managed Presence Beacon"
     public static let cliName = "managedpulse"

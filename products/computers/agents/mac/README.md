@@ -14,7 +14,7 @@ in use, locked or free, and never who is using it.
 
 ## Settings
 
-Every setting lives in the `com.github.managedpulse` preference domain, so a
+Every setting lives in the `com.github.computerpulse` preference domain, so a
 configuration profile manages any of them. A managed value shows in the app greyed,
 with a lock and the word Managed, and the helper refuses to change it.
 
@@ -26,7 +26,7 @@ with a lock and the word Managed, and the helper refuses to change it.
 | `HeartbeatInterval` | integer | 60 | Seconds between heartbeats (30–600) |
 | `VerboseLogging` | boolean | false | Log every check, not only sends |
 
-[`examples/com.github.managedpulse.mobileconfig`](examples/com.github.managedpulse.mobileconfig)
+[`examples/com.github.computerpulse.mobileconfig`](examples/com.github.computerpulse.mobileconfig)
 sets them all.
 
 ## Proving which Mac is reporting
@@ -56,6 +56,9 @@ make app pkg VERSION=2026.10.12.1342
 ```bash
 make app sign pkg notarize SIGNING_IDENTITY_APP="…" SIGNING_IDENTITY_PKG="…" NOTARIZATION_PROFILE="…"
 ```
+
+A `v*` tag publishes the unsigned app as `ComputerPulse-App-<version>.zip` on the GitHub release,
+for a deploying pipeline to sign and package.
 
 The helper accepts only an app signed by its own team, so an unsigned build shows the
 helper as unavailable and Send Now stays off; `managedpulse send` still works from a

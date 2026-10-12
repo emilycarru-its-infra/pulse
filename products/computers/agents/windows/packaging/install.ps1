@@ -17,7 +17,7 @@
 #>
 $ErrorActionPreference = 'Stop'
 $names = Get-Content (Join-Path $PSScriptRoot 'names.json') -Raw | ConvertFrom-Json
-if ($names.product -notmatch '^[A-Za-z0-9]+$') { throw 'Unexpected product name in names.json' }
+if ($names.product -notmatch '^[A-Za-z0-9]+$' -or $names.data -notmatch '^[A-Za-z0-9]+$') { throw 'Unexpected names in names.json' }
 
 $here = Join-Path $env:ProgramFiles $names.product
 if ([IO.Path]::GetFullPath($PSScriptRoot).TrimEnd('\') -ne $here) { throw "Install to $here; this copy is in $PSScriptRoot." }
@@ -66,7 +66,7 @@ function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
     }
 }
 
-$data = Join-Path $env:ProgramData $names.product
+$data = Join-Path $env:ProgramData $names.data
 Set-ProtectedDirectory $data
 Set-ProtectedDirectory (Join-Path $data 'logs') @(New-Rule 'S-1-5-32-545' 'ReadAndExecute')
 Set-ProtectedDirectory (Join-Path $data 'idle') @(

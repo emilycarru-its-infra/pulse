@@ -3,12 +3,14 @@
        these properties and stamp them into each assembly, where PulseAgent.Core's Identity
        class reads them, so a rename is a change to this file alone.
        PulseIconName is the base name of the app icon files under PulseAgent.App\Assets.
-         PulseProductKey  registry keys, the ProgramData folder and the scheduled task names
+         PulseProductKey  the tool: install folder, registry and policy keys, scheduled task names
+         PulseDataName    the ProgramData folder for data and logs, Managed<Bucket> like the other tools
          PulseGuiName     the window title and the GUI executable
          PulseCliName     the command-line executable the agent task runs (kept lowercase)
          PulseIdleName    the small per-user helper that reports keyboard and mouse idle time -->
   <PropertyGroup>
-    <PulseProductKey>ManagedPulse</PulseProductKey>
+    <PulseProductKey>ComputerPulse</PulseProductKey>
+    <PulseDataName>ManagedPulse</PulseDataName>
     <PulseGuiName>Managed Presence Beacon</PulseGuiName>
     <PulseCliName>managedpulse</PulseCliName>
     <PulseIdleName>managedpulse-idle</PulseIdleName>
@@ -25,6 +27,10 @@
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>PulseProductKey</_Parameter1>
       <_Parameter2>$(PulseProductKey)</_Parameter2>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>PulseDataName</_Parameter1>
+      <_Parameter2>$(PulseDataName)</_Parameter2>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
       <_Parameter1>PulseGuiName</_Parameter1>
