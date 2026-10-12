@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 
-from pulse_core.catalog import build, load_positions
+from pulse_core.catalog import build, load_positions, load_rooms
 from pulse_core.inventory import SnipeItProvider
 
 CONTRACT = Path(__file__).parents[1] / "contract"
@@ -137,3 +137,15 @@ def test_editor_positions_overlay_hand_pins(tmp_path):
     site = {"plans": {"positions": "positions.json"}, "positions": {"LAB-MAC-04": [1, 2], "LAB-MAC-01": [3, 4]}}
     assert load_positions(site, tmp_path) == {"LAB-MAC-01": [3, 4], "LAB-MAC-04": [5, 6], "LAB-MAC-05": [7, 8]}
     assert load_positions({"plans": {"positions": "gone.json"}}, tmp_path) == {}
+
+
+def test_editor_rooms_replace_plan_boxes(tmp_path):
+    (tmp_path / "positions.json").write_text('{"seats": {"LAB-MAC-01": [1, 2]}, "rooms": {"A1100": [400, 100, 600, 300]}}')
+    site = {"plans": {"positions": "positions.json", "room_pattern": r"^([A-Z]\d{4})"},
+            "inventory": {"categories": ["Desktop"]}, "auto": {"groups": {"Open Mac Lab": "lab"}}}
+    assert load_positions(site, tmp_path) == {"LAB-MAC-01": [1, 2]}
+    boxes = load_rooms(site, tmp_path)
+    catalog, _ = build(site, provider().devices(), "snipeit", plan_index=PLANS, boxes=boxes)
+    a = next(s for s in catalog["spaces"] if s["room"] == "A1100")
+    assert a["box"] == [400, 100, 600, 300]
+    assert all(400 < s["x"] < 600 for s in a["seats"])

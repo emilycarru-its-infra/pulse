@@ -13,6 +13,7 @@ const vp = Pulse.viewport(svg, content, {
     document.getElementById("zoom-level").textContent = `${Math.round(k * 100)}%`;
     svg.classList.toggle("far", k < 0.45);
     placeBadges(k);
+    sizeHandles(k);
   },
 });
 
@@ -138,7 +139,8 @@ function drawFloor() {
       const seat = el("rect", { x: -size / 2, y: -size / 2, width: size, height: size, rx: size / 6,
         class: `seat ${s.state}` }, one);
       el("title", {}, seat).textContent = `${seatName(s)}: ${WORD[s.state]}`;
-      el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * 0.45 }, one).textContent = names.get(s.hostname);
+      const label = names.get(s.hostname);
+      el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * (label.length > 2 ? 0.32 : 0.45) }, one).textContent = label;
     }
     // A badge shows the room number; hovering or picking the room opens it to the full name.
     const badge = el("g", { class: `badge${c.available ? "" : " none"}`, "data-x": r.x, "data-y": r.y - 4, "data-seats": seats.length,
@@ -150,6 +152,7 @@ function drawFloor() {
     }
   }
   layer.append(labels);
+  drawHandles(layer);
   if (focused) layer.querySelector(`.seat-g[data-host="${CSS.escape(focused)}"]`)?.focus();
   for (const badge of labels.children) {
     for (const face of badge.children) {
@@ -266,6 +269,8 @@ function renderDrawer() {
       <button type="button" class="close" aria-label="Close details">Close</button></div>
     <p class="big">${c.available}</p><p class="of">free of ${seats.length}</p>
     <p class="counts">${countsLine(c)}</p>
+    ${edit.on && space.room ? `<p class="edit-room">Drag the room or its corners to fit the plan.
+      <button type="button" class="relayout">Lay the seats out again</button></p>` : ""}
     <h4>Seats</h4><ul class="rows"></ul>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, space.room, KIND[space.kind]].filter(Boolean).join(" · ");
   drawer.querySelector("h3").textContent = space.name;
@@ -280,6 +285,8 @@ function renderDrawer() {
     return li;
   }));
   drawer.querySelector(".close").onclick = () => pick(null);
+  const relayout = drawer.querySelector(".relayout");
+  if (relayout) relayout.onclick = () => saveRoom(space, roomBox(space), { relayout: true });
 }
 
 function render() {
@@ -376,7 +383,7 @@ document.getElementById("zoom-out").onclick = () => { vp.touch(); vp.zoomAt(0.8,
 document.getElementById("zoom-level").onclick = () => vp.home();
 svg.addEventListener("click", (e) => {
   if (vp.wasDrag() || edit.dropped) return void (edit.dropped = false);
-  if (edit.on && e.target.closest(".seat-g")) return;
+  if (edit.on && (e.target.closest(".seat-g, .handles") || e.target.closest(".space")?.dataset.id === state.picked)) return;
   const g = e.target.closest(".space, .badge");
   pick(g ? g.dataset.id : null, !!g);
 });
@@ -444,6 +451,104 @@ document.getElementById("edit").onclick = (e) => {
 
 const svgPoint = (e) => new DOMPoint(e.clientX, e.clientY).matrixTransform(content.getScreenCTM().inverse());
 
+// Room outlines: in edit mode the picked room shows a handle at each corner. Dragging the room
+// moves it with its seats; dragging a corner resizes it, and the seats nobody placed are laid
+// out again inside. The server saves the outline beside the seat positions.
+const CORNERS = { nw: [0, 1], ne: [2, 1], sw: [0, 3], se: [2, 3] };
+const roomBox = (space) => { const r = bounds(space); return [r.x, r.y, r.x + r.w, r.y + r.h]; };
+
+function drawHandles(layer) {
+  const space = edit.on && state.status.spaces.find((s) => s.id === state.picked && s.room && s.floor === state.floor);
+  if (!space) return;
+  const box = roomBox(space);
+  const g = el("g", { class: "handles", "data-id": space.id }, layer);
+  for (const [corner, [xi, yi]] of Object.entries(CORNERS)) {
+    el("rect", { class: `handle ${corner}`, "data-corner": corner, "data-x": box[xi], "data-y": box[yi] }, g);
+  }
+  sizeHandles();
+}
+
+function sizeHandles(k = vp.k) {
+  const size = 14 / k;
+  for (const h of content.querySelectorAll(".handle")) {
+    Object.entries({ x: h.dataset.x - size / 2, y: h.dataset.y - size / 2, width: size, height: size })
+      .forEach(([a, v]) => h.setAttribute(a, v));
+  }
+}
+
+function showBox(space, box, shift) {
+  const g = content.querySelector(`.space[data-id="${CSS.escape(space.id)}"]`);
+  const room = g?.querySelector(".room");
+  if (room) Object.entries({ x: box[0], y: box[1], width: box[2] - box[0], height: box[3] - box[1] })
+    .forEach(([a, v]) => room.setAttribute(a, v));
+  for (const [corner, [xi, yi]] of Object.entries(CORNERS)) {
+    const h = content.querySelector(`.handle.${corner}`);
+    if (h) Object.assign(h.dataset, { x: box[xi], y: box[yi] });
+  }
+  sizeHandles();
+  if (shift) for (const one of g?.querySelectorAll(".seat-g") ?? []) {
+    const s = seatOf(one.dataset.host);
+    one.setAttribute("transform", `translate(${s.x + shift[0]},${s.y + shift[1]})`);
+  }
+}
+
+async function refresh() {
+  const status = await fetch("api/status").then((r) => r.json());
+  keepMoves(status);
+  state.status = status;
+  render();
+}
+
+async function saveRoom(space, box, extra = {}) {
+  note("saving…");
+  try {
+    const r = await fetch("api/rooms", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ space: space.id, box: box.map((v) => Math.round(v * 10) / 10), ...extra }) });
+    note(r.ok ? `saved room ${space.room}` : `not saved: ${(await r.json()).error}`);
+  } catch {
+    note("not saved: the server did not answer");
+  }
+  await refresh();
+}
+
+content.addEventListener("pointerdown", (e) => {
+  if (!edit.on || e.button !== 0 || e.target.closest(".seat-g")) return;
+  const handle = e.target.closest(".handle");
+  const room = e.target.classList.contains("room") && e.target.closest(".space");
+  const id = handle?.parentNode.dataset.id ?? (room && room.dataset.id === state.picked ? room.dataset.id : null);
+  if (!id) return;
+  e.stopPropagation();
+  const space = state.status.spaces.find((s) => s.id === id);
+  edit.box = { id: e.pointerId, space, corner: handle?.dataset.corner, start: roomBox(space), from: svgPoint(e), box: null };
+  e.target.setPointerCapture(e.pointerId);
+});
+content.addEventListener("pointermove", (e) => {
+  const d = edit.box;
+  if (!d || d.id !== e.pointerId) return;
+  const p = svgPoint(e);
+  const dx = p.x - d.from.x, dy = p.y - d.from.y;
+  const b = [...d.start];
+  if (!d.corner) { b[0] += dx; b[2] += dx; b[1] += dy; b[3] += dy; }
+  else {
+    const [xi, yi] = CORNERS[d.corner];
+    b[xi] += dx;
+    b[yi] += dy;
+    if (b[2] - b[0] < 20 || b[3] - b[1] < 20) return;
+  }
+  d.box = b;
+  d.shift = d.corner ? null : [dx, dy];
+  showBox(d.space, b, d.shift);
+});
+const dropBox = (e) => {
+  const d = edit.box;
+  if (!d || d.id !== e.pointerId) return;
+  edit.box = null;
+  edit.dropped = !!d.box;
+  if (d.box) saveRoom(d.space, d.box, d.shift ? { move: d.shift.map((v) => Math.round(v * 10) / 10) } : {});
+};
+content.addEventListener("pointerup", dropBox);
+content.addEventListener("pointercancel", dropBox);
+
 // Stopping the event here, on the canvas content, keeps the viewport underneath from panning.
 content.addEventListener("pointerdown", (e) => {
   const g = edit.on && e.button === 0 && e.target.closest(".seat-g");
@@ -494,7 +599,7 @@ content.addEventListener("keydown", (e) => {
     const status = await fetch("api/status").then((r) => r.json());
     keepMoves(status);
     state.status = status;
-    if (!edit.drag) render();
+    if (!edit.drag && !edit.box) render();
     if (first && room) requestAnimationFrame(() => pick(room));
     first = false;
   }, 15000);

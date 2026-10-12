@@ -112,7 +112,9 @@ def _auto_spaces(site: dict, devices: list[Device], plans: Plans, categories: se
 
 
 def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | None = None,
-          plan_index: dict | None = None) -> tuple[dict, Report]:
+          plan_index: dict | None = None, boxes: dict | None = None) -> tuple[dict, Report]:
+    """boxes: room outlines drawn in the seat editor, {room: [x0, y0, x1, y1]} in plan pixels,
+    which replace the plan index's."""
     devices = [d for d in devices if d.deployed]
     categories = set(site.get("inventory", {}).get("categories", []))
     plan_cfg = site.get("plans", {})
@@ -136,11 +138,12 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
         code = space.get("room") or (plans.room_code(members[0].location) if members else None)
         geo = plans.geometry(code)
         if geo:
+            box = (boxes or {}).get(code) or geo[2]
             space.setdefault("floor", geo[0])
             space["label"] = [round(v, 1) for v in geo[1]]
-            if geo[2]:
-                space["box"] = [round(v, 1) for v in geo[2]]
-            auto_xy, size = grid(len(members), geo[2], geo[1])
+            if box:
+                space["box"] = [round(v, 1) for v in box]
+            auto_xy, size = grid(len(members), box, geo[1])
             space["seatSize"] = size
         else:
             auto_xy = []
@@ -173,13 +176,28 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
     return catalog, report
 
 
+def editor_file(data: dict) -> dict:
+    """The seat editor's file as {"seats": {hostname: [x, y]}, "rooms": {room: [x0, y0, x1, y1]}};
+    an older file is a bare map of seats."""
+    if data and "seats" not in data and "rooms" not in data:
+        return {"seats": data, "rooms": {}}
+    return {"seats": data.get("seats", {}), "rooms": data.get("rooms", {})}
+
+
+def _saved(site: dict, base: Path) -> dict:
+    name = site.get("plans", {}).get("positions")
+    path = base / name if name else None
+    return editor_file(json.loads(path.read_text()) if path and path.is_file() else {})
+
+
 def load_positions(site: dict, base: Path) -> dict:
     """Hand pins from [positions], overlaid with the seat editor's file named by [plans] positions."""
-    pinned = dict(site.get("positions", {}))
-    saved = site.get("plans", {}).get("positions")
-    if saved and (base / saved).is_file():
-        pinned.update(json.loads((base / saved).read_text()))
-    return pinned
+    return {**site.get("positions", {}), **_saved(site, base)["seats"]}
+
+
+def load_rooms(site: dict, base: Path) -> dict:
+    """Room outlines drawn in the seat editor."""
+    return _saved(site, base)["rooms"]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,7 +218,8 @@ def main(argv: list[str] | None = None) -> int:
     plan_index = json.loads((site_path.parent / index_file).read_text()) if index_file else None
     site["positions"] = load_positions(site, site_path.parent)
 
-    catalog, report = build(site, provider.devices(), provider.name, plan_index=plan_index)
+    catalog, report = build(site, provider.devices(), provider.name, plan_index=plan_index,
+                            boxes=load_rooms(site, site_path.parent))
     text = json.dumps(catalog, indent=1) + "\n"
     if args.out:
         Path(args.out).write_text(text)
