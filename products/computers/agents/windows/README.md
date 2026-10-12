@@ -32,7 +32,7 @@ Intune or Group Policy writes. Otherwise it uses the machine settings under
 | Value | Type | Default | |
 | --- | --- | --- | --- |
 | `IngestUrl` | string | none | The product's `POST /api/ingest` address |
-| `IngestKey` | string | none | Optional shared key sent as `X-Pulse-Key`, for a pilot |
+| `IngestKey` | string | none | Optional shared key sent as `X-Pulse-Key`, for a pilot. Read only from `HKLM\SOFTWARE\<product>\Secrets`, which SYSTEM and Administrators alone can read; never from policy or the readable keys |
 | `CheckIntervalSeconds` | DWORD | 15 | 5 to 300 |
 | `HeartbeatIntervalSeconds` | DWORD | 60 | 15 to 3600, never below the check interval |
 | `UseDeviceCertificate` | DWORD | 1 | Present the Entra device certificate |
@@ -65,9 +65,11 @@ From the install folder, as an administrator (a package's postinstall):
 .\install.ps1
 ```
 
-It refuses an install folder users can write to, takes over the data folder safely (owned by
-Administrators, links never followed), and registers three tasks: the agent, the idle helper and a
-shutdown sender triggered by event 1074. Then it starts the agent. `uninstall.ps1` reverses this.
+It runs only from `Program Files\<product>`. It creates the data folder with its ACL in one step,
+owned by Administrators, and stops if a folder a user owns, or a link, is already there. Then it
+registers three tasks: the agent, the idle helper and a
+shutdown sender triggered by event 1074, and starts the agent. `uninstall.ps1` removes the tasks
+and deletes only the files the agent wrote, by name.
 
 ## Commands
 

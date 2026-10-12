@@ -1,3 +1,5 @@
+using System.Security.AccessControl;
+using System.Security.Principal;
 using Microsoft.Win32;
 
 namespace PulseAgent.Core;
@@ -12,7 +14,8 @@ public sealed record AgentSettings
     /// <summary>Where events go: the product's POST /api/ingest address.</summary>
     public string? IngestUrl { get; init; }
 
-    /// <summary>An optional shared key sent as X-Pulse-Key, for a pilot without device certificates.</summary>
+    /// <summary>An optional shared key sent as X-Pulse-Key, for a pilot without device certificates.
+    /// It lives only in the protected Secrets key: every other key, and policy, is readable by any user.</summary>
     public string? IngestKey { get; init; }
 
     public int CheckIntervalSeconds { get; init; } = DefaultCheckSeconds;
@@ -25,7 +28,8 @@ public sealed record AgentSettings
 }
 
 /// <summary>Reads and writes the settings: machine values under HKLM\SOFTWARE\&lt;product&gt;,
-/// policy values (Intune or Group Policy) under HKLM\SOFTWARE\Policies\&lt;product&gt;.</summary>
+/// policy values (Intune or Group Policy) under HKLM\SOFTWARE\Policies\&lt;product&gt;, and the shared
+/// key under HKLM\SOFTWARE\&lt;product&gt;\Secrets, which only SYSTEM and Administrators can read.</summary>
 public static class SettingsStore
 {
     public const string IngestUrl = nameof(AgentSettings.IngestUrl);
@@ -35,19 +39,21 @@ public static class SettingsStore
     public const string UseDeviceCertificate = nameof(AgentSettings.UseDeviceCertificate);
     public const string VerboseLogging = nameof(AgentSettings.VerboseLogging);
 
+    /// <summary>The settings policy may manage. The shared key is not one: policy is readable on the device.</summary>
     public static readonly string[] Keys =
-        [IngestUrl, IngestKey, CheckIntervalSeconds, HeartbeatIntervalSeconds, UseDeviceCertificate, VerboseLogging];
+        [IngestUrl, CheckIntervalSeconds, HeartbeatIntervalSeconds, UseDeviceCertificate, VerboseLogging];
 
-    /// <summary>The effective settings, from the registry.</summary>
-    public static AgentSettings Load() => Resolve(key => Read(Identity.PolicyKey, key), key => Read(Identity.SettingsKey, key));
+    /// <summary>The effective settings, from the registry. Unelevated, the shared key reads as unset.</summary>
+    public static AgentSettings Load() => Resolve(
+        key => Read(Identity.PolicyKey, key), key => Read(Identity.SettingsKey, key), key => Read(Identity.SecretsKey, key));
 
     /// <summary>The keys policy sets on this device.</summary>
     public static HashSet<string> ManagedKeys() =>
         Keys.Where(k => Read(Identity.PolicyKey, k) is not null).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The effective settings from a policy lookup and a machine lookup, each returning
-    /// the raw registry value or null.</summary>
-    public static AgentSettings Resolve(Func<string, object?> policy, Func<string, object?> machine)
+    /// <summary>The effective settings from the policy, machine and secrets lookups, each returning
+    /// the raw registry value or null. The shared key comes from the secrets lookup alone.</summary>
+    public static AgentSettings Resolve(Func<string, object?> policy, Func<string, object?> machine, Func<string, object?>? secrets = null)
     {
         object? Get(string key) => policy(key) ?? machine(key);
         var defaults = new AgentSettings();
@@ -56,7 +62,7 @@ public static class SettingsStore
         return new AgentSettings
         {
             IngestUrl = AsString(Get(IngestUrl)),
-            IngestKey = AsString(Get(IngestKey)),
+            IngestKey = AsString(secrets?.Invoke(IngestKey)),
             CheckIntervalSeconds = check,
             HeartbeatIntervalSeconds = Math.Max(heartbeat, check),
             UseDeviceCertificate = AsBool(Get(UseDeviceCertificate)) ?? defaults.UseDeviceCertificate,
@@ -75,11 +81,28 @@ public static class SettingsStore
             if (!managed.Contains(name)) key.SetValue(name, value, kind);
         }
         Put(IngestUrl, settings.IngestUrl ?? "", RegistryValueKind.String);
-        if (!string.IsNullOrWhiteSpace(settings.IngestKey)) Put(IngestKey, settings.IngestKey, RegistryValueKind.String);
+        if (!string.IsNullOrWhiteSpace(settings.IngestKey)) SaveSecret(IngestKey, settings.IngestKey);
         Put(CheckIntervalSeconds, settings.CheckIntervalSeconds, RegistryValueKind.DWord);
         Put(HeartbeatIntervalSeconds, settings.HeartbeatIntervalSeconds, RegistryValueKind.DWord);
         Put(UseDeviceCertificate, settings.UseDeviceCertificate ? 1 : 0, RegistryValueKind.DWord);
         Put(VerboseLogging, settings.VerboseLogging ? 1 : 0, RegistryValueKind.DWord);
+    }
+
+    /// <summary>Writes a credential to the Secrets key, which keeps only SYSTEM and Administrators
+    /// and inherits nothing.</summary>
+    private static void SaveSecret(string name, string value)
+    {
+        var security = new RegistrySecurity();
+        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+        foreach (var sid in new[] { WellKnownSidType.LocalSystemSid, WellKnownSidType.BuiltinAdministratorsSid })
+        {
+            security.AddAccessRule(new RegistryAccessRule(new SecurityIdentifier(sid, null),
+                RegistryRights.FullControl, InheritanceFlags.ContainerInherit, PropagationFlags.None, AccessControlType.Allow));
+        }
+        using var root = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+        using var key = root.CreateSubKey(Identity.SecretsKey, writable: true);
+        key.SetAccessControl(security);
+        key.SetValue(name, value, RegistryValueKind.String);
     }
 
     private static object? Read(string path, string name)

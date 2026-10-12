@@ -32,7 +32,7 @@ public partial class PrefsViewModel : ObservableObject
     public enum SaveState { Idle, Saving, Saved, Failed }
 
     public string VersionDisplay => Identity.VersionDisplay;
-    public string KeyPlaceholder => HasSavedKey ? "Saved; enter a new value to replace" : "Optional";
+    public string KeyPlaceholder => !IsElevated ? "Unlock to set or replace" : HasSavedKey ? "Saved; enter a new value to replace" : "Optional";
     public bool IsElevated { get; } = PrefsElevation.IsProcessElevated();
     public bool IsReadOnly => !IsElevated;
     public bool HasUnlockError => UnlockError.Length > 0;
@@ -45,7 +45,7 @@ public partial class PrefsViewModel : ObservableObject
     private bool CanEdit(string key) => PrefsElevation.CanEdit(IsElevated, Locked(key));
 
     public bool IsIngestUrlLocked => Locked(SettingsStore.IngestUrl);
-    public bool IsIngestKeyLocked => Locked(SettingsStore.IngestKey);
+    public bool IsIngestKeyLocked => false;
     public bool IsUseDeviceCertificateLocked => Locked(SettingsStore.UseDeviceCertificate);
     public bool IsCheckIntervalLocked => Locked(SettingsStore.CheckIntervalSeconds);
     public bool IsHeartbeatIntervalLocked => Locked(SettingsStore.HeartbeatIntervalSeconds);

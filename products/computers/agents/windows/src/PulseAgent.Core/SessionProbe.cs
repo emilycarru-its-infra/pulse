@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text.Json;
 
 namespace PulseAgent.Core;
@@ -41,20 +43,38 @@ public static class SessionProbe
         return SessionSnapshot.Nobody;
     }
 
-    /// <summary>The idle seconds the per-user helper last wrote for a session, if fresh.</summary>
+    /// <summary>The idle seconds the per-user helper last wrote for a session, if fresh. Users write
+    /// these files and the agent reads them as SYSTEM, so a report counts only when it is a plain
+    /// small file owned by the user signed in to that session: nobody can speak for another session.</summary>
     internal static int? HelperIdle(uint sessionId, DateTimeOffset? now = null)
     {
         try
         {
-            // Users write these files and the agent reads them as SYSTEM, so a link is never followed.
             var file = new FileInfo(Path.Combine(Identity.IdleDirectory, $"{sessionId}.json"));
             if (!file.Exists || file.Attributes.HasFlag(FileAttributes.ReparsePoint) || file.Length > 4096) return null;
+            var owner = file.GetAccessControl(AccessControlSections.Owner).GetOwner(typeof(SecurityIdentifier));
+            if (owner is null || owner != SessionUser(sessionId)) return null;
             var path = file.FullName;
             return IdleReport.Parse(File.ReadAllText(path), now ?? DateTimeOffset.UtcNow, IdleFreshness);
         }
         catch
         {
             return null;
+        }
+    }
+
+    /// <summary>The account signed in to a session. Only SYSTEM can ask; anyone else gets null.</summary>
+    private static SecurityIdentifier? SessionUser(uint sessionId)
+    {
+        if (!WTSQueryUserToken(sessionId, out var token)) return null;
+        try
+        {
+            using var identity = new WindowsIdentity(token);
+            return identity.User;
+        }
+        finally
+        {
+            CloseHandle(token);
         }
     }
 
@@ -142,6 +162,12 @@ public static class SessionProbe
 
     [DllImport("wtsapi32.dll")]
     private static extern void WTSFreeMemory(IntPtr memory);
+
+    [DllImport("wtsapi32.dll", SetLastError = true)]
+    private static extern bool WTSQueryUserToken(uint sessionId, out IntPtr token);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool CloseHandle(IntPtr handle);
 }
 
 /// <summary>The file the per-user idle helper writes for its session:

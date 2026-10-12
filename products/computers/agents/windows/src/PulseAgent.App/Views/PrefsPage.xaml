@@ -99,7 +99,7 @@
                             <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                        <TextBlock Text="Only for a pilot: the device certificate is how the server knows this computer."
+                        <TextBlock Text="Only for a pilot: the device certificate is how the server knows this computer. The key is stored where only administrators can read it."
                                    Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     </StackPanel>

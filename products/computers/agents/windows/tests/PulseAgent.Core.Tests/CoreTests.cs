@@ -99,6 +99,15 @@ public class SettingsTests
     }
 
     [Fact]
+    public void TheSharedKeyComesOnlyFromTheSecretsKey()
+    {
+        var readable = new Dictionary<string, object> { ["IngestKey"] = "leaked" };
+        Assert.Null(SettingsStore.Resolve(k => readable.GetValueOrDefault(k), k => readable.GetValueOrDefault(k)).IngestKey);
+        Assert.Equal("s3cret", SettingsStore.Resolve(_ => null, _ => null, k => k == "IngestKey" ? "s3cret" : null).IngestKey);
+        Assert.DoesNotContain("IngestKey", SettingsStore.Keys);
+    }
+
+    [Fact]
     public void BlankStringsAreUnset() => Assert.Null(SettingsStore.AsString("  "));
 }
 

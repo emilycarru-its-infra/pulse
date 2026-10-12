@@ -33,6 +33,9 @@ public static class Identity
     public static string SettingsKey => $@"SOFTWARE\{ProductKey}";
     public static string PolicyKey => $@"SOFTWARE\Policies\{ProductKey}";
 
+    /// <summary>The protected key for credentials: SYSTEM and Administrators only, nothing inherited.</summary>
+    public static string SecretsKey => $@"SOFTWARE\{ProductKey}\Secrets";
+
     public static string DataDirectory => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), ProductKey);
     public static string LogDirectory => Path.Combine(DataDirectory, "logs");
