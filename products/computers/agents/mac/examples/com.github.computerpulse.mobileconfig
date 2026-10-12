@@ -6,9 +6,9 @@
     <array>
         <dict>
             <key>PayloadType</key>
-            <string>com.github.managedpulse</string>
+            <string>com.github.computerpulse</string>
             <key>PayloadIdentifier</key>
-            <string>com.github.managedpulse.settings</string>
+            <string>com.github.computerpulse.settings</string>
             <key>PayloadUUID</key>
             <string>6F1B1D9E-5C2A-4E7B-9C1F-2D6A8B3E4F01</string>
             <key>PayloadVersion</key>
@@ -28,7 +28,7 @@
     <key>PayloadDisplayName</key>
     <string>Managed Presence Beacon</string>
     <key>PayloadIdentifier</key>
-    <string>com.github.managedpulse</string>
+    <string>com.github.computerpulse</string>
     <key>PayloadScope</key>
     <string>System</string>
     <key>PayloadType</key>

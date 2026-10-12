@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>ManagedPresenceBeacon</string>
     <key>CFBundleIdentifier</key>
-    <string>com.github.managedpulse</string>
+    <string>com.github.computerpulse</string>
     <key>CFBundleName</key>
     <string>Managed Presence Beacon</string>
     <key>CFBundleDisplayName</key>

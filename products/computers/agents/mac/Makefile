@@ -23,8 +23,8 @@ SWIFT_OUT = $(shell swift build -c release --arch arm64 --arch x86_64 --show-bin
 ICON_DIR = resources/ManagedPresenceBeacon.icon
 ICON_NAME = ManagedPresenceBeacon
 ACTOOL_OUT = $(BUILD_DIR)/actool
-PKG_ID = com.github.managedpulse
-PKG = $(BUILD_DIR)/ManagedPresenceBeacon-$(VERSION).pkg
+PKG_ID = com.github.computerpulse
+PKG = $(BUILD_DIR)/ComputerPulse-$(VERSION).pkg
 
 .PHONY: all swift app sign pkg notarize test clean
 
@@ -56,17 +56,17 @@ app: swift $(ACTOOL_OUT)/Assets.car
 	sed -e 's/{{MARKETING_VERSION}}/$(MARKETING_VERSION)/g' -e 's/{{BUILD_NUMBER}}/$(BUILD_NUMBER)/g' \
 		packaging/resources/Info.plist.template > "$(APP)/Contents/Info.plist"
 	cp $(ACTOOL_OUT)/Assets.car $(ACTOOL_OUT)/$(ICON_NAME).icns "$(APP)/Contents/Resources/"
-	cp packaging/LaunchDaemons/com.github.managedpulse.helper.plist "$(APP)/Contents/Library/LaunchDaemons/"
-	cp packaging/LaunchDaemons/com.github.managedpulse.plist $(ROOT)/Library/LaunchDaemons/
+	cp packaging/LaunchDaemons/com.github.computerpulse.helper.plist "$(APP)/Contents/Library/LaunchDaemons/"
+	cp packaging/LaunchDaemons/com.github.computerpulse.plist $(ROOT)/Library/LaunchDaemons/
 	@echo "Built $(APP) $(VERSION)"
 
 # Inside out: each binary with its own identifier, then the bundle.
 sign:
 	@test -n "$(SIGNING_IDENTITY_APP)" || { echo "Set SIGNING_IDENTITY_APP"; exit 1; }
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" \
-		--identifier com.github.managedpulse.cli "$(APP)/Contents/MacOS/managedpulse"
+		--identifier com.github.computerpulse.cli "$(APP)/Contents/MacOS/managedpulse"
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" \
-		--identifier com.github.managedpulse.helper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
+		--identifier com.github.computerpulse.helper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
 	codesign --force --options runtime --timestamp --sign "$(SIGNING_IDENTITY_APP)" "$(APP)"
 
 pkg:

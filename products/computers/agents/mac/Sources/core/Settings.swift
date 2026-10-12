@@ -1,6 +1,6 @@
 import Foundation
 
-/// The agent's settings, read from the `com.github.managedpulse` preference domain. A
+/// The agent's settings, read from the `com.github.computerpulse` preference domain. A
 /// configuration profile for that domain manages any of them; otherwise the app writes
 /// them to /Library/Preferences through the helper.
 public struct PulseSettings: Equatable, Sendable {

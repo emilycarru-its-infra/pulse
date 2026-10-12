@@ -12,8 +12,11 @@ public static class Identity
         typeof(Identity).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
             .FirstOrDefault(a => a.Key == key)?.Value is { Length: > 0 } value ? value : fallback;
 
-    /// <summary>The name used for registry keys, the ProgramData folder and scheduled tasks.</summary>
+    /// <summary>The tool's name: the install folder, registry and policy keys, and scheduled tasks.</summary>
     public static readonly string ProductKey = Meta("PulseProductKey", "PulseAgent");
+
+    /// <summary>The ProgramData folder for data and logs.</summary>
+    public static readonly string DataName = Meta("PulseDataName", "PulseAgent");
 
     /// <summary>The name people see: the window title and the GUI executable.</summary>
     public static readonly string GuiName = Meta("PulseGuiName", "Pulse Agent");
@@ -37,7 +40,7 @@ public static class Identity
     public static string SecretsKey => $@"SOFTWARE\{ProductKey}\Secrets";
 
     public static string DataDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), ProductKey);
+        Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), DataName);
     public static string LogDirectory => Path.Combine(DataDirectory, "logs");
     public static string IdleDirectory => Path.Combine(DataDirectory, "idle");
     /// <summary>In logs\, the one folder users may read, so the GUI can show it unelevated.</summary>

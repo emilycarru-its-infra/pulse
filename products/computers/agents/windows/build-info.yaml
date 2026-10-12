@@ -1,0 +1,9 @@
+product:
+  name: ComputerPulse
+  version: ${TIMESTAMP}
+  developer: ${PACKAGE_DEVELOPER}
+  identifier: ${PACKAGE_ID_PREFIX}.${ARCH}.ComputerPulse
+  description: ComputerPulse reports whether this shared computer is free, in use, locked or off to the Computers status page, with the Managed Presence Beacon app. Sends no usernames.
+signing_certificate: ${SIGNING_CERT_CN}
+postinstall_action: script
+install_location: 'C:\Program Files\ComputerPulse'

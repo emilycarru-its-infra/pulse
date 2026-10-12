@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.github.managedpulse</string>
+    <string>com.github.computerpulse</string>
     <key>ProgramArguments</key>
     <array>
         <string>/Applications/Utilities/Managed Presence Beacon.app/Contents/MacOS/managedpulse</string>
