@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>PulseAgent.Cli</RootNamespace>
+    <AssemblyName>$(PulseCliName)</AssemblyName>
+    <SelfContained>true</SelfContained>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PulseAgent.Core\PulseAgent.Core.csproj" />
+  </ItemGroup>
+
+</Project>
