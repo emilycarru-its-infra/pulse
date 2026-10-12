@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/emilycarru-its-infra/pulse/core/contract/event.schema.json",
+  "title": "Pulse agent event",
+  "description": "One event sent by a ComputersPulse agent to POST /api/ingest. It never carries a username or any other personal data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["v", "type", "ts", "device", "session", "agent"],
+  "properties": {
+    "v": { "const": 1, "description": "Contract version." },
+    "type": {
+      "enum": ["heartbeat", "login", "logout", "lock", "unlock", "boot", "shutdown"],
+      "description": "heartbeat is sent every 60 seconds; the others are sent as they happen."
+    },
+    "ts": { "type": "string", "format": "date-time", "description": "When the agent observed the event, in UTC." },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hostname", "serial"],
+      "properties": {
+        "hostname": { "type": "string", "minLength": 1, "maxLength": 63 },
+        "serial": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["active", "locked", "idleSeconds"],
+      "properties": {
+        "active": { "type": "boolean", "description": "Someone is signed in at the console." },
+        "locked": { "type": "boolean", "description": "The console session is locked." },
+        "idleSeconds": { "type": "integer", "minimum": 0, "description": "Seconds since the last keyboard or mouse input." }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "platform"],
+      "properties": {
+        "version": { "type": "string", "maxLength": 32 },
+        "platform": { "enum": ["mac", "windows"] }
+      }
+    }
+  }
+}

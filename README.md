@@ -13,9 +13,9 @@ kind of resource is its own product on a subdomain:
 Every page sits behind single sign-on, and each product declares the audience
 role it requires.
 
-## Layout (planned)
+## Layout
 
-- `core/`: event contract, space catalog schema, web shell, and the `pulse-product` Terraform module
+- `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell and the `pulse-product` Terraform module to come
 - `hub/`: the summary page
 - `products/computers/`: `agent-mac`, `agent-win`, `api`, `web`
 - `products/printers/`, `products/servers/`
