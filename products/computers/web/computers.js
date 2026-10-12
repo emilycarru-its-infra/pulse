@@ -205,6 +205,7 @@ function render() {
     `<b>${seats.filter((s) => s.state === "available").length}</b> free of ${seats.length} on campus`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
+  document.getElementById("hint").hidden = state.mode !== "map";
   if (state.mode === "map") drawFloor();
   else renderList();
   renderDrawer();
