@@ -23,24 +23,16 @@ public static class SessionProbe
     /// <summary>Idle readings older than this are ignored and the session's own figure is used.</summary>
     public static readonly TimeSpan IdleFreshness = TimeSpan.FromSeconds(30);
 
-    /// <summary>The signed-in session: the console's when someone is signed in there, otherwise
-    /// the first active remote session with a user.</summary>
+    /// <summary>The console session, the one at the keyboard and screen. A remote session does not
+    /// count: someone signed in over RDP leaves the seat itself free.</summary>
     public static SessionSnapshot Read()
     {
-        var console = WTSGetActiveConsoleSessionId();
-        var candidates = new List<uint>();
-        if (console != 0xFFFFFFFF) candidates.Add(console);
-        candidates.AddRange(ActiveSessions().Where(id => id != console));
-
-        foreach (var id in candidates)
-        {
-            if (Query(id) is not { HasUser: true } info) continue;
-            var (idle, source) = HelperIdle(id) is { } helper
-                ? (helper, "helper")
-                : info.IdleSeconds is { } own ? (own, "session") : (0, "none");
-            return new SessionSnapshot(true, info.Locked, idle, id, source);
-        }
-        return SessionSnapshot.Nobody;
+        var id = WTSGetActiveConsoleSessionId();
+        if (id == 0xFFFFFFFF || Query(id) is not { HasUser: true } info) return SessionSnapshot.Nobody;
+        var (idle, source) = HelperIdle(id) is { } helper
+            ? (helper, "helper")
+            : info.IdleSeconds is { } own ? (own, "session") : (0, "none");
+        return new SessionSnapshot(true, info.Locked, idle, id, source);
     }
 
     /// <summary>The idle seconds the per-user helper last wrote for a session, if fresh. Users write
@@ -80,26 +72,6 @@ public static class SessionProbe
 
     private sealed record SessionInfo(bool HasUser, bool Locked, int? IdleSeconds);
 
-    private static IEnumerable<uint> ActiveSessions()
-    {
-        if (!WTSEnumerateSessions(IntPtr.Zero, 0, 1, out var buffer, out var count)) yield break;
-        try
-        {
-            var size = Marshal.SizeOf<WTS_SESSION_INFO>();
-            var ids = new List<uint>();
-            for (var i = 0; i < count; i++)
-            {
-                var info = Marshal.PtrToStructure<WTS_SESSION_INFO>(buffer + i * size);
-                if (info.State == WTSActive) ids.Add(info.SessionId);
-            }
-            foreach (var id in ids) yield return id;
-        }
-        finally
-        {
-            WTSFreeMemory(buffer);
-        }
-    }
-
     private static SessionInfo? Query(uint sessionId)
     {
         if (!WTSQuerySessionInformation(IntPtr.Zero, sessionId, WTSSessionInfoEx, out var buffer, out _))
@@ -123,17 +95,8 @@ public static class SessionProbe
         }
     }
 
-    private const int WTSActive = 0;
     private const int WTSSessionInfoEx = 25;
     private const int WTS_SESSIONSTATE_LOCK = 0;
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct WTS_SESSION_INFO
-    {
-        public uint SessionId;
-        public string WinStationName;
-        public int State;
-    }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct WTSINFOEX_LEVEL1_W
@@ -153,9 +116,6 @@ public static class SessionProbe
 
     [DllImport("kernel32.dll")]
     private static extern uint WTSGetActiveConsoleSessionId();
-
-    [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "WTSEnumerateSessionsW")]
-    private static extern bool WTSEnumerateSessions(IntPtr server, int reserved, int version, out IntPtr buffer, out int count);
 
     [DllImport("wtsapi32.dll", CharSet = CharSet.Unicode, SetLastError = true, EntryPoint = "WTSQuerySessionInformationW")]
     private static extern bool WTSQuerySessionInformation(IntPtr server, uint sessionId, int infoClass, out IntPtr buffer, out int bytes);
