@@ -11,6 +11,17 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
     public var lastExitCode: String?
     public var schedule: String
     public var program: String?
+    /// The fields ReportMate's System module collects for a launchd job, read from
+    /// `launchctl print` and the job's plist.
+    public var kind: String = "LaunchDaemon"
+    public var arguments: [String] = []
+    public var runAtLoad: Bool = false
+    public var keepAlive: String = "No"
+    public var startInterval: Int?
+    public var user: String = "root"
+    public var standardOutPath: String?
+    public var standardErrorPath: String?
+    public var plistPath: String = ""
 
     /// The jobs the package installs: the agent, and the helper the app registers.
     public static let installed: [(label: String, title: String, plist: String)] = [
@@ -25,7 +36,9 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
         installed.map { job in
             let plist = NSDictionary(contentsOfFile: job.plist) as? [String: Any]
             let printed = launchctlPrint("system/\(job.label)")
-            return make(label: job.label, title: job.title, plist: plist, printed: printed)
+            var made = make(label: job.label, title: job.title, plist: plist, printed: printed)
+            made.plistPath = job.plist
+            return made
         }
     }
 
@@ -38,9 +51,18 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
             state = plist == nil ? "Not installed" : "Not loaded"
         }
         let exit = fields["last exit code"].map { $0 == "(never exited)" ? "Never exited" : $0 }
-        return LaunchdJob(label: label, title: title, state: state,
-                          pid: fields["pid"].flatMap(Int.init), lastExitCode: exit,
-                          schedule: schedule(plist), program: program(plist))
+        var job = LaunchdJob(label: label, title: title, state: state,
+                             pid: fields["pid"].flatMap(Int.init), lastExitCode: exit,
+                             schedule: schedule(plist), program: program(plist))
+        if plist?["MachServices"] != nil, plist?["BundleProgram"] != nil { job.kind = "Privileged helper (SMAppService)" }
+        job.arguments = Array((plist?["ProgramArguments"] as? [String] ?? []).dropFirst())
+        job.runAtLoad = plist?["RunAtLoad"] as? Bool ?? false
+        job.keepAlive = keepAliveWords(plist?["KeepAlive"])
+        job.startInterval = plist?["StartInterval"] as? Int
+        job.user = plist?["UserName"] as? String ?? "root"
+        job.standardOutPath = plist?["StandardOutPath"] as? String
+        job.standardErrorPath = plist?["StandardErrorPath"] as? String
+        return job
     }
 
     /// The top-level `key = value` lines of `launchctl print`; nested blocks are skipped.
@@ -67,8 +89,16 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
         return "On demand"
     }
 
+    static func keepAliveWords(_ value: Any?) -> String {
+        if let on = value as? Bool { return on ? "Yes, restarted whenever it exits" : "No" }
+        if let conditions = value as? [String: Any] {
+            return "While " + conditions.keys.sorted().joined(separator: ", ")
+        }
+        return "No"
+    }
+
     static func program(_ plist: [String: Any]?) -> String? {
-        if let args = plist?["ProgramArguments"] as? [String], !args.isEmpty { return args.joined(separator: " ") }
+        if let args = plist?["ProgramArguments"] as? [String], let first = args.first { return first }
         if let program = plist?["Program"] as? String { return program }
         if let bundled = plist?["BundleProgram"] as? String { return PulseConstants.appPath + "/" + bundled }
         return nil
