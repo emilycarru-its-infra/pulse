@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server Status</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="servers.css">
+</head>
+<body>
+  <main class="doc wide">
+    <p class="sample" id="sample" hidden><b>Mockup with sample data.</b> The servers and services are real names; every status, metric and alert on this page is simulated.</p>
+
+    <div class="toolbar">
+      <div class="segmented" role="group" aria-label="Group by" id="view">
+        <button type="button" data-v="service" aria-pressed="true">By service</button>
+        <button type="button" data-v="location" aria-pressed="false">By location</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Show" id="filter">
+        <button type="button" data-v="all" aria-pressed="true">All</button>
+        <button type="button" data-v="attention" aria-pressed="false">Needs attention</button>
+      </div>
+      <label class="search"><span class="visually-hidden">Find a server</span>
+        <input type="search" id="search" placeholder="Find a server, role or service" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="toolbar-end">
+        <p class="total" id="total" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <section class="picture" aria-label="Where the servers run" id="picture"></section>
+
+    <div class="stage">
+      <div class="groups" id="groups"></div>
+      <aside class="drawer" id="drawer" aria-label="Server details" hidden></aside>
+    </div>
+
+    <div class="page-foot">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="tag up"></span>Up</li>
+        <li><span class="tag degraded"></span>Degraded</li>
+        <li><span class="tag down"></span>Down</li>
+        <li><span class="tag stopped"></span>Stopped on purpose</li>
+        <li><span class="tag unknown"></span>No data</li>
+      </ul>
+      <p class="fine" id="updated"></p>
+    </div>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="servers.js"></script>
+</body>
+</html>
