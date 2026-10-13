@@ -11,6 +11,10 @@ locals {
   deployment_bucket = "${azurerm_storage_account.this.primary_blob_endpoint}${azurerm_storage_container.deployments.name}"
 
   app_settings = merge({
+    # azurerm writes AzureWebJobsStorage as a connection string with an empty account key,
+    # which the host tries before the identity settings and fails on. An empty value makes
+    # it fall through to AzureWebJobsStorage__accountName and the managed identity.
+    AzureWebJobsStorage              = ""
     AzureWebJobsStorage__accountName = azurerm_storage_account.this.name
     PULSE_STORAGE_ACCOUNT            = azurerm_storage_account.this.name
     PULSE_EVENTS_TABLE               = var.events_table_name
