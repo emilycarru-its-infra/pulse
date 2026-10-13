@@ -383,3 +383,5 @@ svg.addEventListener("keydown", (e) => {
     first = false;
   }, 15000);
 })();
+
+Pulse.masonry(document.getElementById("spaces"));
