@@ -8,7 +8,7 @@
     <ScrollViewer Padding="28,24,28,24">
         <StackPanel Spacing="20" MaxWidth="960" HorizontalAlignment="Center">
 
-            <!-- Header: icon, name, description, links, then a divider -->
+            <!-- Header: icon, name, description, links and version, then a divider -->
             <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,0">
                 <Image x:Name="AppIcon" Width="96" Height="96" HorizontalAlignment="Center" />
                 <TextBlock x:Name="AppName" Style="{StaticResource TitleTextBlockStyle}" HorizontalAlignment="Center" />
@@ -21,31 +21,14 @@
                                      NavigateUri="https://github.com/emilycarru-its-infra/pulse/tree/main/products/computers/agents/windows" />
                     <HyperlinkButton Content="Report Issue" NavigateUri="https://github.com/emilycarru-its-infra/pulse/issues" />
                 </StackPanel>
+                <TextBlock x:Name="VersionText" IsTextSelectionEnabled="True"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           HorizontalAlignment="Center" />
             </StackPanel>
+
             <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-            <!-- Read-only until Unlock: the settings live in HKLM, so Unlock relaunches elevated -->
-            <StackPanel HorizontalAlignment="Center" Spacing="6"
-                        Visibility="{x:Bind ViewModel.IsReadOnly, Converter={StaticResource BoolToVisibility}}">
-                <Button HorizontalAlignment="Center" Click="UnlockButton_Click"
-                        ToolTipService.ToolTip="Relaunch as administrator to edit settings">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <FontIcon Glyph="&#xE785;" FontSize="14" />
-                        <TextBlock Text="Unlock to make changes" />
-                    </StackPanel>
-                </Button>
-                <TextBlock Text="{x:Bind ViewModel.UnlockError, Mode=OneWay}"
-                           Style="{StaticResource CaptionTextBlockStyle}" HorizontalAlignment="Center"
-                           Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
-                           Visibility="{x:Bind ViewModel.HasUnlockError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
-                        Visibility="{x:Bind ViewModel.IsElevated, Converter={StaticResource BoolToVisibility}}">
-                <FontIcon Glyph="&#xEA18;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                <TextBlock Text="Running as administrator. Changes save to this computer's machine settings."
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-            </StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
                         Visibility="{x:Bind ViewModel.IsSaveStatusVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
                 <FontIcon Glyph="{x:Bind ViewModel.SaveStatusGlyph, Mode=OneWay}" FontSize="12"

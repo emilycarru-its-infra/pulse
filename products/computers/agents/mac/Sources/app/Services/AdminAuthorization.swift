@@ -1,7 +1,7 @@
 //
-//  The window's Unlock: asks an administrator to authenticate and keeps the resulting
-//  authorization, which the helper checks before any preference write. Prefs stay
-//  read-only until then; Run needs no administrator.
+//  Asks an administrator to authenticate the first time Prefs saves a change, and keeps
+//  the resulting authorization, which the helper checks before any preference write.
+//  Run needs no administrator.
 //
 
 import Foundation

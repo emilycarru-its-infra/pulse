@@ -7,7 +7,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Title bar: no title text, just the Prefs / Run / Logs selector centred in it. The rest of
@@ -35,12 +34,5 @@
 
         <Frame x:Name="ContentFrame" Grid.Row="1" />
 
-        <!-- Footer: the version, on every tab -->
-        <Border Grid.Row="2" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
-                Padding="16,6">
-            <TextBlock x:Name="VersionText" HorizontalAlignment="Center" IsTextSelectionEnabled="True"
-                       Style="{StaticResource CaptionTextBlockStyle}"
-                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
-        </Border>
     </Grid>
 </Window>

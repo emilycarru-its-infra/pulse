@@ -208,3 +208,67 @@ public class ScheduledTaskTests
         Assert.Equal("2027-01-04 09:41, Result 0x80070005", ScheduledTasks.DescribeLastRun(when, unchecked((int)0x80070005)));
     }
 }
+
+public class ApplySettingsTests
+{
+    private static readonly HashSet<string> NoPolicy = [];
+
+    private static string Payload(string json) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+
+    [Fact]
+    public void ChangedKeysRoundTripThroughTheCommandLine()
+    {
+        var changes = new Dictionary<string, object>
+        {
+            [SettingsStore.IngestUrl] = "https://status.example.edu/api/ingest",
+            [SettingsStore.CheckIntervalSeconds] = 30,
+            [SettingsStore.VerboseLogging] = true,
+        };
+        var start = PrefsElevation.BuildElevatedApply(@"C:\Program Files\Example\app.exe", changes);
+        Assert.Equal("runas", start.Verb);
+        var payload = PrefsElevation.ApplyPayload(start.Arguments.Split(' '));
+        var values = PrefsElevation.Validate(payload!, NoPolicy, out var error);
+        Assert.Equal("", error);
+        Assert.Equal(changes, values);
+    }
+
+    [Fact]
+    public void OnlyTheApplySwitchStartsTheApplyMode()
+    {
+        Assert.Null(PrefsElevation.ApplyPayload([]));
+        Assert.Null(PrefsElevation.ApplyPayload(["--prefs"]));
+        Assert.Equal("", PrefsElevation.ApplyPayload([PrefsElevation.ApplyArgument]));
+    }
+
+    [Fact]
+    public void IntervalsAreClampedToTheirRanges()
+    {
+        var values = PrefsElevation.Validate(Payload("""{"CheckIntervalSeconds":1,"HeartbeatIntervalSeconds":99999}"""), NoPolicy, out _);
+        Assert.Equal(5, values![SettingsStore.CheckIntervalSeconds]);
+        Assert.Equal(3600, values[SettingsStore.HeartbeatIntervalSeconds]);
+    }
+
+    [Theory]
+    [InlineData("""{"Nonsense":1}""")]
+    [InlineData("""{"CheckIntervalSeconds":"thirty"}""")]
+    [InlineData("""{"VerboseLogging":1}""")]
+    [InlineData("""{"IngestKey":""}""")]
+    [InlineData("""{}""")]
+    [InlineData("""[1,2]""")]
+    public void BadPayloadsAreRefused(string json)
+    {
+        Assert.Null(PrefsElevation.Validate(Payload(json), NoPolicy, out var error));
+        Assert.NotEqual("", error);
+    }
+
+    [Fact]
+    public void NotBase64IsRefused() => Assert.Null(PrefsElevation.Validate("%%%", NoPolicy, out _));
+
+    [Fact]
+    public void APolicyKeyIsNeverWritten()
+    {
+        HashSet<string> managed = [SettingsStore.IngestUrl];
+        Assert.Null(PrefsElevation.Validate(Payload("""{"ingesturl":"https://x.example"}"""), managed, out var error));
+        Assert.Contains("policy", error);
+    }
+}

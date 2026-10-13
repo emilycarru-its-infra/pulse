@@ -22,6 +22,14 @@ public partial class App : Application
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
     {
+        // The hidden apply mode: Prefs started this copy through UAC to write the changed settings.
+        // It writes them and exits with the result, without ever opening a window.
+        if (PrefsElevation.ApplyPayload(Environment.GetCommandLineArgs().Skip(1).ToList()) is { } payload)
+        {
+            Environment.Exit(PrefsElevation.Apply(payload));
+            return;
+        }
+
         try
         {
             window = new MainWindow();

@@ -1,7 +1,7 @@
 //
-//  Prefs: the app header with Unlock, then two columns of cards and the Services card.
-//  Every field is read-only until an administrator unlocks the window. A value a
-//  configuration profile sets stays gray either way, under one banner that says so.
+//  Prefs: the app header, then two columns of cards and the Services card. A value a
+//  configuration profile sets stays gray, under one banner that says so; any other
+//  change asks for an administrator when it is saved.
 //
 
 import SwiftUI
@@ -11,8 +11,6 @@ struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     @Environment(XPCClient.self) private var xpc
     @State private var revealKey = false
-
-    private var locked: Bool { !xpc.isUnlocked }
 
     var body: some View {
         ScrollView {
@@ -59,28 +57,8 @@ struct SettingsView: View {
                 Link("Report Issue", destination: PulseConstants.issuesURL)
             }
             .font(.caption)
-            lockButton
-                .padding(.top, 4)
         }
         .padding(.top, 8)
-    }
-
-    @ViewBuilder private var lockButton: some View {
-        if locked {
-            Button {
-                if xpc.unlock() { viewModel.load() }
-            } label: {
-                Label("Unlock to make changes", systemImage: "lock.fill")
-            }
-            .help("An administrator must authenticate before the beacon's settings can change")
-        } else {
-            Button {
-                xpc.lock()
-            } label: {
-                Label("Lock", systemImage: "lock.open.fill")
-            }
-            .help("Stop making changes")
-        }
     }
 
     /// One line for every key a profile sets, worded as System Settings words it.
@@ -259,7 +237,7 @@ struct SettingsView: View {
                                      @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
-            content().disabled(viewModel.isManaged(key) || locked)
+            content().disabled(viewModel.isManaged(key))
         }
     }
 }

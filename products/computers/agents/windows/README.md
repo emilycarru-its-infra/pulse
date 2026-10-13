@@ -17,7 +17,7 @@ Three programs, published together into one folder:
   falls back to the session's own figure.
 - **The GUI** (`Managed Presence Beacon.exe`) has the Prefs, Run and Logs tabs of the other
   management tools.
-  - **Prefs** shows the settings and, in a **Services** card, the agent's scheduled tasks with their state, trigger, last result and program. A value set by policy appears in a grey, disabled control, and one line at the top of the tab says so. Prefs is read-only until **Unlock to make changes** relaunches the app as administrator.
+  - **Prefs** shows the settings and, in a **Services** card, the agent's scheduled tasks with their state, trigger, last result and program. A value set by policy appears in a grey, disabled control, and one line at the top of the tab says so. Every other setting can be edited and saves itself; the settings live in HKLM, so saving asks for an administrator through UAC at that moment.
   - **Run** shows what the agent last saw and sent, and has **Send now**.
   - **Logs** follows the agent's daily log.
 

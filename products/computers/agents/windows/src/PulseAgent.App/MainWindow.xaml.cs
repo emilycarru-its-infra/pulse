@@ -21,7 +21,6 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         Title = Identity.GuiName;
-        VersionText.Text = Identity.VersionDisplay;
 
         // 1100 x 900 DIP scaled by the monitor's DPI, kept inside 96% of the work area, and never
         // smaller than 900 x 640 DIP.
@@ -54,7 +53,7 @@ public sealed partial class MainWindow : Window
             ((UIElement)Content).KeyboardAccelerators.Add(accelerator);
         }
 
-        // Prefs is the first tab; the elevated relaunch from Unlock passes --prefs as well.
+        // Prefs is the first tab.
         Tabs.SelectedItem = Tabs.Items[0];
     }
 

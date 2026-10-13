@@ -83,7 +83,8 @@ final class XPCClient: NSObject {
 
     // MARK: Administrator
 
-    /// Prompts for an administrator. Prefs stay editable until `lock()` or the app quits.
+    /// Prompts for an administrator. The authorization covers every save until `lock()`
+    /// or the app quits.
     @discardableResult
     func unlock() -> Bool {
         isUnlocked = admin.unlock()

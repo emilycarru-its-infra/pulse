@@ -10,8 +10,8 @@ in use, locked or free, and never who is using it.
 - **Managed Presence Beacon.app** in /Applications/Utilities is the Prefs / Run / Logs
   window. A privileged helper inside it writes the machine-level settings and runs
   `managedpresencebeacon send` for Send Now; it trusts only an app signed by its own team.
-  Send Now needs no administrator; Prefs stay read-only until an administrator clicks
-  Unlock, and the helper refuses any write without that authorization. The Services card
+  Send Now needs no administrator. Saving a change on Prefs asks for one, and the helper
+  refuses any write without that authorization. The Services card
   on Prefs shows the agent's and the helper's launchd state, schedule and last exit code.
 - Every event follows [`core/contract/event.schema.json`](../../../../core/contract/event.schema.json).
 

@@ -1,4 +1,3 @@
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
@@ -15,6 +14,7 @@ public sealed partial class PrefsPage : Page
     {
         InitializeComponent();
         AppName.Text = Identity.GuiName;
+        VersionText.Text = Identity.VersionDisplay;
         var icon = Path.Combine(AppContext.BaseDirectory, "Assets", $"{Identity.IconName}.png");
         if (File.Exists(icon)) AppIcon.Source = new BitmapImage(new Uri(icon));
     }
@@ -23,12 +23,5 @@ public sealed partial class PrefsPage : Page
     {
         base.OnNavigatedTo(e);
         ViewModel.Load();
-    }
-
-    private void UnlockButton_Click(object sender, RoutedEventArgs e)
-    {
-        // Once the elevated copy has started this read-only one closes; a cancelled UAC prompt
-        // leaves the tab as it was.
-        if (ViewModel.TryRelaunchElevated()) Application.Current.Exit();
     }
 }

@@ -74,18 +74,31 @@ public static class SettingsStore
     /// leaves the saved one in place: a secret is replaced, never shown or cleared by accident.</summary>
     public static void Save(AgentSettings settings, IReadOnlySet<string> managed)
     {
+        var values = new Dictionary<string, object>
+        {
+            [IngestUrl] = settings.IngestUrl ?? "",
+            [CheckIntervalSeconds] = settings.CheckIntervalSeconds,
+            [HeartbeatIntervalSeconds] = settings.HeartbeatIntervalSeconds,
+            [UseDeviceCertificate] = settings.UseDeviceCertificate,
+            [VerboseLogging] = settings.VerboseLogging,
+        };
+        if (!string.IsNullOrWhiteSpace(settings.IngestKey)) values[IngestKey] = settings.IngestKey;
+        SaveValues(values.Where(v => !managed.Contains(v.Key)).ToDictionary());
+    }
+
+    /// <summary>Writes just the given keys: strings as text, ints and bools as DWORDs, and the
+    /// ingest key to the Secrets key. The caller has already left out any key policy manages.</summary>
+    public static void SaveValues(IReadOnlyDictionary<string, object> values)
+    {
         using var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)
             .CreateSubKey(Identity.SettingsKey, writable: true);
-        void Put(string name, object value, RegistryValueKind kind)
+        foreach (var (name, value) in values)
         {
-            if (!managed.Contains(name)) key.SetValue(name, value, kind);
+            if (name == IngestKey) SaveSecret(IngestKey, (string)value);
+            else if (value is bool flag) key.SetValue(name, flag ? 1 : 0, RegistryValueKind.DWord);
+            else if (value is int number) key.SetValue(name, number, RegistryValueKind.DWord);
+            else key.SetValue(name, value.ToString() ?? "", RegistryValueKind.String);
         }
-        Put(IngestUrl, settings.IngestUrl ?? "", RegistryValueKind.String);
-        if (!string.IsNullOrWhiteSpace(settings.IngestKey)) SaveSecret(IngestKey, settings.IngestKey);
-        Put(CheckIntervalSeconds, settings.CheckIntervalSeconds, RegistryValueKind.DWord);
-        Put(HeartbeatIntervalSeconds, settings.HeartbeatIntervalSeconds, RegistryValueKind.DWord);
-        Put(UseDeviceCertificate, settings.UseDeviceCertificate ? 1 : 0, RegistryValueKind.DWord);
-        Put(VerboseLogging, settings.VerboseLogging ? 1 : 0, RegistryValueKind.DWord);
     }
 
     /// <summary>Writes a credential to the Secrets key, which keeps only SYSTEM and Administrators

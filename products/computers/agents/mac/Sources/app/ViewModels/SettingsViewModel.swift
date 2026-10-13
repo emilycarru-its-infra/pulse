@@ -1,7 +1,7 @@
 //
 //  The Prefs page's values. Reads what the agent reads (a profile's value wins), and
-//  saves each change through the helper a moment after the last edit, once an
-//  administrator has unlocked the window. Managed keys are never written.
+//  saves each change through the helper a moment after the last edit, asking for an
+//  administrator the first time. Managed keys are never written.
 //
 
 import Foundation
@@ -54,7 +54,7 @@ final class SettingsViewModel {
     }
 
     private func changed(_ key: PulseSettings.Key) {
-        guard !loading, !isManaged(key), client?.isUnlocked == true else { return }
+        guard !loading, !isManaged(key) else { return }
         dirty.insert(key)
         saveTask?.cancel()
         saveTask = Task { [weak self] in
@@ -80,6 +80,13 @@ final class SettingsViewModel {
         dirty.removeAll()
         let writes = keys.compactMap { key in value(for: key).map { (key, $0) } }
         guard !writes.isEmpty else { return }
+        // The first save of the session asks for an administrator; a cancel puts the
+        // fields back to what is on disk.
+        guard client.isUnlocked || client.unlock() else {
+            load()
+            saveStatus = .failed("Not saved: an administrator must approve the change.")
+            return
+        }
         saveStatus = .saving
         var refused: [String] = []
         for (key, value) in writes {
