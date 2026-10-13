@@ -33,14 +33,18 @@ resource "azurerm_storage_account" "this" {
   tags                            = var.tags
 }
 
-resource "azurerm_storage_table" "events" {
-  name               = var.events_table_name
-  storage_account_id = azurerm_storage_account.this.id
+# The tables go through ARM. azurerm_storage_table still writes table ACLs over the data
+# plane with the account key, which an account with shared keys off refuses.
+resource "azapi_resource" "events" {
+  type      = "Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01"
+  name      = var.events_table_name
+  parent_id = "${azurerm_storage_account.this.id}/tableServices/default"
 }
 
-resource "azurerm_storage_table" "state" {
-  name               = var.state_table_name
-  storage_account_id = azurerm_storage_account.this.id
+resource "azapi_resource" "state" {
+  type      = "Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01"
+  name      = var.state_table_name
+  parent_id = "${azurerm_storage_account.this.id}/tableServices/default"
 }
 
 resource "azurerm_storage_container" "deployments" {
@@ -212,4 +216,20 @@ resource "azurerm_static_web_app_custom_domain" "this" {
   validation_type   = "cname-delegation"
 
   depends_on = [azurerm_dns_cname_record.this]
+}
+
+# The first apply created these tables through azurerm and then failed on their ACLs. Forget
+# them without a data-plane delete; the azapi tables above take over the same tables.
+removed {
+  from = azurerm_storage_table.events
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = azurerm_storage_table.state
+  lifecycle {
+    destroy = false
+  }
 }
