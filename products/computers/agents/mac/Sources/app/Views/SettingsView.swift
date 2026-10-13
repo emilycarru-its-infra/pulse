@@ -10,6 +10,7 @@ import PulseAgentCore
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     @Environment(XPCClient.self) private var xpc
+    @State private var expandedServices: Set<String> = []
 
     var body: some View {
         ScrollView {
@@ -27,7 +28,7 @@ struct SettingsView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
-                servicesCard
+                if !viewModel.services.isEmpty { servicesCard }
                 footer
             }
             .padding()
@@ -196,59 +197,107 @@ struct SettingsView: View {
 
     private var servicesCard: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(viewModel.services) { job in
                     serviceRow(job)
                     if job != viewModel.services.last { Divider() }
                 }
             }
-            .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
             Label("Services", systemImage: "gearshape.2").font(.headline)
         }
     }
 
+    /// One collapsed row per job: its label, a summary line and its state. Clicking
+    /// anywhere on the row, or Space or Return when it has focus, shows the fields
+    /// ReportMate collects for the job, all read-only.
     private func serviceRow(_ job: LaunchdJob) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(job.title).font(.body.weight(.medium))
-                Text(job.label)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-                    .textSelection(.enabled)
-                Spacer()
-                Label(job.pid.map { "\(job.state), pid \($0)" } ?? job.state, systemImage: stateSymbol(job))
-                    .font(.callout)
-                    .foregroundStyle(job.state == "Running" ? .green : .secondary)
-            }
-            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
-                GridRow {
-                    Text("Schedule").foregroundStyle(.secondary)
-                    Text(job.schedule)
-                }
-                GridRow {
-                    Text("Last exit code").foregroundStyle(.secondary)
-                    Text(job.lastExitCode ?? "—")
-                }
-                if let program = job.program {
-                    GridRow {
-                        Text("Runs").foregroundStyle(.secondary)
-                        Text(program).textSelection(.enabled).lineLimit(2).truncationMode(.middle)
+        let open = expandedServices.contains(job.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                toggle(job)
+            } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(job.label)
+                            .font(.body.monospaced())
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text(job.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 12)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(stateColor(job))
+                            .frame(width: 9, height: 9)
+                        Text(job.statusText)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(.vertical, 8)
+                .padding(.trailing, 6)
+                .contentShape(Rectangle())
             }
-            .font(.caption)
+            .buttonStyle(.plain)
+            .onKeyPress(.return) { toggle(job); return .handled }
+            .onKeyPress(.space) { toggle(job); return .handled }
+            .accessibilityLabel("\(job.label), \(job.statusText)")
+            .accessibilityHint(open ? "Hides the details" : "Shows the details")
+            .accessibilityAddTraits(.isButton)
+
+            if open {
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                    detail("Type", job.kind)
+                    detail("Status", job.statusText)
+                    detail("Last exit code", job.lastExitCode ?? "—")
+                    detail("Program", job.program ?? "—", mono: true)
+                    if !job.arguments.isEmpty { detail("Arguments", job.arguments.joined(separator: " "), mono: true) }
+                    detail("Runs at load", job.runAtLoad ? "Yes" : "No")
+                    detail("Keep alive", job.keepAlive)
+                    detail("Schedule", job.startInterval.map { "Every \($0) seconds" } ?? job.schedule)
+                    detail("User", job.user)
+                    if let out = job.standardOutPath { detail("Standard output", out, mono: true) }
+                    if let err = job.standardErrorPath { detail("Standard error", err, mono: true) }
+                    detail("Plist", job.plistPath, mono: true)
+                }
+                .font(.callout)
+                .padding(.leading, 24)
+                .padding(.bottom, 10)
+            }
         }
-        .accessibilityElement(children: .combine)
     }
 
-    private func stateSymbol(_ job: LaunchdJob) -> String {
-        switch job.state {
-        case "Running": "circle.fill"
-        case "Not installed", "Not loaded": "circle.dashed"
-        default: "circle"
+    private func toggle(_ job: LaunchdJob) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            if expandedServices.contains(job.id) { expandedServices.remove(job.id) } else { expandedServices.insert(job.id) }
         }
+    }
+
+    @ViewBuilder
+    private func detail(_ name: String, _ value: String, mono: Bool = false) -> some View {
+        GridRow {
+            Text(name).foregroundStyle(.secondary)
+            Text(value)
+                .font(mono ? .callout.monospaced() : .callout)
+                .textSelection(.enabled)
+                .lineLimit(2)
+                .truncationMode(.middle)
+        }
+    }
+
+    private func stateColor(_ job: LaunchdJob) -> Color {
+        if job.state == "Running" { return .green }
+        if let code = job.lastExitCode, Int(code).map({ $0 != 0 }) ?? false { return .red }
+        return .secondary
     }
 
     /// A field a profile sets stays disabled and gray; the banner above explains why.
