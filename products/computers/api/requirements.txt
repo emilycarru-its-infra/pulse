@@ -3,5 +3,5 @@
 azure-functions
 azure-data-tables>=12.5
 azure-identity>=1.17
-cryptography>=43
+cryptography>=43,<51
 jsonschema>=4.20

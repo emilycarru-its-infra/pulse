@@ -7,8 +7,8 @@ license = "MIT"
 dependencies = ["pulse-core", "jsonschema"]
 
 [project.optional-dependencies]
-azure = ["azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "cryptography>=43"]
-test = ["pytest", "azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "cryptography>=43"]
+azure = ["azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "cryptography>=43,<51"]
+test = ["pytest", "azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "cryptography>=43,<51"]
 
 [tool.setuptools.packages.find]
 include = ["pulse_computers*"]
