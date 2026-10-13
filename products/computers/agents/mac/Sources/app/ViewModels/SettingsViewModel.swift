@@ -1,7 +1,7 @@
 //
 //  The Prefs page's values. Reads what the agent reads (a profile's value wins), and
-//  saves each change through the helper a moment after the last edit. Managed keys are
-//  never written.
+//  saves each change through the helper a moment after the last edit, once an
+//  administrator has unlocked the window. Managed keys are never written.
 //
 
 import Foundation
@@ -33,6 +33,10 @@ final class SettingsViewModel {
 
     func isManaged(_ key: PulseSettings.Key) -> Bool { managed.contains(key) }
 
+    /// True when a profile sets at least one key, which shows the Prefs banner.
+    var anyManaged: Bool { !managed.isEmpty }
+    private(set) var services: [LaunchdJob] = []
+
     func load() {
         loading = true
         defer { loading = false }
@@ -45,11 +49,12 @@ final class SettingsViewModel {
         heartbeatInterval = s.heartbeatInterval
         verboseLogging = s.verboseLogging
         certificate = DeviceIdentity.findCertificate()
+        services = LaunchdJob.readAll()
         dirty.removeAll()
     }
 
     private func changed(_ key: PulseSettings.Key) {
-        guard !loading, !isManaged(key) else { return }
+        guard !loading, !isManaged(key), client?.isUnlocked == true else { return }
         dirty.insert(key)
         saveTask?.cancel()
         saveTask = Task { [weak self] in

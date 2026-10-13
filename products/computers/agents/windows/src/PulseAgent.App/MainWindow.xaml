@@ -7,38 +7,40 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Custom title bar region (drag target) -->
-        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="32" Background="Transparent">
-            <TextBlock x:Name="AppTitle" VerticalAlignment="Center" Margin="16,0,0,0"
-                       Style="{StaticResource CaptionTextBlockStyle}" />
+        <!-- Title bar: no title text, just the Prefs / Run / Logs selector centred in it. The rest of
+             the bar is the drag target; the selector is a passthrough region so it takes clicks. -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="48" Background="Transparent">
+            <SelectorBar x:Name="Tabs" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         SelectionChanged="Tabs_SelectionChanged" SizeChanged="Tabs_SizeChanged">
+                <SelectorBarItem Text="Prefs" Tag="prefs" AutomationProperties.AutomationId="PrefsTab">
+                    <SelectorBarItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem Text="Run" Tag="run" AutomationProperties.AutomationId="RunTab">
+                    <SelectorBarItem.Icon>
+                        <FontIcon Glyph="&#xE768;" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+                <SelectorBarItem Text="Logs" Tag="logs" AutomationProperties.AutomationId="LogsTab">
+                    <SelectorBarItem.Icon>
+                        <FontIcon Glyph="&#xE9D5;" />
+                    </SelectorBarItem.Icon>
+                </SelectorBarItem>
+            </SelectorBar>
         </Grid>
 
-        <NavigationView x:Name="NavView" Grid.Row="1"
-                        PaneDisplayMode="Top"
-                        IsBackButtonVisible="Collapsed"
-                        IsSettingsVisible="False"
-                        SelectionChanged="NavView_SelectionChanged">
-            <NavigationView.MenuItems>
-                <NavigationViewItem Content="Prefs" Tag="prefs">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE713;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem Content="Run" Tag="run">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE768;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-                <NavigationViewItem Content="Logs" Tag="logs">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE9D5;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.MenuItems>
+        <Frame x:Name="ContentFrame" Grid.Row="1" />
 
-            <Frame x:Name="ContentFrame" />
-        </NavigationView>
+        <!-- Footer: the version, on every tab -->
+        <Border Grid.Row="2" BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0"
+                Padding="16,6">
+            <TextBlock x:Name="VersionText" HorizontalAlignment="Center" IsTextSelectionEnabled="True"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+        </Border>
     </Grid>
 </Window>

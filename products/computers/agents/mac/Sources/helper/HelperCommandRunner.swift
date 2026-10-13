@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import PulseAgentCore
 
 final class HelperCommandRunner: NSObject, HelperXPCProtocol, @unchecked Sendable {
@@ -63,20 +64,20 @@ final class HelperCommandRunner: NSObject, HelperXPCProtocol, @unchecked Sendabl
         process = nil
     }
 
-    func setPreference(key: String, stringValue: String, domain: String, withReply reply: @escaping (Bool) -> Void) {
-        reply(write(key, stringValue as CFString, .string, domain))
+    func setPreference(key: String, stringValue: String, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void) {
+        reply(write(key, stringValue as CFString, .string, domain, authorization))
     }
 
-    func setBoolPreference(key: String, boolValue: Bool, domain: String, withReply reply: @escaping (Bool) -> Void) {
-        reply(write(key, boolValue as CFPropertyList, .bool, domain))
+    func setBoolPreference(key: String, boolValue: Bool, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void) {
+        reply(write(key, boolValue as CFPropertyList, .bool, domain, authorization))
     }
 
-    func setIntPreference(key: String, intValue: Int, domain: String, withReply reply: @escaping (Bool) -> Void) {
-        reply(write(key, intValue as CFNumber as CFPropertyList, .int, domain))
+    func setIntPreference(key: String, intValue: Int, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void) {
+        reply(write(key, intValue as CFNumber as CFPropertyList, .int, domain, authorization))
     }
 
-    func removePreference(key: String, domain: String, withReply reply: @escaping (Bool) -> Void) {
-        reply(write(key, nil, nil, domain))
+    func removePreference(key: String, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void) {
+        reply(write(key, nil, nil, domain, authorization))
     }
 
     func getHelperVersion(withReply reply: @escaping (String) -> Void) {
@@ -84,7 +85,12 @@ final class HelperCommandRunner: NSObject, HelperXPCProtocol, @unchecked Sendabl
     }
 
     /// One machine-level value, to /Library/Preferences where the agent reads it.
-    private func write(_ key: String, _ value: CFPropertyList?, _ kind: PulseSettings.Key.Kind?, _ domain: String) -> Bool {
+    private func write(_ key: String, _ value: CFPropertyList?, _ kind: PulseSettings.Key.Kind?, _ domain: String,
+                       _ authorization: Data) -> Bool {
+        guard Self.isAdminAuthorized(authorization) else {
+            NSLog("managedpresencebeacon helper refused a write to %@: no administrator authorization", key)
+            return false
+        }
         let decision = HelperPolicy.evaluate(domain: domain, key: key, kind: kind) { PulseSettings.isManaged($0) }
         guard decision == .allow else {
             NSLog("managedpresencebeacon helper refused a write to %@ in %@: %@", key, domain, String(describing: decision))
@@ -93,5 +99,26 @@ final class HelperCommandRunner: NSObject, HelperXPCProtocol, @unchecked Sendabl
         let d = PulseConstants.domain as CFString
         CFPreferencesSetValue(key as CFString, value, d, kCFPreferencesAnyUser, kCFPreferencesAnyHost)
         return CFPreferencesSynchronize(d, kCFPreferencesAnyUser, kCFPreferencesAnyHost)
+    }
+
+    /// True when `externalForm` is an authorization an administrator granted to the app.
+    static func isAdminAuthorized(_ externalForm: Data) -> Bool {
+        guard externalForm.count == MemoryLayout<AuthorizationExternalForm>.size else { return false }
+        var form = AuthorizationExternalForm()
+        withUnsafeMutableBytes(of: &form) { buffer in
+            _ = externalForm.copyBytes(to: buffer)
+        }
+        var authRef: AuthorizationRef?
+        guard AuthorizationCreateFromExternalForm(&form, &authRef) == errAuthorizationSuccess, let authRef else {
+            return false
+        }
+        defer { AuthorizationFree(authRef, []) }
+        return HelperPolicy.adminRight.withCString { name in
+            var item = AuthorizationItem(name: name, valueLength: 0, value: nil, flags: 0)
+            return withUnsafeMutablePointer(to: &item) { itemPointer in
+                var rights = AuthorizationRights(count: 1, items: itemPointer)
+                return AuthorizationCopyRights(authRef, &rights, nil, [.extendRights], nil) == errAuthorizationSuccess
+            }
+        }
     }
 }

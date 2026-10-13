@@ -1,6 +1,7 @@
 //
-//  Prefs: the app header, then two columns of cards. A value a configuration profile
-//  sets shows that value, greyed, with a lock and the word Managed.
+//  Prefs: the app header with Unlock, then two columns of cards and the Services card.
+//  Every field is read-only until an administrator unlocks the window. A value a
+//  configuration profile sets stays gray either way, under one banner that says so.
 //
 
 import SwiftUI
@@ -11,24 +12,28 @@ struct SettingsView: View {
     @Environment(XPCClient.self) private var xpc
     @State private var revealKey = false
 
-    private var version: String {
-        let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-        guard let short else { return PulseConstants.version }
-        return build.map { "v\(short) (\($0))" } ?? "v\(short)"
-    }
+    private var locked: Bool { !xpc.isUnlocked }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
                 header
-                saveStatus
+                Divider()
+                if viewModel.anyManaged { profileBanner }
                 HStack(alignment: .top, spacing: 20) {
-                    connectionCard.frame(maxWidth: .infinity, alignment: .top)
-                    timingCard.frame(maxWidth: .infinity, alignment: .top)
+                    VStack(spacing: 16) {
+                        connectionCard
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    VStack(spacing: 16) {
+                        timingCard
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
+                servicesCard
+                saveStatus
             }
-            .padding(24)
+            .padding()
         }
         .onAppear {
             viewModel.configure(client: xpc)
@@ -37,32 +42,64 @@ struct SettingsView: View {
     }
 
     private var header: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 8) {
             Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
-                .frame(width: 56, height: 56)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 72, height: 72)
                 .accessibilityHidden(true)
-            Text(PulseConstants.appName).font(.title2.bold())
+            Text(PulseConstants.appName)
+                .font(.largeTitle.bold())
             Text("Tells Pulse whether this computer is free, without saying who is using it.")
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            Text(version)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .textSelection(.enabled)
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 Link("Documentation", destination: PulseConstants.documentationURL)
                 Link("Report Issue", destination: PulseConstants.issuesURL)
             }
             .font(.caption)
+            lockButton
+                .padding(.top, 4)
         }
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder private var lockButton: some View {
+        if locked {
+            Button {
+                if xpc.unlock() { viewModel.load() }
+            } label: {
+                Label("Unlock to make changes", systemImage: "lock.fill")
+            }
+            .help("An administrator must authenticate before the beacon's settings can change")
+        } else {
+            Button {
+                xpc.lock()
+            } label: {
+                Label("Lock", systemImage: "lock.open.fill")
+            }
+            .help("Stop making changes")
+        }
+    }
+
+    /// One line for every key a profile sets, worded as System Settings words it.
+    private var profileBanner: some View {
+        Label("Settings shown in gray have been configured by a profile.", systemImage: "lock.fill")
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private var saveStatus: some View {
         Group {
             switch viewModel.saveStatus {
-            case .idle: Text(" ")
-            case .saving: Label("Saving…", systemImage: "arrow.triangle.2.circlepath")
+            case .idle: EmptyView()
+            case .saving:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Saving").foregroundStyle(.secondary)
+                }
             case .saved: Label("Saved", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
             case .failed(let why): Label(why, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
             }
@@ -112,7 +149,7 @@ struct SettingsView: View {
                         }
                     } else {
                         Label("No Intune agent certificate in the System keychain", systemImage: "xmark.seal")
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -159,18 +196,70 @@ struct SettingsView: View {
         }
     }
 
+    private var servicesCard: some View {
+        GroupBox {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(viewModel.services) { job in
+                    serviceRow(job)
+                    if job != viewModel.services.last { Divider() }
+                }
+            }
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } label: {
+            Label("Services", systemImage: "gearshape.2").font(.headline)
+        }
+    }
+
+    private func serviceRow(_ job: LaunchdJob) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(job.title).font(.body.weight(.medium))
+                Text(job.label)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                Spacer()
+                Label(job.pid.map { "\(job.state), pid \($0)" } ?? job.state, systemImage: stateSymbol(job))
+                    .font(.callout)
+                    .foregroundStyle(job.state == "Running" ? .green : .secondary)
+            }
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
+                GridRow {
+                    Text("Schedule").foregroundStyle(.secondary)
+                    Text(job.schedule)
+                }
+                GridRow {
+                    Text("Last exit code").foregroundStyle(.secondary)
+                    Text(job.lastExitCode ?? "—")
+                }
+                if let program = job.program {
+                    GridRow {
+                        Text("Runs").foregroundStyle(.secondary)
+                        Text(program).textSelection(.enabled).lineLimit(2).truncationMode(.middle)
+                    }
+                }
+            }
+            .font(.caption)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func stateSymbol(_ job: LaunchdJob) -> String {
+        switch job.state {
+        case "Running": "circle.fill"
+        case "Not installed", "Not loaded": "circle.dashed"
+        default: "circle"
+        }
+    }
+
+    /// A field a profile sets stays disabled and gray; the banner above explains why.
     @ViewBuilder
     private func row<Content: View>(_ key: PulseSettings.Key, _ label: String? = nil,
                                      @ViewBuilder content: () -> Content) -> some View {
-        let managed = viewModel.isManaged(key)
         VStack(alignment: .leading, spacing: 2) {
             if let label { Text(label).font(.caption).foregroundStyle(.secondary) }
-            content().disabled(managed)
-            if managed {
-                Label("Managed", systemImage: "lock.fill")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            content().disabled(viewModel.isManaged(key) || locked)
         }
     }
 }

@@ -50,7 +50,7 @@ app: swift $(ACTOOL_OUT)/Assets.car
 	@rm -rf "$(APP)"
 	@mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources" "$(APP)/Contents/Library/LaunchDaemons" \
 		$(ROOT)/Library/LaunchDaemons
-	cp $(SWIFT_OUT)/ManagedPresenceBeaconApp "$(APP)/Contents/MacOS/ManagedPresenceBeacon"
+	cp $(SWIFT_OUT)/ManagedPresenceBeaconApp "$(APP)/Contents/MacOS/ComputerPulseGUI"
 	cp $(SWIFT_OUT)/managedpresencebeacon "$(APP)/Contents/MacOS/managedpresencebeacon"
 	cp $(SWIFT_OUT)/ManagedPresenceBeaconHelper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
 	sed -e 's/{{MARKETING_VERSION}}/$(MARKETING_VERSION)/g' -e 's/{{BUILD_NUMBER}}/$(BUILD_NUMBER)/g' \

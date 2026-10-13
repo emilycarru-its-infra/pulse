@@ -48,6 +48,7 @@ public static class Identity
 
     public static string AgentTaskName => ProductKey;
     public static string IdleTaskName => $"{ProductKey} Idle";
+    public static string ShutdownTaskName => $"{ProductKey} Shutdown";
 
     /// <summary>The event the GUI's Send now button signals and the agent waits on.</summary>
     public static string SendNowEventName => $@"Global\{ProductKey}.SendNow";

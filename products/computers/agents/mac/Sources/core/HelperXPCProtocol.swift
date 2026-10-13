@@ -8,11 +8,12 @@ import Foundation
     func stopCommand()
 
     /// Machine-level preference writes (any user, any host), refused for a key a
-    /// configuration profile manages.
-    func setPreference(key: String, stringValue: String, domain: String, withReply reply: @escaping (Bool) -> Void)
-    func setBoolPreference(key: String, boolValue: Bool, domain: String, withReply reply: @escaping (Bool) -> Void)
-    func setIntPreference(key: String, intValue: Int, domain: String, withReply reply: @escaping (Bool) -> Void)
-    func removePreference(key: String, domain: String, withReply reply: @escaping (Bool) -> Void)
+    /// configuration profile manages. `authorization` is the AuthorizationExternalForm the
+    /// app got when an administrator unlocked the window; a write without it is refused.
+    func setPreference(key: String, stringValue: String, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void)
+    func setBoolPreference(key: String, boolValue: Bool, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void)
+    func setIntPreference(key: String, intValue: Int, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void)
+    func removePreference(key: String, domain: String, authorization: Data, withReply reply: @escaping (Bool) -> Void)
 
     func getHelperVersion(withReply reply: @escaping (String) -> Void)
 }
@@ -30,6 +31,10 @@ public enum HelperPolicy {
     public enum Decision: Equatable, Sendable { case allow, wrongDomain, unknownKey, wrongType, managed }
 
     public static let commands: Set<String> = ["send", "status"]
+
+    /// The right an administrator must hold to change a preference. Send and status
+    /// need none, so a standard user can still use Run.
+    public static let adminRight = "system.privilege.admin"
 
     public static func allowsCommand(_ arguments: [String]) -> Bool {
         guard let first = arguments.first, commands.contains(first) else { return false }

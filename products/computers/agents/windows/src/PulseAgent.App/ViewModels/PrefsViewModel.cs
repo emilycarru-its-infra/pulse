@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Xaml.Media;
 using PulseAgent.Core;
@@ -7,8 +8,9 @@ namespace PulseAgent.App.ViewModels;
 /// <summary>
 /// The Prefs tab. Settings live in HKLM, so the tab is read-only unless this process is elevated;
 /// Unlock relaunches the app elevated on this tab. A value set by policy (Intune or Group Policy)
-/// shows its managed value, greyed, with a lock and the word Managed, and is never written.
-/// Elevated, every other change saves itself half a second after the last edit.
+/// shows its policy value in a disabled, grey control and is never written; one line at the top
+/// of the tab says so when any is. Elevated, every other change saves itself half a second after
+/// the last edit. The Services card lists the agent's scheduled tasks, read-only.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
@@ -31,7 +33,8 @@ public partial class PrefsViewModel : ObservableObject
 
     public enum SaveState { Idle, Saving, Saved, Failed }
 
-    public string VersionDisplay => Identity.VersionDisplay;
+    public ObservableCollection<ScheduledTaskStatus> Services { get; } = [];
+
     public string KeyPlaceholder => !IsElevated ? "Unlock to set or replace" : HasSavedKey ? "Saved; enter a new value to replace" : "Optional";
     public bool IsElevated { get; } = PrefsElevation.IsProcessElevated();
     public bool IsReadOnly => !IsElevated;
@@ -44,12 +47,8 @@ public partial class PrefsViewModel : ObservableObject
     private bool Locked(string key) => managed.Contains(key);
     private bool CanEdit(string key) => PrefsElevation.CanEdit(IsElevated, Locked(key));
 
-    public bool IsIngestUrlLocked => Locked(SettingsStore.IngestUrl);
-    public bool IsIngestKeyLocked => false;
-    public bool IsUseDeviceCertificateLocked => Locked(SettingsStore.UseDeviceCertificate);
-    public bool IsCheckIntervalLocked => Locked(SettingsStore.CheckIntervalSeconds);
-    public bool IsHeartbeatIntervalLocked => Locked(SettingsStore.HeartbeatIntervalSeconds);
-    public bool IsVerboseLoggingLocked => Locked(SettingsStore.VerboseLogging);
+    /// <summary>Whether policy sets any key on this device, which shows the line about grey settings.</summary>
+    public bool HasPolicySettings => managed.Count > 0;
 
     public bool CanEditIngestUrl => CanEdit(SettingsStore.IngestUrl);
     public bool CanEditIngestKey => CanEdit(SettingsStore.IngestKey);
@@ -112,6 +111,15 @@ public partial class PrefsViewModel : ObservableObject
         DeviceText = $"{Device.Hostname}\nSerial {Device.Serial}";
         OnPropertyChanged(string.Empty);
         loading = false;
+        LoadServices();
+    }
+
+    // Task Scheduler can take a moment to answer, so the card fills in after the settings.
+    private async void LoadServices()
+    {
+        var tasks = await Task.Run(ScheduledTasks.Read);
+        Services.Clear();
+        foreach (var task in tasks) Services.Add(task);
     }
 
     /// <summary>Relaunches elevated through UAC on this tab. True when the elevated copy started.</summary>
