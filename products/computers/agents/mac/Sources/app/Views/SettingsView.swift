@@ -117,7 +117,14 @@ struct SettingsView: View {
                     Text("Device certificate").font(.caption).foregroundStyle(.secondary)
                     if let cert = viewModel.certificate {
                         Label {
-                            Text(cert.subject).textSelection(.enabled)
+                            Text(cert.subject)
+                                .font(.body.monospaced())
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                                .truncationMode(.middle)
+                                .textSelection(.enabled)
+                                .help(cert.subject)
+                                .padding(.trailing, 12)
                         } icon: {
                             Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
                         }
