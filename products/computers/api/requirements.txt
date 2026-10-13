@@ -1,0 +1,7 @@
+# The Functions package: pulse_computers, pulse_core and the event contract are copied
+# beside function_app.py by pack.sh, so only third-party packages are listed here.
+azure-functions
+azure-data-tables>=12.5
+azure-identity>=1.17
+cryptography>=43
+jsonschema>=4.20

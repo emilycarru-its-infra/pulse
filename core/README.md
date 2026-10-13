@@ -60,7 +60,9 @@ every placed seat the inventory no longer has. `--strict` turns either into a fa
 Providers live in `pulse_core/inventory/` and all return the same `Device` record, so
 changing inventory systems means adding a provider and changing one line of the site
 config. `snipeit` reads `/api/v1/hardware`; the custom-field names it reads for hostname,
-platform and group are set under `[inventory.fields]`. Any inventory serving the same
+platform and group are set under `[inventory.fields]`, and `device_id_fields` lists any that
+hold the ids a device's certificates carry (an Intune or Entra device id). Those land in
+the seat's `deviceIds`, which the ingest service uses to tie a certificate to a seat. Any inventory serving the same
 API can use it unchanged.
 
 ## History export
@@ -70,6 +72,11 @@ data warehouse from `GET /api/export/events?since=<RFC 3339 time>`, as newline-d
 JSON in the event shape plus a `receivedAt` field, oldest first. Callers authenticate with
 an Entra token carrying the export role; there is no shared key. Pulse holds live state;
 long-term history and reporting belong to the warehouse.
+
+## Infrastructure
+
+[`terraform/pulse-product`](terraform/pulse-product) is the Terraform module that creates one
+product's Azure resources: storage, Function App, Static Web App and an optional custom domain.
 
 ## Tests
 

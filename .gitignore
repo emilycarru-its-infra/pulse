@@ -10,3 +10,5 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
+local.settings.json
+/products/computers/api/catalog.json
