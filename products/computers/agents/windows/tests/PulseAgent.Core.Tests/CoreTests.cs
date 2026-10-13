@@ -212,38 +212,83 @@ public class ScheduledTaskTests
 public class ApplySettingsTests
 {
     private static readonly HashSet<string> NoPolicy = [];
-
-    private static string Payload(string json) => Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
+    private static readonly string[] Roots = [@"C:\Program Files", @"C:\Program Files (x86)"];
+    private const string Installed = @"C:\Program Files\Example\Example App.exe";
 
     [Fact]
-    public void ChangedKeysRoundTripThroughTheCommandLine()
+    public async Task ChangedKeysRoundTripThroughAFrame()
     {
         var changes = new Dictionary<string, object>
         {
             [SettingsStore.IngestUrl] = "https://status.example.edu/api/ingest",
+            [SettingsStore.IngestKey] = "s3cret",
             [SettingsStore.CheckIntervalSeconds] = 30,
             [SettingsStore.VerboseLogging] = true,
         };
-        var start = PrefsElevation.BuildElevatedApply(@"C:\Program Files\Example\app.exe", changes);
-        Assert.Equal("runas", start.Verb);
-        var payload = PrefsElevation.ApplyPayload(start.Arguments.Split(' '));
-        var values = PrefsElevation.Validate(payload!, NoPolicy, out var error);
+        using var stream = new MemoryStream();
+        await PrefsElevation.WriteFrameAsync(stream, System.Text.Json.JsonSerializer.Serialize(changes));
+        stream.Position = 0;
+        var values = PrefsElevation.Validate((await PrefsElevation.ReadFrameAsync(stream))!, NoPolicy, out var error);
         Assert.Equal("", error);
         Assert.Equal(changes, values);
     }
 
     [Fact]
+    public void OnlyThePipeNameGoesOnTheCommandLine()
+    {
+        var name = PrefsElevation.NewPipeName();
+        Assert.True(PrefsElevation.IsPipeName(name));
+        var start = PrefsElevation.BuildElevatedApply(Installed, name);
+        Assert.Equal("runas", start.Verb);
+        Assert.Equal($"{PrefsElevation.ApplyArgument} {name}", start.Arguments);
+        Assert.Equal(name, PrefsElevation.ApplyPipeName(start.Arguments.Split(' ')));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("eyJJbmdlc3RVcmwiOiJ4In0=")]
+    [InlineData(@"..\..\pipe\other")]
+    public void APayloadOrStrangeNameIsNotAPipeName(string name) => Assert.False(PrefsElevation.IsPipeName(name));
+
+    [Fact]
     public void OnlyTheApplySwitchStartsTheApplyMode()
     {
-        Assert.Null(PrefsElevation.ApplyPayload([]));
-        Assert.Null(PrefsElevation.ApplyPayload(["--prefs"]));
-        Assert.Equal("", PrefsElevation.ApplyPayload([PrefsElevation.ApplyArgument]));
+        Assert.Null(PrefsElevation.ApplyPipeName([]));
+        Assert.Null(PrefsElevation.ApplyPipeName(["--prefs"]));
+        Assert.Equal("", PrefsElevation.ApplyPipeName([PrefsElevation.ApplyArgument]));
     }
+
+    [Fact]
+    public async Task ShortOrOversizedFramesAreRefused()
+    {
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([5, 0, 0, 0, (byte)'{'])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([0, 0, 0, 0])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([0xFF, 0xFF, 0xFF, 0x7F])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([1, 0])));
+    }
+
+    [Fact]
+    public void TheSameAppUnderProgramFilesIsTrusted()
+    {
+        Assert.True(PrefsElevation.IsTrustedServer(Installed, Installed, Roots));
+        Assert.True(PrefsElevation.IsTrustedServer(Installed.ToUpperInvariant(), Installed, Roots));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Users\me\Downloads\evil.exe", Installed)]
+    [InlineData(@"C:\Program Files\Example\Other.exe", Installed)]
+    [InlineData(null, Installed)]
+    [InlineData(@"C:\Users\me\app\Example App.exe", @"C:\Users\me\app\Example App.exe")]
+    [InlineData(@"C:\Program Files Evil\Example App.exe", @"C:\Program Files Evil\Example App.exe")]
+    [InlineData(@"C:\Program Files\..\Users\me\a.exe", @"C:\Program Files\..\Users\me\a.exe")]
+    [InlineData(@"\\server\share\Program Files\a.exe", @"\\server\share\Program Files\a.exe")]
+    public void AnyOtherServerOrPlaceIsNot(string? server, string own) =>
+        Assert.False(PrefsElevation.IsTrustedServer(server, own, Roots));
 
     [Fact]
     public void IntervalsAreClampedToTheirRanges()
     {
-        var values = PrefsElevation.Validate(Payload("""{"CheckIntervalSeconds":1,"HeartbeatIntervalSeconds":99999}"""), NoPolicy, out _);
+        var values = PrefsElevation.Validate("""{"CheckIntervalSeconds":1,"HeartbeatIntervalSeconds":99999}""", NoPolicy, out _);
         Assert.Equal(5, values![SettingsStore.CheckIntervalSeconds]);
         Assert.Equal(3600, values[SettingsStore.HeartbeatIntervalSeconds]);
     }
@@ -255,20 +300,18 @@ public class ApplySettingsTests
     [InlineData("""{"IngestKey":""}""")]
     [InlineData("""{}""")]
     [InlineData("""[1,2]""")]
+    [InlineData("""not json""")]
     public void BadPayloadsAreRefused(string json)
     {
-        Assert.Null(PrefsElevation.Validate(Payload(json), NoPolicy, out var error));
+        Assert.Null(PrefsElevation.Validate(json, NoPolicy, out var error));
         Assert.NotEqual("", error);
     }
-
-    [Fact]
-    public void NotBase64IsRefused() => Assert.Null(PrefsElevation.Validate("%%%", NoPolicy, out _));
 
     [Fact]
     public void APolicyKeyIsNeverWritten()
     {
         HashSet<string> managed = [SettingsStore.IngestUrl];
-        Assert.Null(PrefsElevation.Validate(Payload("""{"ingesturl":"https://x.example"}"""), managed, out var error));
+        Assert.Null(PrefsElevation.Validate("""{"ingesturl":"https://x.example"}""", managed, out var error));
         Assert.Contains("policy", error);
     }
 }

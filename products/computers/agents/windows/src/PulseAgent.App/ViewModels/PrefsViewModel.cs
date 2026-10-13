@@ -229,13 +229,10 @@ public partial class PrefsViewModel : ObservableObject
         if (Environment.ProcessPath is not { Length: > 0 } exe) return "the app could not find its own executable.";
         try
         {
-            using var process = System.Diagnostics.Process.Start(PrefsElevation.BuildElevatedApply(exe, changes));
-            if (process is null) return "the administrator copy of the app did not start.";
-            await process.WaitForExitAsync();
-            return process.ExitCode switch
+            return await PrefsElevation.RunElevatedApplyAsync(exe, changes) switch
             {
                 PrefsElevation.Applied => null,
-                PrefsElevation.Refused => "a setting was refused; it may be set by policy.",
+                PrefsElevation.Refused => "the change was refused; a setting may be set by policy, or the app is not installed under Program Files.",
                 _ => "the settings could not be written.",
             };
         }
