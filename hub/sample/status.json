@@ -1,0 +1,63 @@
+{
+  "sample": true,
+  "groups": [
+    {
+      "name": "Teaching and learning",
+      "components": [
+        { "id": "lms", "name": "Learning platform", "about": "Courses, assignments and grades" },
+        { "id": "video", "name": "Video platform", "about": "Lecture capture and course video" }
+      ]
+    },
+    {
+      "name": "Email and collaboration",
+      "components": [
+        { "id": "email", "name": "Email and calendar" },
+        { "id": "chat", "name": "Chat and meetings", "history": [{ "daysAgo": 41, "level": "warn", "minutes": 90, "note": "Slow message delivery" }] }
+      ]
+    },
+    {
+      "name": "Network and sign-in",
+      "components": [
+        { "id": "sso", "name": "Single sign-on" },
+        { "id": "wifi", "name": "Wi-Fi" },
+        { "id": "vpn", "name": "VPN" }
+      ]
+    },
+    {
+      "name": "On campus",
+      "components": [
+        { "id": "labs", "name": "Computer labs", "href": "/computers/" },
+        { "id": "print", "name": "Printing" },
+        { "id": "files", "name": "Home folders" }
+      ]
+    }
+  ],
+  "incidents": [
+    {
+      "title": "Wi-Fi drops in the north building",
+      "impact": "minor",
+      "components": ["wifi"],
+      "start": "-50m",
+      "updates": [
+        { "at": "-10m", "status": "identified", "body": "A failed access point controller is being replaced." },
+        { "at": "-45m", "status": "investigating", "body": "Some devices lose Wi-Fi on floors 2 and 3." }
+      ]
+    },
+    {
+      "title": "Learning platform upgrade",
+      "impact": "maintenance",
+      "components": ["lms"],
+      "start": "+2d",
+      "end": "+2.1d",
+      "updates": [{ "at": "-1d", "status": "scheduled", "body": "The learning platform is read-only for two hours." }]
+    },
+    {
+      "title": "Printing release stations offline",
+      "impact": "major",
+      "components": ["print"],
+      "start": "-2d",
+      "end": "-1.95d",
+      "updates": [{ "at": "-1.95d", "status": "resolved", "body": "The print server was restarted; jobs released normally." }]
+    }
+  ]
+}
