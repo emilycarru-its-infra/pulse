@@ -51,6 +51,15 @@ public struct PulseSettings: Equatable, Sendable {
         return s
     }
 
+    /// Whether a key has any value, without handing the value back. The Prefs page uses
+    /// this for the ingest key, which it shows as status only.
+    public static func isSet(_ key: Key, domain: String = PulseConstants.domain) -> Bool {
+        let d = domain as CFString
+        CFPreferencesAppSynchronize(d)
+        guard let v = CFPreferencesCopyAppValue(key.rawValue as CFString, d) else { return false }
+        return (v as? String).map { !$0.isEmpty } ?? true
+    }
+
     /// True when a configuration profile sets the key. CFPreferences keeps the managed
     /// layer it loaded at start-up, so the managed preferences file is checked as well.
     public static func isManaged(_ key: Key, domain: String = PulseConstants.domain) -> Bool {

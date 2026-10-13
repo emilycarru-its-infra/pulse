@@ -26,9 +26,14 @@ import Foundation
 }
 
 /// Decides which requests the root helper accepts: only the Prefs page's keys, only in
-/// this domain, never a managed key, and only the CLI commands the Run tab uses.
+/// this domain, never a managed key, never the ingest key, and only the CLI commands
+/// the Run tab uses.
 public enum HelperPolicy {
-    public enum Decision: Equatable, Sendable { case allow, wrongDomain, unknownKey, wrongType, managed }
+    public enum Decision: Equatable, Sendable { case allow, wrongDomain, unknownKey, wrongType, managed, readOnly }
+
+    /// Keys the helper never writes or removes. The ingest key is set by a configuration
+    /// profile only, so a local administrator cannot read or change it from the app.
+    public static let readOnlyKeys: Set<PulseSettings.Key> = [.ingestKey]
 
     public static let commands: Set<String> = ["send", "status"]
 
@@ -46,6 +51,7 @@ public enum HelperPolicy {
                                 isManaged: (PulseSettings.Key) -> Bool) -> Decision {
         guard domain == PulseConstants.domain else { return .wrongDomain }
         guard let k = PulseSettings.Key(rawValue: key) else { return .unknownKey }
+        if readOnlyKeys.contains(k) { return .readOnly }
         if let kind, kind != k.kind { return .wrongType }
         if isManaged(k) { return .managed }
         return .allow

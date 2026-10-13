@@ -25,7 +25,7 @@ to change it.
 | Key | Type | Default | |
 |---|---|---|---|
 | `IngestURL` | string | none | The server's ingest endpoint |
-| `IngestKey` | string | none | Optional shared key, sent as `X-Pulse-Key` |
+| `IngestKey` | string | none | Optional shared key, sent as `X-Pulse-Key`. Set by profile only; Prefs shows whether it is set, never its value |
 | `CheckInterval` | integer | 15 | Seconds between looks at the console (5–120) |
 | `HeartbeatInterval` | integer | 60 | Seconds between heartbeats (30–600) |
 | `VerboseLogging` | boolean | false | Log every check, not only sends |
