@@ -142,11 +142,20 @@ public class ScheduledTaskTests
     private const string AgentXml = """
         <?xml version="1.0" encoding="UTF-16"?>
         <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+          <RegistrationInfo>
+            <Author>Example IT</Author>
+            <Description>Reports whether this computer is free.</Description>
+          </RegistrationInfo>
+          <Principals>
+            <Principal id="Author"><UserId>S-1-5-18</UserId><LogonType>ServiceAccount</LogonType><RunLevel>HighestAvailable</RunLevel></Principal>
+          </Principals>
+          <Settings><Hidden>false</Hidden></Settings>
           <Triggers><BootTrigger><Enabled>true</Enabled></BootTrigger></Triggers>
           <Actions Context="Author">
             <Exec>
               <Command>"C:\Program Files\Example\agent.exe"</Command>
               <Arguments>run</Arguments>
+              <WorkingDirectory>C:\Program Files\Example</WorkingDirectory>
             </Exec>
           </Actions>
         </Task>
@@ -165,21 +174,131 @@ public class ScheduledTaskTests
         </Task>
         """;
 
+    private const string IdleXml = """
+        <Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+          <Principals><Principal id="Author"><GroupId>S-1-5-32-545</GroupId><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+          <Settings><Hidden>true</Hidden></Settings>
+          <Triggers><LogonTrigger><Enabled>true</Enabled></LogonTrigger></Triggers>
+          <Actions><Exec><Command>C:\idle.exe</Command></Exec></Actions>
+        </Task>
+        """;
+
+    private static readonly DateTime When = new(2027, 1, 4, 9, 41, 0);
+    private static readonly DateTime Never = new(1899, 12, 30);
+
+    private static TaskSnapshot Snapshot(string xml, bool enabled = true, int state = 3, int result = 0, DateTime? lastRun = null) =>
+        new("Agent", @"\Agent", enabled, state, lastRun ?? When, result, Never, ScheduledTasks.ParseDefinition(xml.Trim()));
+
+    private static string Detail(ScheduledTaskStatus status, string label) =>
+        status.Details.Single(d => d.Label == label).Value;
+
     [Fact]
-    public void BootTaskReadsItsTriggerAndProgram()
+    public void BootTaskReadsItsDefinition()
     {
-        var (trigger, program) = ScheduledTasks.DescribeDefinition(AgentXml.Trim());
-        Assert.Equal("At startup", trigger);
-        Assert.Equal(@"C:\Program Files\Example\agent.exe run", program);
+        var definition = ScheduledTasks.ParseDefinition(AgentXml.Trim());
+        Assert.Equal("At startup", definition.Trigger);
+        Assert.Equal(new TaskAction(@"C:\Program Files\Example\agent.exe", "run", @"C:\Program Files\Example"), Assert.Single(definition.Actions));
+        Assert.Equal("SYSTEM", definition.RunAs);
+        Assert.Equal("Highest privileges", definition.RunLevel);
+        Assert.Equal("Example IT", definition.Author);
+        Assert.Equal("Reports whether this computer is free.", definition.Description);
+        Assert.False(definition.Hidden);
     }
 
     [Fact]
     public void EventTaskNamesTheEventAndSkipsADisabledTrigger()
     {
-        var (trigger, program) = ScheduledTasks.DescribeDefinition(ShutdownXml);
-        Assert.Equal("On event 1074 in the System log", trigger);
-        Assert.Equal(@"C:\agent.exe", program);
+        var definition = ScheduledTasks.ParseDefinition(ShutdownXml);
+        Assert.Equal("On event 1074 in the System log", definition.Trigger);
+        Assert.Equal(@"C:\agent.exe", Assert.Single(definition.Actions).Program);
+        Assert.Equal("The account that registered it", definition.RunAs);
+        Assert.Equal("Standard privileges", definition.RunLevel);
+        Assert.Equal("", definition.Author);
     }
+
+    [Fact]
+    public void GroupTaskRunsAsAnyMemberOfTheGroup()
+    {
+        var definition = ScheduledTasks.ParseDefinition(IdleXml);
+        Assert.Equal("Any member of Users", definition.RunAs);
+        Assert.Equal("At log on of any user", definition.Trigger);
+        Assert.True(definition.Hidden);
+    }
+
+    [Fact]
+    public void DetailCarriesTheReportMateFields()
+    {
+        var status = ScheduledTasks.Describe(Snapshot(AgentXml, state: 4, result: 0x41301));
+        Assert.Equal("Running", status.State);
+        Assert.Equal(StatusTone.Healthy, status.Tone);
+        Assert.Equal(@"\Agent", Detail(status, "Path"));
+        Assert.Equal(@"\", Detail(status, "Folder"));
+        Assert.Equal("Yes", Detail(status, "Enabled"));
+        Assert.Equal("No", Detail(status, "Hidden"));
+        Assert.Equal("2027-01-04 09:41", Detail(status, "Last run"));
+        Assert.Equal("0x00041301 (Still running)", Detail(status, "Last result"));
+        Assert.Equal("None scheduled; it runs on its trigger", Detail(status, "Next run"));
+        Assert.Equal("At startup", Detail(status, "Triggers"));
+        Assert.Equal("run", Detail(status, "Arguments"));
+        Assert.Equal(@"C:\Program Files\Example", Detail(status, "Starts in"));
+        Assert.Equal("SYSTEM", Detail(status, "Run as"));
+        Assert.Equal("Highest privileges", Detail(status, "Run level"));
+        Assert.Equal("Example IT", Detail(status, "Author"));
+        Assert.True(status.Details.Single(d => d.Label == "Program").Monospace);
+        Assert.False(status.Details.Single(d => d.Label == "Run as").Monospace);
+    }
+
+    [Fact]
+    public void ATaskThatHasNotRunHasNoResultLineAndAnEmptyAuthorIsLeftOut()
+    {
+        var status = ScheduledTasks.Describe(Snapshot(ShutdownXml, result: 0x41303, lastRun: new DateTime(1999, 11, 30)));
+        Assert.Equal("Has not run yet", Detail(status, "Last run"));
+        Assert.DoesNotContain(status.Details, d => d.Label is "Last result" or "Author" or "Arguments" or "Starts in");
+        Assert.Equal(StatusTone.Healthy, status.Tone);
+    }
+
+    [Theory]
+    [InlineData(true, 3, 0, StatusTone.Healthy)]
+    [InlineData(true, 4, 0x41301, StatusTone.Healthy)]
+    [InlineData(true, 3, 0x41306, StatusTone.Healthy)]
+    [InlineData(true, 3, unchecked((int)0xC000013A), StatusTone.Healthy)]
+    [InlineData(false, 3, 0, StatusTone.Inactive)]
+    [InlineData(true, 1, 0, StatusTone.Inactive)]
+    [InlineData(false, 3, 2, StatusTone.Inactive)]
+    [InlineData(true, 3, 2, StatusTone.Failed)]
+    [InlineData(true, 3, unchecked((int)0x80070005), StatusTone.Failed)]
+    public void TheDotIsRedOnlyForAFailedRun(bool enabled, int state, int result, StatusTone expected) =>
+        Assert.Equal(expected, ScheduledTasks.ToneOf(enabled, state, result));
+
+    [Fact]
+    public void ATaskStatusWithoutDetailIsGray()
+    {
+        var status = new ScheduledTaskStatus("Agent", "Not installed");
+        Assert.Equal(StatusTone.Inactive, status.Tone);
+        Assert.Empty(status.Details);
+        Assert.Equal("Agent, Not installed", status.AccessibleName);
+        Assert.Equal("Scheduled task", status.Summary);
+    }
+
+    [Fact]
+    public void TheCollapsedRowSummarizesTriggerAndLastResult()
+    {
+        Assert.Equal("Scheduled task · At startup · Last result 0x0", ScheduledTasks.SummaryLine("At startup", true, 0));
+        Assert.Equal("Scheduled task · At log on of any user · Last result 0x41306", ScheduledTasks.SummaryLine("At log on of any user", true, 0x41306));
+        Assert.Equal("Scheduled task · On event 1074 in the System log · Has not run yet", ScheduledTasks.SummaryLine("On event 1074 in the System log", false, 0x41303));
+        Assert.Equal("Scheduled task · Every 6 hours · Last result 0x80070005", ScheduledTasks.SummaryLine("Every 6 hours", true, unchecked((int)0x80070005)));
+    }
+
+    [Fact]
+    public void DescribeFillsTheSummary() =>
+        Assert.Equal("Scheduled task · At startup · Last result 0x2", ScheduledTasks.Describe(Snapshot(AgentXml, result: 2)).Summary);
+
+    [Theory]
+    [InlineData(@"\Agent", @"\")]
+    [InlineData(@"\Vendor\Agent", @"\Vendor")]
+    [InlineData("Agent", @"\")]
+    public void FolderIsThePathWithoutTheName(string path, string expected) =>
+        Assert.Equal(expected, ScheduledTasks.FolderOf(path));
 
     [Theory]
     [InlineData("PT6H", "6 hours")]
@@ -190,7 +309,7 @@ public class ScheduledTaskTests
         Assert.Equal(expected, ScheduledTasks.DescribeInterval(System.Xml.XmlConvert.ToTimeSpan(xml)));
 
     [Theory]
-    [InlineData(3, true, "Ready")]
+    [InlineData(3, true, "Ready, not running")]
     [InlineData(4, true, "Running")]
     [InlineData(3, false, "Disabled")]
     [InlineData(0, true, "Unknown")]
@@ -198,14 +317,17 @@ public class ScheduledTaskTests
         Assert.Equal(expected, ScheduledTasks.DescribeState(state, enabled));
 
     [Fact]
-    public void LastRunShowsTheExitCodeOrTheSchedulersWord()
+    public void ResultsReadAsHexAndMeaning()
     {
-        var when = new DateTime(2027, 1, 4, 9, 41, 0);
-        Assert.Equal("2027-01-04 09:41, Exit code 0", ScheduledTasks.DescribeLastRun(when, 0));
-        Assert.Equal("2027-01-04 09:41, Exit code 2", ScheduledTasks.DescribeLastRun(when, 2));
-        Assert.Equal("2027-01-04 09:41, Still running", ScheduledTasks.DescribeLastRun(when, 0x41301));
-        Assert.Equal("Has not run yet", ScheduledTasks.DescribeLastRun(new DateTime(1999, 11, 30), 0x41303));
-        Assert.Equal("2027-01-04 09:41, Result 0x80070005", ScheduledTasks.DescribeLastRun(when, unchecked((int)0x80070005)));
+        Assert.Equal("0x00000000 (Exit code 0, success)", ScheduledTasks.DescribeResult(0));
+        Assert.Equal("0x00000002 (Exit code 2)", ScheduledTasks.DescribeResult(2));
+        Assert.Equal("0x00041303 (Has not run yet)", ScheduledTasks.DescribeResult(0x41303));
+        Assert.Equal("0xC000013A (Ended when Windows shut down)", ScheduledTasks.DescribeResult(unchecked((int)0xC000013A)));
+        Assert.Equal("0xDEADBEEF (Unrecognized result)", ScheduledTasks.DescribeResult(unchecked((int)0xDEADBEEF)));
+        // A wrapped Win32 error takes the system's message, whatever the display language.
+        var denied = ScheduledTasks.DescribeResult(unchecked((int)0x80070005));
+        Assert.StartsWith("0x80070005 (", denied);
+        Assert.DoesNotContain("Unrecognized", denied);
     }
 }
 

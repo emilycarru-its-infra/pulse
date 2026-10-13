@@ -11,7 +11,8 @@ namespace PulseAgent.App.ViewModels;
 /// to a copy of itself started through UAC, which asks for an administrator at that moment; an
 /// elevated app writes them itself. A value set by policy (Intune or Group Policy) shows its policy
 /// value in a disabled, grey control and is never written; one line at the top of the tab says so
-/// when any is. The Services card lists the agent's scheduled tasks, read-only.
+/// when any is. The Services card lists the agent's scheduled tasks, read-only, one expandable row
+/// each, and is hidden when the agent ships none.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
@@ -38,6 +39,7 @@ public partial class PrefsViewModel : ObservableObject
     public enum SaveState { Idle, Saving, Saved, Failed }
 
     public ObservableCollection<ScheduledTaskStatus> Services { get; } = [];
+    public bool HasServices { get; } = ScheduledTasks.AnyDefined;
 
     // Unelevated, the protected Secrets key cannot be read, so whether a key is saved is unknown.
     public string KeyPlaceholder => !IsElevated ? "Optional; enter a value to set or replace" : HasSavedKey ? "Saved; enter a new value to replace" : "Optional";

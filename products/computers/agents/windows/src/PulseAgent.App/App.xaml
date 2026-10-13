@@ -10,6 +10,8 @@
             </ResourceDictionary.MergedDictionaries>
             <cvt:BoolToVisibilityConverter x:Key="BoolToVisibility" />
             <cvt:InvertBoolConverter x:Key="InvertBool" />
+            <cvt:StatusToneToBrushConverter x:Key="StatusToneToBrush" />
+            <cvt:MonospaceConverter x:Key="Monospace" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

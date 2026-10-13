@@ -140,10 +140,12 @@
                 </StackPanel>
             </Grid>
 
-            <!-- What the agent installs: its scheduled tasks, read-only -->
+            <!-- What the agent installs: one row per scheduled task, read-only. A click or Space
+                 anywhere on a row's header expands it; hidden when the agent ships no task. -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="20">
+                    BorderThickness="1" CornerRadius="8" Padding="20"
+                    Visibility="{x:Bind ViewModel.HasServices, Converter={StaticResource BoolToVisibility}}">
                 <StackPanel Spacing="8">
                     <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
                         <FontIcon Glyph="&#xE823;" FontSize="20"
@@ -154,47 +156,60 @@
                                Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                     <ItemsControl ItemsSource="{x:Bind ViewModel.Services}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="core:ScheduledTaskStatus">
-                                <StackPanel Spacing="4" Padding="0,10,0,10"
-                                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
-                                    <Grid ColumnSpacing="12">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" IsTextSelectionEnabled="True" />
-                                        <TextBlock Grid.Column="1" Text="{x:Bind State}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                    </Grid>
-                                    <Grid ColumnSpacing="12" RowSpacing="2"
-                                          Visibility="{x:Bind HasDetails, Converter={StaticResource BoolToVisibility}}">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                            <RowDefinition Height="Auto" />
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Text="Runs" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Grid.Column="1" Text="{x:Bind Trigger}" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Grid.Row="1" Text="Last run" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind LastRun}" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   TextWrapping="Wrap" />
-                                        <TextBlock Grid.Row="2" Text="Program" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind Program}" Style="{StaticResource CaptionTextBlockStyle}"
-                                                   FontFamily="Consolas" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
-                                    </Grid>
-                                    <TextBlock Text="{x:Bind Note}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
-                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                               Visibility="{x:Bind HasNote, Converter={StaticResource BoolToVisibility}}" />
-                                </StackPanel>
+                                <Expander HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                                          AutomationProperties.Name="{x:Bind AccessibleName}">
+                                    <Expander.Header>
+                                        <!-- No selectable text here, so a click anywhere reaches the header's toggle -->
+                                        <Grid ColumnSpacing="12" Padding="0,8,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{x:Bind Name}" FontFamily="Cascadia Mono, Consolas"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{x:Bind Summary}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <Ellipse Width="10" Height="10" VerticalAlignment="Center"
+                                                         Fill="{x:Bind Tone, Converter={StaticResource StatusToneToBrush}}" />
+                                                <TextBlock Text="{x:Bind State}" VerticalAlignment="Center"
+                                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Expander.Header>
+                                    <StackPanel Spacing="8">
+                                        <ItemsControl ItemsSource="{x:Bind Details}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="core:StatusDetail">
+                                                    <Grid ColumnSpacing="12" Padding="0,2,0,2">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="110" />
+                                                            <ColumnDefinition Width="*" />
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Text="{x:Bind Label}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind Value}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                   FontFamily="{x:Bind Monospace, Converter={StaticResource Monospace}}"
+                                                                   TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{x:Bind Note}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" IsTextSelectionEnabled="True"
+                                                   Visibility="{x:Bind HasNote, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                </Expander>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
