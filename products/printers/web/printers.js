@@ -36,7 +36,7 @@ const shown = (p) => state.audience === "all" || p.audience === state.audience;
 // The short label on a printer's square: what it prints.
 const kindOf = (p) => (p.inkjet ? "INK" : p.colour ? "CLR" : "BW");
 const kindWord = (p) => (p.inkjet ? "Large-format inkjet" : p.colour ? "Colour laser" : "Black-and-white laser");
-// A room's name from the inventory location ("C4230 - Print Room" is "Print Room").
+// A room's name from the inventory location ("R101 - Print Room" is "Print Room").
 const placeName = (p) => p.location.replace(/^\S+\s*-\s*/, "").trim() || p.location;
 
 // Rooms: every printer in one room shares a badge, a drawer and a list card.
