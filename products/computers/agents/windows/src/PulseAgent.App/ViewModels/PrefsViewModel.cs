@@ -110,7 +110,7 @@ public partial class PrefsViewModel : ObservableObject
         VerboseLogging = settings.VerboseLogging;
         var cert = DeviceCertificate.Find();
         CertificateText = cert is null
-            ? "No device certificate found. The computer may not be joined to Entra."
+            ? "No device certificate found. The computer may not be enrolled in Intune."
             : $"{DeviceCertificate.DeviceId(cert)}\nExpires {cert.NotAfter:yyyy-MM-dd}";
         DeviceText = $"{Device.Hostname}\nSerial {Device.Serial}";
         saved = Current();

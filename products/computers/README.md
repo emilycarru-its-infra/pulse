@@ -71,7 +71,7 @@ when the agent proves it holds the certificate's key, then forwards the certific
 in date, and the device id in its subject is one the catalog lists for the event's hostname:
 
 - Mac: subject `IntuneMDMAgent-<Intune device id>`, issued by `Microsoft Intune MDM Agent CA`.
-- Windows: subject the Entra device id, issued by `MS-Organization-Access`.
+- Windows: subject the Intune device id, issued by `Microsoft Intune MDM Device CA`.
 
 Both CAs issue for every Microsoft tenant, so the seat mapping is what limits ingest to
 your own computers. Fill it by naming the inventory fields that hold the ids in the site
@@ -88,7 +88,7 @@ security find-certificate -a -c IntuneMDMAgent- -p /Library/Keychains/System.key
 ```
 
 ```powershell
-Get-ChildItem Cert:\LocalMachine\My | Where-Object Issuer -like '*CN=MS-Organization-Access*' | Select-Object -First 1 | Export-Certificate -FilePath win-device.cer
+Get-ChildItem Cert:\LocalMachine\My | Where-Object Issuer -eq 'CN=Microsoft Intune MDM Device CA' | Select-Object -First 1 | Export-Certificate -FilePath win-device.cer
 ```
 
 ```bash
@@ -97,7 +97,8 @@ python -m pulse_computers.deviceauth mac-device.pem
 
 Download the `issuer certificate` URL it prints and convert it to PEM. When the device
 certificate carries no such URL, export the issuer from the chain Windows builds
-(`certutil -verify win-device.cer`) or Keychain Access shows.
+(`certutil -verify win-device.cer`) or Keychain Access shows. On Windows the Intune MDM
+Device CA is in the machine's intermediate store, `Cert:\LocalMachine\CA`.
 
 ```bash
 openssl x509 -inform der -in issuer.cer -out issuer.pem

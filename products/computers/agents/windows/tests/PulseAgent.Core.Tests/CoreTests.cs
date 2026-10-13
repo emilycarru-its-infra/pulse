@@ -137,6 +137,18 @@ public class IdentityTests
         Assert.Equal("[2027-01-04 17:05:00] WARN  late", AgentLog.FormatLine(new DateTime(2027, 1, 4, 17, 5, 0), "WARN", "late"));
 }
 
+public class DeviceCertificateTests
+{
+    [Theory]
+    [InlineData("CN=Microsoft Intune MDM Device CA", true)]
+    [InlineData("cn=microsoft intune mdm device ca", true)]
+    [InlineData("CN=Microsoft Intune Device Management Device CA", false)]
+    [InlineData("CN=Microsoft Intune MDM Device CA Lookalike", false)]
+    [InlineData("DC=net + DC=windows + CN=MS-Organization-Access + OU=00000000-0000-0000-0000-000000000000", false)]
+    public void OnlyTheIntuneMdmDeviceCaIsAccepted(string issuer, bool expected) =>
+        Assert.Equal(expected, DeviceCertificate.IsIssuedByCa(issuer));
+}
+
 public class ScheduledTaskTests
 {
     private const string AgentXml = """

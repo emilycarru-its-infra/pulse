@@ -2,8 +2,8 @@
 
 An agent proves which computer it is with a TLS client certificate its management system
 issued: on a Mac the Intune agent's (subject `IntuneMDMAgent-<Intune device id>`, issuer
-`Microsoft Intune MDM Agent CA`), on Windows the Entra device certificate (subject the
-Entra device id, issuer `MS-Organization-Access`). App Service requires a client certificate
+`Microsoft Intune MDM Agent CA`), on Windows the Intune MDM certificate (subject the
+Intune device id, issuer `Microsoft Intune MDM Device CA`). App Service requires a client certificate
 on the ingest path, ends TLS only when the client proves it holds the key, and forwards that
 certificate, base64 DER, in `X-ARR-ClientCert`. It does not check the issuer, so this
 module does:
@@ -87,7 +87,7 @@ def verify(cert: x509.Certificate, cas: list[x509.Certificate], now: datetime | 
 
 
 def device_id(cert: x509.Certificate) -> str:
-    """The Intune device id (Mac) or Entra device id (Windows) a certificate names, lowercase."""
+    """The Intune device id a certificate names, lowercase."""
     names = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
     cn = str(names[0].value).strip() if names else ""
     if cn.startswith(MAC_PREFIX):
