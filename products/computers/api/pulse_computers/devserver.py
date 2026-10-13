@@ -117,7 +117,8 @@ class Positions:
 LOCAL = {"localhost", "127.0.0.1"}
 
 
-def make_handler(service: ComputersService, theme: Path, key: str, assets: Path, positions: Positions | None = None):
+def make_handler(service: ComputersService, theme: Path, key: str, assets: Path, positions: Positions | None = None,
+                 hub_status: Path = ROOT / "hub" / "sample" / "status.json"):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
             if not self.path.startswith("/computers/api/ingest"):
@@ -171,6 +172,8 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path,
                 return self._send(200, body, "application/x-ndjson")
             if p == "/hub/products.json":
                 return self._json(200, PRODUCTS)
+            if p == "/hub/status.json":
+                return self._file(hub_status.parent, hub_status.name)
             if p == "/computers":
                 self.send_response(301)
                 self.send_header("Location", "/computers/")
@@ -226,6 +229,8 @@ def main() -> None:
     parser.add_argument("--simulate", action="store_true", help="feed made-up events for every seat")
     parser.add_argument("--speed", type=float, default=30.0)
     parser.add_argument("--positions", help="JSON file the seat editor saves to; turns the editor on")
+    parser.add_argument("--hub-status", default=str(ROOT / "hub" / "sample" / "status.json"),
+                        help="the hub's systems and incidents (default: the generic sample)")
     args = parser.parse_args()
 
     with open(args.catalog) as f:
@@ -240,7 +245,8 @@ def main() -> None:
         threading.Thread(target=simulate, args=(catalog, send, 5.0, args.speed), daemon=True).start()
 
     editor = Positions(Path(args.positions), catalog) if args.positions else None
-    handler = make_handler(service, Path(args.theme), args.key, Path(args.assets or Path(args.catalog).parent), editor)
+    handler = make_handler(service, Path(args.theme), args.key, Path(args.assets or Path(args.catalog).parent), editor,
+                           Path(args.hub_status))
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler)
     seats = sum(len(s["seats"]) for s in catalog["spaces"])
     print(f"Pulse on http://localhost:{args.port}/  ({len(catalog['spaces'])} spaces, {seats} seats"

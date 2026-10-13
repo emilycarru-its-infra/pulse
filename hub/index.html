@@ -10,18 +10,48 @@
 </head>
 <body>
   <main class="doc">
-    <section class="intro">
-      <div class="intro-text">
-        <h2>What is working right now</h2>
-        <p>Live status of shared university systems. Each product checks itself every few seconds; open one for the detail.</p>
-      </div>
-      <p class="fine" id="updated" aria-live="polite"></p>
+    <p class="notice sample" id="sample" hidden></p>
+
+    <section class="overall card" id="overall" aria-live="polite">
+      <p class="overall-title" id="overall-title">Checking…</p>
+      <p class="fine" id="updated"></p>
     </section>
+
+    <section id="active-wrap" hidden>
+      <p class="kicker">Active incidents</p>
+      <ol class="incidents" id="active"></ol>
+    </section>
+
+    <section id="maintenance-wrap" hidden>
+      <p class="kicker">Scheduled maintenance</p>
+      <ol class="incidents" id="maintenance"></ol>
+    </section>
+
     <section>
-      <p class="kicker">Products</p>
+      <p class="kicker">Live detail</p>
       <ul class="products" id="products"></ul>
     </section>
-    <p class="fine foot">Signed-in members of the university only. Pulse shows live state; history lives in the data warehouse.</p>
+
+    <section>
+      <div class="section-head">
+        <p class="kicker">Systems</p>
+        <p class="fine legend">
+          <span class="key"><i class="day ok"></i>No issues</span>
+          <span class="key"><i class="day warn"></i>Degraded</span>
+          <span class="key"><i class="day bad"></i>Outage</span>
+          <span class="key"><i class="day maint"></i>Maintenance</span>
+          <span class="key">90 days, oldest left</span>
+        </p>
+      </div>
+      <div class="groups" id="groups"></div>
+    </section>
+
+    <section>
+      <p class="kicker">Past incidents</p>
+      <ol class="history" id="history"></ol>
+    </section>
+
+    <p class="fine foot" id="foot">Pulse shows live state; history lives in the data warehouse.</p>
   </main>
   <script src="/core/shell.js"></script>
   <script src="/hub.js"></script>
