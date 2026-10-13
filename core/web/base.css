@@ -102,3 +102,7 @@ main.doc > * { width: 90%; margin-left: auto; margin-right: auto; }
 .segmented button:hover:not([aria-pressed="true"]), .segmented button:focus-visible { background: var(--accent-band); color: #000; }
 
 .foot { margin-top: 40px; border-top: 1px solid var(--hair); padding-top: 12px; }
+
+/* Masonry grids (core/web/masonry.js): small implicit rows that each card spans by its height;
+   the span carries the vertical gap, so the grid's own row gap is zero. */
+.masonry { grid-auto-rows: 4px; row-gap: 0 !important; align-items: start; }

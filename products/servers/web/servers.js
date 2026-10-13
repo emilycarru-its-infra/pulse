@@ -273,3 +273,5 @@ document.addEventListener("keydown", (e) => {
     document.getElementById("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
   }, 30000);
 })();
+
+Pulse.masonry(document.getElementById("groups"));
