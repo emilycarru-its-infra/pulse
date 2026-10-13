@@ -1,0 +1,18 @@
+[project]
+name = "pulse-printers"
+version = "0.1.0"
+description = "PrintersPulse API, catalog build, sample-data simulator and local dev server"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["pulse-core"]
+
+[project.optional-dependencies]
+azure = ["azure-functions"]
+test = ["pytest", "azure-functions"]
+
+[tool.setuptools.packages.find]
+include = ["pulse_printers*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

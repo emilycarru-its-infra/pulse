@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Printer Status</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="printers.css">
+</head>
+<body class="app">
+  <main class="doc wide">
+    <p class="mock" role="note" id="mock" hidden><b>Mockup</b><span>Sample data: the printers and their rooms are real; their states, supplies and queues are made up.</span></p>
+
+    <div class="map-toolbar">
+      <div class="floors" role="tablist" aria-label="Floors" id="floors"></div>
+      <div class="views">
+        <span class="zoom" role="group" aria-label="Zoom">
+          <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" id="zoom-level" class="zoom-level" title="Show the whole floor">100%</button>
+          <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        </span>
+        <div class="segmented" role="group" aria-label="Show" id="mode">
+          <button type="button" data-v="map" aria-pressed="true">Map</button>
+          <button type="button" data-v="list" aria-pressed="false">List</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Who prints there" id="audience">
+          <button type="button" data-v="students" aria-pressed="false">Students</button>
+          <button type="button" data-v="staff" aria-pressed="false">Staff</button>
+        </div>
+      </div>
+      <div class="toolbar-end">
+        <p class="total" id="total" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="canvas-wrap" id="map-view">
+        <svg id="map" class="floormap" role="application" tabindex="0"
+             aria-label="Floor plan. Drag to pan, pinch or hold Command and scroll to zoom. Pick a printer for its details.">
+          <defs>
+            <filter id="plan-light" color-interpolation-filters="sRGB">
+              <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"></feColorMatrix>
+            </filter>
+            <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" class="hatch-bg"></rect>
+              <rect width="4" height="8" class="hatch-fg"></rect>
+            </pattern>
+            <pattern id="hatch-ok" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="8" height="8" class="hatch-ok-bg"></rect>
+              <rect width="4" height="8" class="hatch-ok-fg"></rect>
+            </pattern>
+          </defs>
+          <g id="content"></g>
+        </svg>
+      </div>
+      <div class="list-view" id="list-view" hidden><div class="spaces" id="spaces"></div></div>
+      <aside class="drawer" id="drawer" aria-label="Room details" hidden></aside>
+    </div>
+
+    <div class="map-foot">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="key ready"></span>Ready</li>
+        <li><span class="key printing"></span>Printing</li>
+        <li><span class="key attention"></span>Needs attention</li>
+        <li><span class="key error"></span>Stopped</li>
+        <li><span class="key offline"></span>Not responding</li>
+      </ul>
+      <p class="canvas-hint" id="hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a printer for its details</p>
+    </div>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="/core/viewport.js"></script>
+  <script src="printers.js"></script>
+</body>
+</html>

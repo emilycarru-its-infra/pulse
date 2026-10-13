@@ -18,8 +18,8 @@ role it requires.
 - `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell; the `pulse-product` Terraform module ([core/terraform/pulse-product](core/terraform/pulse-product))
 - `hub/`: the summary page
 - `products/computers/`: `api` (with a simulator, local dev server and Azure Functions host), `web` and the Mac and Windows agents ([products/computers/README.md](products/computers/README.md))
+- `products/printers/`: PrintersPulse, on sample data until its collector exists ([products/printers/README.md](products/printers/README.md))
 - `products/servers/`: ServersPulse, with a sample health source until its collectors exist ([products/servers/README.md](products/servers/README.md))
-- `products/printers/`
 
 This repo holds only generic code. Site-specific values (hostnames, catalogs,
 floorplans, tenant settings) are configuration that a separate deploy repo supplies.
