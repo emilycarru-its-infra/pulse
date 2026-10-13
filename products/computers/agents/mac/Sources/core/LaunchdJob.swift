@@ -22,6 +22,8 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
     public var standardOutPath: String?
     public var standardErrorPath: String?
     public var plistPath: String = ""
+    /// False when the job's plist is not on disk, so nothing about it can be read.
+    public var isInstalled = true
 
     /// The jobs the package installs: the agent, and the helper the app registers.
     public static let installed: [(label: String, title: String, plist: String)] = [
@@ -38,6 +40,7 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
             let printed = launchctlPrint("system/\(job.label)")
             var made = make(label: job.label, title: job.title, plist: plist, printed: printed)
             made.plistPath = job.plist
+            if job.label == PulseConstants.helperLabel { made.kind = "Privileged helper (SMAppService)" }
             return made
         }
     }
@@ -55,6 +58,7 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
                              pid: fields["pid"].flatMap(Int.init), lastExitCode: exit,
                              schedule: schedule(plist), program: program(plist))
         if plist?["MachServices"] != nil, plist?["BundleProgram"] != nil { job.kind = "Privileged helper (SMAppService)" }
+        job.isInstalled = plist != nil
         job.arguments = Array((plist?["ProgramArguments"] as? [String] ?? []).dropFirst())
         job.runAtLoad = plist?["RunAtLoad"] as? Bool ?? false
         job.keepAlive = keepAliveWords(plist?["KeepAlive"])
@@ -87,6 +91,30 @@ public struct LaunchdJob: Identifiable, Equatable, Sendable {
         if plist["MachServices"] != nil { return "On demand, when the app connects" }
         if plist["RunAtLoad"] as? Bool == true { return "Once at startup" }
         return "On demand"
+    }
+
+    /// What the collapsed row shows on the right: "Running (PID n)", "Loaded, not
+    /// running" or "Not loaded".
+    public var statusText: String {
+        if let pid { return "Running (PID \(pid))" }
+        if state == "Running" { return "Running" }
+        if state == "Not loaded" || state == "Not installed" { return "Not loaded" }
+        return "Loaded, not running"
+    }
+
+    /// The collapsed row's one secondary line, e.g. "Launch daemon · At startup, kept
+    /// running · Last exit 0".
+    public var summary: String {
+        var when: String
+        if let startInterval { when = "Every \(startInterval) seconds" }
+        else if keepAlive.hasPrefix("Yes") { when = runAtLoad ? "At startup, kept running" : "Kept running" }
+        else if kind.hasPrefix("Privileged helper") { when = "On demand" }
+        else { when = runAtLoad ? "At startup" : "On demand" }
+        let type = kind.hasPrefix("Privileged helper") ? "Privileged helper" : "Launch daemon"
+        guard isInstalled else { return "\(type) · Not installed" }
+        var parts = [type, when]
+        if let lastExitCode { parts.append(Int(lastExitCode) != nil ? "Last exit \(lastExitCode)" : lastExitCode) }
+        return parts.joined(separator: " · ")
     }
 
     static func keepAliveWords(_ value: Any?) -> String {

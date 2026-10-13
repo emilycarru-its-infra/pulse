@@ -10,6 +10,7 @@ import PulseAgentCore
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     @Environment(XPCClient.self) private var xpc
+    @State private var expandedServices: Set<String> = []
 
     var body: some View {
         ScrollView {
@@ -208,44 +209,77 @@ struct SettingsView: View {
         }
     }
 
-    /// One collapsed row per job: its label and a state dot. Expanded, the fields
+    /// One collapsed row per job: its label, a summary line and its state. Clicking
+    /// anywhere on the row, or Space or Return when it has focus, shows the fields
     /// ReportMate collects for the job, all read-only.
     private func serviceRow(_ job: LaunchdJob) -> some View {
-        DisclosureGroup {
-            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
-                detail("Type", job.kind)
-                detail("Status", job.pid.map { "\(job.state), pid \($0)" } ?? job.state)
-                detail("Last exit code", job.lastExitCode ?? "—")
-                detail("Program", job.program ?? "—", mono: true)
-                if !job.arguments.isEmpty { detail("Arguments", job.arguments.joined(separator: " "), mono: true) }
-                detail("Runs at load", job.runAtLoad ? "Yes" : "No")
-                detail("Keep alive", job.keepAlive)
-                detail("Schedule", job.startInterval.map { "Every \($0) seconds" } ?? job.schedule)
-                detail("User", job.user)
-                if let out = job.standardOutPath { detail("Standard output", out, mono: true) }
-                if let err = job.standardErrorPath { detail("Standard error", err, mono: true) }
-                detail("Plist", job.plistPath, mono: true)
+        let open = expandedServices.contains(job.id)
+        return VStack(alignment: .leading, spacing: 0) {
+            Button {
+                toggle(job)
+            } label: {
+                HStack(alignment: .center, spacing: 10) {
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(job.label)
+                            .font(.body.monospaced())
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Text(job.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 12)
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(stateColor(job))
+                            .frame(width: 9, height: 9)
+                        Text(job.statusText)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 8)
+                .padding(.trailing, 6)
+                .contentShape(Rectangle())
             }
-            .font(.callout)
-            .padding(.vertical, 6)
-            .padding(.leading, 4)
-        } label: {
-            HStack {
-                Text(job.label)
-                    .font(.body.monospaced())
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
-                Spacer()
-                Circle()
-                    .fill(stateColor(job))
-                    .frame(width: 9, height: 9)
-                    .help(job.state)
-                    .accessibilityLabel(job.state)
+            .buttonStyle(.plain)
+            .onKeyPress(.return) { toggle(job); return .handled }
+            .onKeyPress(.space) { toggle(job); return .handled }
+            .accessibilityLabel("\(job.label), \(job.statusText)")
+            .accessibilityHint(open ? "Hides the details" : "Shows the details")
+            .accessibilityAddTraits(.isButton)
+
+            if open {
+                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
+                    detail("Type", job.kind)
+                    detail("Status", job.statusText)
+                    detail("Last exit code", job.lastExitCode ?? "—")
+                    detail("Program", job.program ?? "—", mono: true)
+                    if !job.arguments.isEmpty { detail("Arguments", job.arguments.joined(separator: " "), mono: true) }
+                    detail("Runs at load", job.runAtLoad ? "Yes" : "No")
+                    detail("Keep alive", job.keepAlive)
+                    detail("Schedule", job.startInterval.map { "Every \($0) seconds" } ?? job.schedule)
+                    detail("User", job.user)
+                    if let out = job.standardOutPath { detail("Standard output", out, mono: true) }
+                    if let err = job.standardErrorPath { detail("Standard error", err, mono: true) }
+                    detail("Plist", job.plistPath, mono: true)
+                }
+                .font(.callout)
+                .padding(.leading, 24)
+                .padding(.bottom, 10)
             }
-            .padding(.trailing, 6)
         }
-        .padding(.vertical, 8)
+    }
+
+    private func toggle(_ job: LaunchdJob) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            if expandedServices.contains(job.id) { expandedServices.remove(job.id) } else { expandedServices.insert(job.id) }
+        }
     }
 
     @ViewBuilder
