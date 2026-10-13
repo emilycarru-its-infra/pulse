@@ -63,3 +63,10 @@ def test_ingest_key_when_set(pulse):
 def test_routes_are_registered():
     routes = {f.get_trigger().route for f in function_app.app.get_functions()}
     assert routes == {"ingest", "status", "summary", "export/events"}
+
+
+def test_ingest_refuses_any_path_but_its_own(pulse):
+    for url in ["/api/summary/../ingest", "/API/ingest", "/api/%69ngest", "/api/status/%2e%2e/ingest"]:
+        req = func.HttpRequest("POST", url, headers={}, body=b"{}")
+        assert function_app.ingest(req).status_code == 404, url
+    assert function_app._exact_path("https://host.example/api/ingest?x=1", "/api/ingest")

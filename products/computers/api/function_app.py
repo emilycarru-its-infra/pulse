@@ -78,7 +78,22 @@ def _json(code: int, obj) -> func.HttpResponse:
                              headers={"Cache-Control": "no-store"})
 
 
+INGEST_PATH = "/api/ingest"
+
+
+def _exact_path(url: str, path: str) -> bool:
+    """True only for exactly path: no other case, no dot segments, no percent-encoding.
+    App Service matches certificate exclusion paths by prefix, so a path that only routes
+    here after normalising (/api/summary/../ingest) could arrive without a handshake
+    certificate and with a header typed by hand. Such a request is refused."""
+    raw = url.split("://", 1)[-1]
+    raw = raw[raw.find("/"):] if "/" in raw else "/"
+    return raw.split("?", 1)[0] == path
+
+
 def ingest(req: func.HttpRequest) -> func.HttpResponse:
+    if not _exact_path(req.url, INGEST_PATH):
+        return _json(404, {"error": "not found"})
     p = pulse()
     body = req.get_body()
     if len(body) > MAX_EVENT:
