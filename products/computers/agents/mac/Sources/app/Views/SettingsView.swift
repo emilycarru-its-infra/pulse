@@ -29,7 +29,7 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .top)
                 }
                 servicesCard
-                saveStatus
+                footer
             }
             .padding()
         }
@@ -52,13 +52,24 @@ struct SettingsView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-            HStack(spacing: 16) {
-                Link("Documentation", destination: PulseConstants.documentationURL)
-                Link("Report Issue", destination: PulseConstants.issuesURL)
-            }
-            .font(.caption)
         }
         .padding(.top, 8)
+    }
+
+    /// The version and the help links on the left, the save state on the right.
+    private var footer: some View {
+        HStack(spacing: 12) {
+            Text("v\(PulseConstants.version)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+            Link("Documentation", destination: PulseConstants.documentationURL)
+                .font(.caption)
+            Link("Report Issue", destination: PulseConstants.issuesURL)
+                .font(.caption)
+            Spacer()
+            saveStatus
+        }
     }
 
     /// One line for every key a profile sets, worded as System Settings words it.
@@ -83,7 +94,6 @@ struct SettingsView: View {
             }
         }
         .font(.callout)
-        .frame(maxWidth: .infinity, alignment: .trailing)
         .accessibilityElement(children: .combine)
     }
 
