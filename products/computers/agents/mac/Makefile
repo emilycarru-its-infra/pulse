@@ -20,6 +20,11 @@ BUILD_DIR = build
 ROOT = $(BUILD_DIR)/root
 APP = $(ROOT)/Applications/Utilities/Managed Presence Beacon.app
 SWIFT_OUT = $(shell swift build -c release --arch arm64 --arch x86_64 --show-bin-path 2>/dev/null)
+# Record the SDK the binaries are linked against. SwiftPM writes the deployment target as
+# the SDK version, and AppKit then keeps the pre-macOS 26 window chrome (a title bar and a
+# small tab strip) instead of the toolbar tabs the other Managed apps show.
+SDK_VERSION := $(shell xcrun --show-sdk-version)
+DEPLOYMENT_TARGET = 14.0
 ICON_DIR = resources/ManagedPresenceBeacon.icon
 ICON_NAME = ManagedPresenceBeacon
 ACTOOL_OUT = $(BUILD_DIR)/actool
@@ -50,9 +55,13 @@ app: swift $(ACTOOL_OUT)/Assets.car
 	@rm -rf "$(APP)"
 	@mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Resources" "$(APP)/Contents/Library/LaunchDaemons" \
 		$(ROOT)/Library/LaunchDaemons
-	cp $(SWIFT_OUT)/ManagedPresenceBeaconApp "$(APP)/Contents/MacOS/ManagedPresenceBeacon"
+	cp $(SWIFT_OUT)/ManagedPresenceBeaconApp "$(APP)/Contents/MacOS/ComputerPulseGUI"
 	cp $(SWIFT_OUT)/managedpresencebeacon "$(APP)/Contents/MacOS/managedpresencebeacon"
 	cp $(SWIFT_OUT)/ManagedPresenceBeaconHelper "$(APP)/Contents/MacOS/ManagedPresenceBeaconHelper"
+	@for bin in "$(APP)/Contents/MacOS/"*; do \
+		vtool -set-build-version macos $(DEPLOYMENT_TARGET) $(SDK_VERSION) -replace -output "$$bin.stamped" "$$bin" && \
+		mv "$$bin.stamped" "$$bin" && chmod 755 "$$bin" && codesign --force --sign - "$$bin" 2>/dev/null; \
+	done
 	sed -e 's/{{MARKETING_VERSION}}/$(MARKETING_VERSION)/g' -e 's/{{BUILD_NUMBER}}/$(BUILD_NUMBER)/g' \
 		packaging/resources/Info.plist.template > "$(APP)/Contents/Info.plist"
 	cp $(ACTOOL_OUT)/Assets.car $(ACTOOL_OUT)/$(ICON_NAME).icns "$(APP)/Contents/Resources/"

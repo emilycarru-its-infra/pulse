@@ -1,6 +1,6 @@
 //
 //  The window: Prefs, Run and Logs. A plain TabView, which macOS 26 draws as the
-//  Liquid Glass segmented control in the title bar.
+//  Liquid Glass segmented control in the toolbar.
 //
 
 import SwiftUI

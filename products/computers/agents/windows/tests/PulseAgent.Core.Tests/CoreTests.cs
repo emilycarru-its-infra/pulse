@@ -136,3 +136,182 @@ public class IdentityTests
     public void LogLinesCarryAPaddedLevel() =>
         Assert.Equal("[2027-01-04 17:05:00] WARN  late", AgentLog.FormatLine(new DateTime(2027, 1, 4, 17, 5, 0), "WARN", "late"));
 }
+
+public class ScheduledTaskTests
+{
+    private const string AgentXml = """
+        <?xml version="1.0" encoding="UTF-16"?>
+        <Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+          <Triggers><BootTrigger><Enabled>true</Enabled></BootTrigger></Triggers>
+          <Actions Context="Author">
+            <Exec>
+              <Command>"C:\Program Files\Example\agent.exe"</Command>
+              <Arguments>run</Arguments>
+            </Exec>
+          </Actions>
+        </Task>
+        """;
+
+    private const string ShutdownXml = """
+        <Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+          <Triggers>
+            <EventTrigger>
+              <Enabled>true</Enabled>
+              <Subscription>&lt;QueryList&gt;&lt;Query Id="0" Path="System"&gt;&lt;Select Path="System"&gt;*[System[Provider[@Name='User32'] and EventID=1074]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
+            </EventTrigger>
+            <LogonTrigger><Enabled>false</Enabled></LogonTrigger>
+          </Triggers>
+          <Actions><Exec><Command>C:\agent.exe</Command></Exec></Actions>
+        </Task>
+        """;
+
+    [Fact]
+    public void BootTaskReadsItsTriggerAndProgram()
+    {
+        var (trigger, program) = ScheduledTasks.DescribeDefinition(AgentXml.Trim());
+        Assert.Equal("At startup", trigger);
+        Assert.Equal(@"C:\Program Files\Example\agent.exe run", program);
+    }
+
+    [Fact]
+    public void EventTaskNamesTheEventAndSkipsADisabledTrigger()
+    {
+        var (trigger, program) = ScheduledTasks.DescribeDefinition(ShutdownXml);
+        Assert.Equal("On event 1074 in the System log", trigger);
+        Assert.Equal(@"C:\agent.exe", program);
+    }
+
+    [Theory]
+    [InlineData("PT6H", "6 hours")]
+    [InlineData("PT1H", "hour")]
+    [InlineData("PT90M", "90 minutes")]
+    [InlineData("P1D", "day")]
+    public void IntervalsReadAsWords(string xml, string expected) =>
+        Assert.Equal(expected, ScheduledTasks.DescribeInterval(System.Xml.XmlConvert.ToTimeSpan(xml)));
+
+    [Theory]
+    [InlineData(3, true, "Ready")]
+    [InlineData(4, true, "Running")]
+    [InlineData(3, false, "Disabled")]
+    [InlineData(0, true, "Unknown")]
+    public void StatesReadAsWords(int state, bool enabled, string expected) =>
+        Assert.Equal(expected, ScheduledTasks.DescribeState(state, enabled));
+
+    [Fact]
+    public void LastRunShowsTheExitCodeOrTheSchedulersWord()
+    {
+        var when = new DateTime(2027, 1, 4, 9, 41, 0);
+        Assert.Equal("2027-01-04 09:41, Exit code 0", ScheduledTasks.DescribeLastRun(when, 0));
+        Assert.Equal("2027-01-04 09:41, Exit code 2", ScheduledTasks.DescribeLastRun(when, 2));
+        Assert.Equal("2027-01-04 09:41, Still running", ScheduledTasks.DescribeLastRun(when, 0x41301));
+        Assert.Equal("Has not run yet", ScheduledTasks.DescribeLastRun(new DateTime(1999, 11, 30), 0x41303));
+        Assert.Equal("2027-01-04 09:41, Result 0x80070005", ScheduledTasks.DescribeLastRun(when, unchecked((int)0x80070005)));
+    }
+}
+
+public class ApplySettingsTests
+{
+    private static readonly HashSet<string> NoPolicy = [];
+    private static readonly string[] Roots = [@"C:\Program Files", @"C:\Program Files (x86)"];
+    private const string Installed = @"C:\Program Files\Example\Example App.exe";
+
+    [Fact]
+    public async Task ChangedKeysRoundTripThroughAFrame()
+    {
+        var changes = new Dictionary<string, object>
+        {
+            [SettingsStore.IngestUrl] = "https://status.example.edu/api/ingest",
+            [SettingsStore.IngestKey] = "s3cret",
+            [SettingsStore.CheckIntervalSeconds] = 30,
+            [SettingsStore.VerboseLogging] = true,
+        };
+        using var stream = new MemoryStream();
+        await PrefsElevation.WriteFrameAsync(stream, System.Text.Json.JsonSerializer.Serialize(changes));
+        stream.Position = 0;
+        var values = PrefsElevation.Validate((await PrefsElevation.ReadFrameAsync(stream))!, NoPolicy, out var error);
+        Assert.Equal("", error);
+        Assert.Equal(changes, values);
+    }
+
+    [Fact]
+    public void OnlyThePipeNameGoesOnTheCommandLine()
+    {
+        var name = PrefsElevation.NewPipeName();
+        Assert.True(PrefsElevation.IsPipeName(name));
+        var start = PrefsElevation.BuildElevatedApply(Installed, name);
+        Assert.Equal("runas", start.Verb);
+        Assert.Equal($"{PrefsElevation.ApplyArgument} {name}", start.Arguments);
+        Assert.Equal(name, PrefsElevation.ApplyPipeName(start.Arguments.Split(' ')));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("eyJJbmdlc3RVcmwiOiJ4In0=")]
+    [InlineData(@"..\..\pipe\other")]
+    public void APayloadOrStrangeNameIsNotAPipeName(string name) => Assert.False(PrefsElevation.IsPipeName(name));
+
+    [Fact]
+    public void OnlyTheApplySwitchStartsTheApplyMode()
+    {
+        Assert.Null(PrefsElevation.ApplyPipeName([]));
+        Assert.Null(PrefsElevation.ApplyPipeName(["--prefs"]));
+        Assert.Equal("", PrefsElevation.ApplyPipeName([PrefsElevation.ApplyArgument]));
+    }
+
+    [Fact]
+    public async Task ShortOrOversizedFramesAreRefused()
+    {
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([5, 0, 0, 0, (byte)'{'])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([0, 0, 0, 0])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([0xFF, 0xFF, 0xFF, 0x7F])));
+        Assert.Null(await PrefsElevation.ReadFrameAsync(new MemoryStream([1, 0])));
+    }
+
+    [Fact]
+    public void TheSameAppUnderProgramFilesIsTrusted()
+    {
+        Assert.True(PrefsElevation.IsTrustedServer(Installed, Installed, Roots));
+        Assert.True(PrefsElevation.IsTrustedServer(Installed.ToUpperInvariant(), Installed, Roots));
+    }
+
+    [Theory]
+    [InlineData(@"C:\Users\me\Downloads\evil.exe", Installed)]
+    [InlineData(@"C:\Program Files\Example\Other.exe", Installed)]
+    [InlineData(null, Installed)]
+    [InlineData(@"C:\Users\me\app\Example App.exe", @"C:\Users\me\app\Example App.exe")]
+    [InlineData(@"C:\Program Files Evil\Example App.exe", @"C:\Program Files Evil\Example App.exe")]
+    [InlineData(@"C:\Program Files\..\Users\me\a.exe", @"C:\Program Files\..\Users\me\a.exe")]
+    [InlineData(@"\\server\share\Program Files\a.exe", @"\\server\share\Program Files\a.exe")]
+    public void AnyOtherServerOrPlaceIsNot(string? server, string own) =>
+        Assert.False(PrefsElevation.IsTrustedServer(server, own, Roots));
+
+    [Fact]
+    public void IntervalsAreClampedToTheirRanges()
+    {
+        var values = PrefsElevation.Validate("""{"CheckIntervalSeconds":1,"HeartbeatIntervalSeconds":99999}""", NoPolicy, out _);
+        Assert.Equal(5, values![SettingsStore.CheckIntervalSeconds]);
+        Assert.Equal(3600, values[SettingsStore.HeartbeatIntervalSeconds]);
+    }
+
+    [Theory]
+    [InlineData("""{"Nonsense":1}""")]
+    [InlineData("""{"CheckIntervalSeconds":"thirty"}""")]
+    [InlineData("""{"VerboseLogging":1}""")]
+    [InlineData("""{"IngestKey":""}""")]
+    [InlineData("""{}""")]
+    [InlineData("""[1,2]""")]
+    [InlineData("""not json""")]
+    public void BadPayloadsAreRefused(string json)
+    {
+        Assert.Null(PrefsElevation.Validate(json, NoPolicy, out var error));
+        Assert.NotEqual("", error);
+    }
+
+    [Fact]
+    public void APolicyKeyIsNeverWritten()
+    {
+        HashSet<string> managed = [SettingsStore.IngestUrl];
+        Assert.Null(PrefsElevation.Validate("""{"ingesturl":"https://x.example"}""", managed, out var error));
+        Assert.Contains("policy", error);
+    }
+}

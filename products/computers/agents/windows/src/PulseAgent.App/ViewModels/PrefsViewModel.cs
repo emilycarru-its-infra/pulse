@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.UI.Xaml.Media;
 using PulseAgent.Core;
@@ -5,16 +6,22 @@ using PulseAgent.Core;
 namespace PulseAgent.App.ViewModels;
 
 /// <summary>
-/// The Prefs tab. Settings live in HKLM, so the tab is read-only unless this process is elevated;
-/// Unlock relaunches the app elevated on this tab. A value set by policy (Intune or Group Policy)
-/// shows its managed value, greyed, with a lock and the word Managed, and is never written.
-/// Elevated, every other change saves itself half a second after the last edit.
+/// The Prefs tab. Every setting policy does not manage can be edited, and saves itself half a
+/// second after the last edit. Settings live in HKLM, so an unelevated app hands the changed keys
+/// to a copy of itself started through UAC, which asks for an administrator at that moment; an
+/// elevated app writes them itself. A value set by policy (Intune or Group Policy) shows its policy
+/// value in a disabled, grey control and is never written; one line at the top of the tab says so
+/// when any is. The Services card lists the agent's scheduled tasks, read-only.
 /// </summary>
 public partial class PrefsViewModel : ObservableObject
 {
     private Timer? saveTimer;
     private bool loading;
+    private bool saving;
+    private bool saveAgain;
     private HashSet<string> managed = [];
+    // The values as last loaded or saved, so an unelevated save sends only what changed.
+    private Dictionary<string, object> saved = [];
 
     [ObservableProperty] private string _ingestUrl = "";
     [ObservableProperty] private string _ingestKey = "";
@@ -27,29 +34,24 @@ public partial class PrefsViewModel : ObservableObject
     [ObservableProperty] private string _deviceText = "";
     [ObservableProperty] private SaveState _saveStatus = SaveState.Idle;
     [ObservableProperty] private string _saveError = "";
-    [ObservableProperty] private string _unlockError = "";
 
     public enum SaveState { Idle, Saving, Saved, Failed }
 
-    public string VersionDisplay => Identity.VersionDisplay;
-    public string KeyPlaceholder => !IsElevated ? "Unlock to set or replace" : HasSavedKey ? "Saved; enter a new value to replace" : "Optional";
+    public ObservableCollection<ScheduledTaskStatus> Services { get; } = [];
+
+    // Unelevated, the protected Secrets key cannot be read, so whether a key is saved is unknown.
+    public string KeyPlaceholder => !IsElevated ? "Optional; enter a value to set or replace" : HasSavedKey ? "Saved; enter a new value to replace" : "Optional";
     public bool IsElevated { get; } = PrefsElevation.IsProcessElevated();
-    public bool IsReadOnly => !IsElevated;
-    public bool HasUnlockError => UnlockError.Length > 0;
 
     // NumberBox.Value is a double.
     public double CheckIntervalValue { get => CheckInterval; set => CheckInterval = (int)value; }
     public double HeartbeatIntervalValue { get => HeartbeatInterval; set => HeartbeatInterval = (int)value; }
 
     private bool Locked(string key) => managed.Contains(key);
-    private bool CanEdit(string key) => PrefsElevation.CanEdit(IsElevated, Locked(key));
+    private bool CanEdit(string key) => !Locked(key);
 
-    public bool IsIngestUrlLocked => Locked(SettingsStore.IngestUrl);
-    public bool IsIngestKeyLocked => false;
-    public bool IsUseDeviceCertificateLocked => Locked(SettingsStore.UseDeviceCertificate);
-    public bool IsCheckIntervalLocked => Locked(SettingsStore.CheckIntervalSeconds);
-    public bool IsHeartbeatIntervalLocked => Locked(SettingsStore.HeartbeatIntervalSeconds);
-    public bool IsVerboseLoggingLocked => Locked(SettingsStore.VerboseLogging);
+    /// <summary>Whether policy sets any key on this device, which shows the line about grey settings.</summary>
+    public bool HasPolicySettings => managed.Count > 0;
 
     public bool CanEditIngestUrl => CanEdit(SettingsStore.IngestUrl);
     public bool CanEditIngestKey => CanEdit(SettingsStore.IngestKey);
@@ -89,7 +91,6 @@ public partial class PrefsViewModel : ObservableObject
     }
 
     partial void OnHasSavedKeyChanged(bool value) => OnPropertyChanged(nameof(KeyPlaceholder));
-    partial void OnUnlockErrorChanged(string value) => OnPropertyChanged(nameof(HasUnlockError));
     partial void OnCheckIntervalChanged(int value) => OnPropertyChanged(nameof(CheckIntervalValue));
     partial void OnHeartbeatIntervalChanged(int value) => OnPropertyChanged(nameof(HeartbeatIntervalValue));
 
@@ -110,33 +111,18 @@ public partial class PrefsViewModel : ObservableObject
             ? "No device certificate found. The computer may not be joined to Entra."
             : $"{DeviceCertificate.DeviceId(cert)}\nExpires {cert.NotAfter:yyyy-MM-dd}";
         DeviceText = $"{Device.Hostname}\nSerial {Device.Serial}";
+        saved = Current();
         OnPropertyChanged(string.Empty);
         loading = false;
+        LoadServices();
     }
 
-    /// <summary>Relaunches elevated through UAC on this tab. True when the elevated copy started.</summary>
-    public bool TryRelaunchElevated()
+    // Task Scheduler can take a moment to answer, so the card fills in after the settings.
+    private async void LoadServices()
     {
-        UnlockError = "";
-        try
-        {
-            if (Environment.ProcessPath is not { Length: > 0 } exe)
-            {
-                UnlockError = "Could not find the app's own executable to relaunch.";
-                return false;
-            }
-            using var process = System.Diagnostics.Process.Start(PrefsElevation.BuildElevatedRelaunch(exe));
-            return process is not null;
-        }
-        catch (Exception ex) when (PrefsElevation.IsElevationCancelled(ex))
-        {
-            return false;
-        }
-        catch (Exception ex)
-        {
-            UnlockError = $"Could not relaunch as administrator: {ex.Message}";
-            return false;
-        }
+        var tasks = await Task.Run(ScheduledTasks.Read);
+        Services.Clear();
+        foreach (var task in tasks) Services.Add(task);
     }
 
     private static readonly HashSet<string> settingProperties =
@@ -148,26 +134,73 @@ public partial class PrefsViewModel : ObservableObject
     protected override void OnPropertyChanged(System.ComponentModel.PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
-        if (loading || !IsElevated || !settingProperties.Contains(e.PropertyName ?? "")) return;
+        if (loading || !settingProperties.Contains(e.PropertyName ?? "")) return;
         var queue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
         saveTimer?.Dispose();
         saveTimer = new Timer(_ => queue.TryEnqueue(Save), null, 500, Timeout.Infinite);
     }
 
+    /// <summary>The settings as the controls hold them, keyed by setting name. The ingest key is
+    /// in only when one has been typed.</summary>
+    private Dictionary<string, object> Current()
+    {
+        var values = new Dictionary<string, object>
+        {
+            [SettingsStore.IngestUrl] = IngestUrl.Trim(),
+            [SettingsStore.CheckIntervalSeconds] = CheckInterval,
+            [SettingsStore.HeartbeatIntervalSeconds] = HeartbeatInterval,
+            [SettingsStore.UseDeviceCertificate] = UseDeviceCertificate,
+            [SettingsStore.VerboseLogging] = VerboseLogging,
+        };
+        if (IngestKey.Length > 0) values[SettingsStore.IngestKey] = IngestKey;
+        return values;
+    }
+
     private async void Save()
     {
+        // A save already waiting on UAC picks up this edit when it finishes.
+        if (saving)
+        {
+            saveAgain = true;
+            return;
+        }
+        saving = true;
         SaveStatus = SaveState.Saving;
         try
         {
-            SettingsStore.Save(new AgentSettings
+            var current = Current();
+            if (IsElevated)
             {
-                IngestUrl = IngestUrl.Trim(),
-                IngestKey = IngestKey,
-                UseDeviceCertificate = UseDeviceCertificate,
-                CheckIntervalSeconds = CheckInterval,
-                HeartbeatIntervalSeconds = HeartbeatInterval,
-                VerboseLogging = VerboseLogging,
-            }, managed);
+                SettingsStore.Save(new AgentSettings
+                {
+                    IngestUrl = IngestUrl.Trim(),
+                    IngestKey = IngestKey,
+                    UseDeviceCertificate = UseDeviceCertificate,
+                    CheckIntervalSeconds = CheckInterval,
+                    HeartbeatIntervalSeconds = HeartbeatInterval,
+                    VerboseLogging = VerboseLogging,
+                }, managed);
+            }
+            else
+            {
+                var changes = current
+                    .Where(v => !managed.Contains(v.Key) && !(saved.TryGetValue(v.Key, out var was) && Equals(was, v.Value)))
+                    .ToDictionary();
+                if (changes.Count == 0)
+                {
+                    SaveStatus = SaveState.Idle;
+                    return;
+                }
+                if (await ApplyElevatedAsync(changes) is { } error)
+                {
+                    // Show the fields as HKLM holds them again: nothing was written.
+                    SaveError = error;
+                    SaveStatus = SaveState.Failed;
+                    Load();
+                    return;
+                }
+            }
+            saved = current;
             if (IngestKey.Length > 0) HasSavedKey = true;
             SaveStatus = SaveState.Saved;
             await Task.Delay(2500);
@@ -177,6 +210,35 @@ public partial class PrefsViewModel : ObservableObject
         {
             SaveError = ex.Message;
             SaveStatus = SaveState.Failed;
+        }
+        finally
+        {
+            saving = false;
+            if (saveAgain)
+            {
+                saveAgain = false;
+                Save();
+            }
+        }
+    }
+
+    /// <summary>Runs this app elevated in its hidden apply mode with the changed keys and waits for
+    /// it. Null when it wrote them, else why not.</summary>
+    private static async Task<string?> ApplyElevatedAsync(Dictionary<string, object> changes)
+    {
+        if (Environment.ProcessPath is not { Length: > 0 } exe) return "the app could not find its own executable.";
+        try
+        {
+            return await PrefsElevation.RunElevatedApplyAsync(exe, changes) switch
+            {
+                PrefsElevation.Applied => null,
+                PrefsElevation.Refused => "the change was refused; a setting may be set by policy, or the app is not installed under Program Files.",
+                _ => "the settings could not be written.",
+            };
+        }
+        catch (Exception ex) when (PrefsElevation.IsElevationCancelled(ex))
+        {
+            return "an administrator must approve the change.";
         }
     }
 }

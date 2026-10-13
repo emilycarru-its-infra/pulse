@@ -15,8 +15,10 @@ final class XPCClient: NSObject {
     var lastExitCode: Int32?
     var helperStatus: HelperStatus = .unknown
     var connectionError: String?
+    private(set) var isUnlocked = false
 
     private var connection: NSXPCConnection?
+    private let admin = AdminAuthorization()
 
     struct OutputLine: Identifiable {
         let id = UUID()
@@ -79,19 +81,34 @@ final class XPCClient: NSObject {
         outputLines.append(OutputLine(text: "[WARNING] Stopped.", level: .warning))
     }
 
+    // MARK: Administrator
+
+    /// Prompts for an administrator. The authorization covers every save until `lock()`
+    /// or the app quits.
+    @discardableResult
+    func unlock() -> Bool {
+        isUnlocked = admin.unlock()
+        return isUnlocked
+    }
+
+    func lock() {
+        admin.lock()
+        isUnlocked = false
+    }
+
     // MARK: Preferences
 
     /// Each write replies whether the helper took it.
     func set(_ key: PulseSettings.Key, _ value: Any?, reply: @escaping @Sendable (Bool) -> Void) {
         connect()
         let domain = PulseConstants.domain
-        guard connection != nil else { reply(false); return }
+        guard connection != nil, let auth = admin.externalForm else { reply(false); return }
         proxy(onError: { reply(false) }) { p in
             switch value {
-            case nil: p.removePreference(key: key.rawValue, domain: domain, withReply: reply)
-            case let s as String: p.setPreference(key: key.rawValue, stringValue: s, domain: domain, withReply: reply)
-            case let b as Bool: p.setBoolPreference(key: key.rawValue, boolValue: b, domain: domain, withReply: reply)
-            case let i as Int: p.setIntPreference(key: key.rawValue, intValue: i, domain: domain, withReply: reply)
+            case nil: p.removePreference(key: key.rawValue, domain: domain, authorization: auth, withReply: reply)
+            case let s as String: p.setPreference(key: key.rawValue, stringValue: s, domain: domain, authorization: auth, withReply: reply)
+            case let b as Bool: p.setBoolPreference(key: key.rawValue, boolValue: b, domain: domain, authorization: auth, withReply: reply)
+            case let i as Int: p.setIntPreference(key: key.rawValue, intValue: i, domain: domain, authorization: auth, withReply: reply)
             default: reply(false)
             }
         }

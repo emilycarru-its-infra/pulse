@@ -2,66 +2,49 @@
     x:Class="PulseAgent.App.Views.PrefsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="using:PulseAgent.Core"
     NavigationCacheMode="Required">
 
     <ScrollViewer Padding="28,24,28,24">
         <StackPanel Spacing="20" MaxWidth="960" HorizontalAlignment="Center">
 
-            <!-- Header: icon, name, description, version, links -->
-            <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,4">
-                <Image x:Name="AppIcon" Width="64" Height="64" HorizontalAlignment="Center" />
+            <!-- Header: icon, name, description, links and version, then a divider -->
+            <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,0">
+                <Image x:Name="AppIcon" Width="96" Height="96" HorizontalAlignment="Center" />
                 <TextBlock x:Name="AppName" Style="{StaticResource TitleTextBlockStyle}" HorizontalAlignment="Center" />
                 <TextBlock Text="Tells the campus status page whether this computer is free, in use or off. It never sends who is signed in."
-                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Style="{StaticResource BodyTextBlockStyle}"
                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                           TextAlignment="Center" MaxWidth="520" TextWrapping="WrapWholeWords" />
-                <TextBlock Text="{x:Bind ViewModel.VersionDisplay}"
-                           Style="{StaticResource CaptionTextBlockStyle}"
-                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" HorizontalAlignment="Center" />
+                           TextAlignment="Center" MaxWidth="560" TextWrapping="WrapWholeWords" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
                     <HyperlinkButton Content="Documentation"
                                      NavigateUri="https://github.com/emilycarru-its-infra/pulse/tree/main/products/computers/agents/windows" />
                     <HyperlinkButton Content="Report Issue" NavigateUri="https://github.com/emilycarru-its-infra/pulse/issues" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
-                            Visibility="{x:Bind ViewModel.IsSaveStatusVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                    <FontIcon Glyph="{x:Bind ViewModel.SaveStatusGlyph, Mode=OneWay}" FontSize="12"
-                              Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
-                    <TextBlock Text="{x:Bind ViewModel.SaveStatusMessage, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
-                </StackPanel>
+                <TextBlock x:Name="VersionText" IsTextSelectionEnabled="True"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           HorizontalAlignment="Center" />
             </StackPanel>
 
-            <!-- Read-only until Unlock: the settings live in HKLM -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1" CornerRadius="8" Padding="16,12"
-                    Visibility="{x:Bind ViewModel.IsReadOnly, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel Spacing="6">
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="&#xE72E;" FontSize="16" VerticalAlignment="Center"
-                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextWrapping="WrapWholeWords"
-                                   Text="Settings are read-only. Unlock to change them (requires administrator)." />
-                        <Button Grid.Column="2" Click="UnlockButton_Click"
-                                ToolTipService.ToolTip="Relaunch as administrator to edit settings">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xEA18;" FontSize="14" />
-                                <TextBlock Text="Unlock" />
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                    <TextBlock Text="{x:Bind ViewModel.UnlockError, Mode=OneWay}"
-                               Style="{StaticResource CaptionTextBlockStyle}"
-                               Foreground="{ThemeResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
-                               Visibility="{x:Bind ViewModel.HasUnlockError, Mode=OneWay, Converter={StaticResource BoolToVisibility}}" />
-                </StackPanel>
-            </Border>
+            <Rectangle Height="1" Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                        Visibility="{x:Bind ViewModel.IsSaveStatusVisible, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <FontIcon Glyph="{x:Bind ViewModel.SaveStatusGlyph, Mode=OneWay}" FontSize="12"
+                          Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
+                <TextBlock Text="{x:Bind ViewModel.SaveStatusMessage, Mode=OneWay}" Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{x:Bind ViewModel.SaveStatusBrush, Mode=OneWay}" />
+            </StackPanel>
+
+            <!-- One line for every policy-set value, instead of a caption on each -->
+            <StackPanel Orientation="Horizontal" Spacing="6"
+                        Visibility="{x:Bind ViewModel.HasPolicySettings, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
+                <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                <TextBlock Text="Settings shown in gray have been configured by a policy."
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
 
             <!-- Two columns; the cards stack within each -->
             <Grid ColumnSpacing="16">
@@ -83,22 +66,10 @@
                         <TextBox Text="{x:Bind ViewModel.IngestUrl, Mode=TwoWay}"
                                  PlaceholderText="https://status.example.edu/computers/api/ingest"
                                  IsEnabled="{x:Bind ViewModel.CanEditIngestUrl, Mode=OneWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsIngestUrlLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
                         <TextBlock Text="Shared key" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
                         <PasswordBox Password="{x:Bind ViewModel.IngestKey, Mode=TwoWay}" PasswordRevealMode="Peek"
                                      PlaceholderText="{x:Bind ViewModel.KeyPlaceholder, Mode=OneWay}"
                                      IsEnabled="{x:Bind ViewModel.CanEditIngestKey, Mode=OneWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsIngestKeyLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
                         <TextBlock Text="Only for a pilot: the device certificate is how the server knows this computer. The key is stored where only administrators can read it."
                                    Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -116,12 +87,6 @@
                         <ToggleSwitch OnContent="Present the device certificate" OffContent="Present the device certificate"
                                       IsOn="{x:Bind ViewModel.UseDeviceCertificate, Mode=TwoWay}"
                                       IsEnabled="{x:Bind ViewModel.CanEditUseDeviceCertificate, Mode=OneWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsUseDeviceCertificateLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
                         <TextBlock Text="Certificate" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
                         <TextBlock Text="{x:Bind ViewModel.CertificateText, Mode=OneWay}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
                         <TextBlock Text="Computer" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
@@ -146,24 +111,12 @@
                                        IsEnabled="{x:Bind ViewModel.CanEditCheckInterval, Mode=OneWay}" />
                             <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsCheckIntervalLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
                         <TextBlock Text="Send a heartbeat every" Style="{StaticResource CaptionTextBlockStyle}" Margin="0,4,0,0" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <NumberBox Value="{x:Bind ViewModel.HeartbeatIntervalValue, Mode=TwoWay}" Minimum="15" Maximum="3600"
                                        SpinButtonPlacementMode="Compact" SmallChange="15" Width="120"
                                        IsEnabled="{x:Bind ViewModel.CanEditHeartbeatInterval, Mode=OneWay}" />
                             <TextBlock Text="seconds" VerticalAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsHeartbeatIntervalLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                         </StackPanel>
                         <TextBlock Text="A sign-in, sign-out, lock or unlock is sent at once, whatever these say."
                                    Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
@@ -182,16 +135,71 @@
                         <ToggleSwitch OnContent="Enable verbose logging" OffContent="Enable verbose logging"
                                       IsOn="{x:Bind ViewModel.VerboseLogging, Mode=TwoWay}"
                                       IsEnabled="{x:Bind ViewModel.CanEditVerboseLogging, Mode=OneWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="4"
-                                    Visibility="{x:Bind ViewModel.IsVerboseLoggingLocked, Mode=OneWay, Converter={StaticResource BoolToVisibility}}">
-                            <FontIcon Glyph="&#xE72E;" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                            <TextBlock Text="Managed" Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        </StackPanel>
                     </StackPanel>
                 </Border>
                 </StackPanel>
             </Grid>
+
+            <!-- What the agent installs: its scheduled tasks, read-only -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="20">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,4">
+                        <FontIcon Glyph="&#xE823;" FontSize="20"
+                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Services" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="The scheduled tasks the agent installs. Task Scheduler runs them; nothing here starts or stops one."
+                               Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="WrapWholeWords"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.Services}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="core:ScheduledTaskStatus">
+                                <StackPanel Spacing="4" Padding="0,10,0,10"
+                                            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}" BorderThickness="0,1,0,0">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" IsTextSelectionEnabled="True" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind State}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                    </Grid>
+                                    <Grid ColumnSpacing="12" RowSpacing="2"
+                                          Visibility="{x:Bind HasDetails, Converter={StaticResource BoolToVisibility}}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="80" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock Text="Runs" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Trigger}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Grid.Row="1" Text="Last run" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind LastRun}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock Grid.Row="2" Text="Program" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind Program}" Style="{StaticResource CaptionTextBlockStyle}"
+                                                   FontFamily="Consolas" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                                    </Grid>
+                                    <TextBlock Text="{x:Bind Note}" Style="{StaticResource CaptionTextBlockStyle}" TextWrapping="Wrap"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               Visibility="{x:Bind HasNote, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </Page>

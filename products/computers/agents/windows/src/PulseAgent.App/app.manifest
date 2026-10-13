@@ -4,7 +4,7 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- The GUI runs unelevated; Unlock on the Prefs tab relaunches it through UAC. -->
+        <!-- The GUI runs unelevated; saving a setting starts a hidden copy through UAC to write it. -->
         <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>

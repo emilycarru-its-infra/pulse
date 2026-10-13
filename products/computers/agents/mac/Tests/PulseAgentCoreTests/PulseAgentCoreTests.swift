@@ -55,3 +55,27 @@ import Testing
     #expect(PulseSettings.int("30") == 30)
     #expect(PulseSettings.int(NSNumber(value: 45)) == 45)
 }
+
+@Test func launchdJobReadsTopLevelFields() {
+    let printed = """
+    system/com.example.agent = {
+    \tactive count = 1
+    \tstate = running
+    \tpid = 412
+    \tlast exit code = (never exited)
+    \tendpoints = {
+    \t\tstate = active
+    \t}
+    }
+    """
+    let plist: [String: Any] = ["KeepAlive": true, "ProgramArguments": ["/usr/local/bin/tool", "run"]]
+    let job = LaunchdJob.make(label: "com.example.agent", title: "Agent", plist: plist, printed: printed)
+    #expect(job.state == "Running")
+    #expect(job.pid == 412)
+    #expect(job.lastExitCode == "Never exited")
+    #expect(job.schedule == "Always running, restarted if it exits")
+    #expect(job.program == "/usr/local/bin/tool run")
+    #expect(LaunchdJob.make(label: "x", title: "x", plist: nil, printed: nil).state == "Not installed")
+    #expect(LaunchdJob.make(label: "x", title: "x", plist: plist, printed: nil).state == "Not loaded")
+    #expect(LaunchdJob.schedule(["MachServices": ["x": true]]) == "On demand, when the app connects")
+}
