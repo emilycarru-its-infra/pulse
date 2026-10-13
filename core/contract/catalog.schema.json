@@ -106,6 +106,13 @@
                 "outOfService": {
                   "type": "boolean"
                 },
+                "deviceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Management ids the device's certificates carry (Intune device id, Entra device id). The ingest service accepts this seat's events only from a certificate naming one of them."
+                },
                 "x": {
                   "type": "number"
                 },

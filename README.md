@@ -15,9 +15,9 @@ role it requires.
 
 ## Layout
 
-- `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell and the `pulse-product` Terraform module to come
+- `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell; the `pulse-product` Terraform module ([core/terraform/pulse-product](core/terraform/pulse-product))
 - `hub/`: the summary page
-- `products/computers/`: `api` (with a simulator and local dev server) and `web`; `agent-mac` and `agent-win` to come ([products/computers/README.md](products/computers/README.md))
+- `products/computers/`: `api` (with a simulator, local dev server and Azure Functions host), `web` and the Mac and Windows agents ([products/computers/README.md](products/computers/README.md))
 - `products/printers/`, `products/servers/`
 
 This repo holds only generic code. Site-specific values (hostnames, catalogs,

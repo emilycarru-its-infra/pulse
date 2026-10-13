@@ -10,7 +10,15 @@ from pulse_core.state import LastSeen, SeatState, seat_state
 
 from .store import Store
 
-CONTRACT = Path(__file__).resolve().parents[4] / "core" / "contract"
+
+def _contract() -> Path:
+    """core/contract in the repo; a Functions package carries a copy in contract/ beside the code."""
+    here = Path(__file__).resolve().parents
+    found = [here[1] / "contract"] + ([here[4] / "core" / "contract"] if len(here) > 4 else [])
+    return next((p for p in found if (p / "event.schema.json").is_file()), found[-1])
+
+
+CONTRACT = _contract()
 _VALIDATOR = jsonschema.Draft202012Validator(json.loads((CONTRACT / "event.schema.json").read_text()))
 
 COUNTED = [s.value for s in SeatState]
@@ -34,10 +42,13 @@ class ComputersService:
         self.store = store
         self.title = title
 
-    def ingest(self, event: dict, now: datetime | None = None) -> None:
+    def validate(self, event) -> None:
         errors = sorted(_VALIDATOR.iter_errors(event), key=lambda e: list(e.path))
         if errors:
             raise ValidationError("; ".join(e.message for e in errors[:3]))
+
+    def ingest(self, event: dict, now: datetime | None = None) -> None:
+        self.validate(event)
         stored = dict(event)
         stored["receivedAt"] = _iso(now or datetime.now(timezone.utc))
         self.store.append(stored)

@@ -86,6 +86,20 @@ def test_build_matches_places_and_reports():
     assert not report.ok()
 
 
+def test_device_ids_pass_through_to_seats():
+    row = asset("A1", "LAB-MAC-01")
+    row["custom_fields"]["Intune Id"] = {"value": " ABC-123 "}
+    row["custom_fields"]["Entra Id"] = {"value": ""}
+    p = SnipeItProvider("https://inv.example/api/v1", "t", device_id_fields=["Intune Id", "Entra Id"],
+                        fetch=fake_fetch([{"total": 2, "rows": [row, asset("A2", "LAB-MAC-03")]}]))
+    site = {"spaces": [{"id": "lab", "name": "Lab", "kind": "lab", "match": {"group": "Open Mac Lab"}}]}
+    catalog, _ = build(site, p.devices(), "snipeit", now=datetime(2027, 1, 4, tzinfo=timezone.utc))
+    jsonschema.validate(catalog, json.loads((CONTRACT / "catalog.schema.json").read_text()))
+    seats = {s["hostname"]: s for s in catalog["spaces"][0]["seats"]}
+    assert seats["LAB-MAC-01"]["deviceIds"] == ["abc-123"]
+    assert "deviceIds" not in seats["LAB-MAC-03"]
+
+
 def test_example_event_matches_schema():
     schema = json.loads((CONTRACT / "event.schema.json").read_text())
     jsonschema.validate(json.loads((CONTRACT / "examples" / "heartbeat.json").read_text()), schema)

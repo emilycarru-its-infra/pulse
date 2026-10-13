@@ -15,6 +15,7 @@ class Device:
     group: str
     deployed: bool
     name: str = ""  # what the inventory calls the device, such as "FMSA Control Room"
+    device_ids: tuple[str, ...] = ()  # management ids its certificates carry (Intune, Entra), lowercase
 
 
 class InventoryProvider(Protocol):
