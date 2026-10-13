@@ -62,7 +62,7 @@ def test_ingest_key_when_set(pulse):
 
 def test_routes_are_registered():
     routes = {f.get_trigger().route for f in function_app.app.get_functions()}
-    assert routes == {"ingest", "status", "summary", "export/events"}
+    assert routes == {"ingest", "status", "summary", "export/events", "GetRoles"}
 
 
 def test_ingest_refuses_any_path_but_its_own(pulse):
@@ -70,3 +70,11 @@ def test_ingest_refuses_any_path_but_its_own(pulse):
         req = func.HttpRequest("POST", url, headers={}, body=b"{}")
         assert function_app.ingest(req).status_code == 404, url
     assert function_app._exact_path("https://host.example/api/ingest?x=1", "/api/ingest")
+
+
+def test_swa_roles_maps_only_known_app_roles():
+    claims = [{"typ": "roles", "val": "Pulse.Everyone"}, {"typ": "roles", "val": "Other"},
+              {"typ": "name", "val": "Pulse.ITS"},
+              {"typ": "http://schemas.microsoft.com/ws/2008/06/identity/claims/role", "val": "Pulse.ITS"}]
+    assert function_app.swa_roles("Pulse.Everyone=everyone, Pulse.ITS=its", claims) == ["everyone", "its"]
+    assert function_app.swa_roles("", claims) == []

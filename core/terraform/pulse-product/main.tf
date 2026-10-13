@@ -147,7 +147,10 @@ resource "azurerm_static_web_app" "this" {
   location            = coalesce(var.static_web_app_location, var.location)
   sku_tier            = "Standard"
   sku_size            = "Standard"
-  tags                = var.tags
+  # The Static Web App replaces its settings whole on every write, so its sign-in settings
+  # (the Entra client id and secret staticwebapp.config.json names) are set here only.
+  app_settings = var.static_web_app_app_settings
+  tags         = var.tags
 }
 
 # Linking makes the Function App the Static Web App's /api backend and turns on App Service

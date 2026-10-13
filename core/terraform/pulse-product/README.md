@@ -102,7 +102,8 @@ cd examples/basic && terraform init -backend=false && terraform validate
 | `instance_memory_in_mb` | number | `2048` | 512, 2048 or 4096 |
 | `maximum_instance_count` | number | `40` | |
 | `app_settings` | map(string) | `{}` | Merged over the module's own settings |
-| `browser_paths` | list(string) | `["/api/status", "/api/summary", "/api/export"]` | Paths that need no client certificate; every other path does |
+| `static_web_app_app_settings` | map(string), sensitive | `{}` | Static Web App settings, e.g. its Entra sign-in client id and secret |
+| `browser_paths` | list(string) | `["/api/status", "/api/summary", "/api/export", "/api/GetRoles"]` | Paths that need no client certificate; every other path does |
 | `unauthenticated_paths` | list(string) | `["/api/ingest"]` | Paths App Service authentication lets through |
 | `custom_domain` | string | null | Must sit inside `dns_zone_name` |
 | `dns_zone_name` | string | null | Azure DNS zone for the CNAME |

@@ -82,6 +82,13 @@ variable "maximum_instance_count" {
   default     = 40
 }
 
+variable "static_web_app_app_settings" {
+  description = "Static Web App settings, such as the client id and secret its custom Entra sign-in reads. Set them here only: the Static Web App replaces its settings whole on every write."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
 variable "app_settings" {
   description = "Function App settings merged over the ones this module sets (storage and table names). Product settings such as PULSE_DEVICE_CA_PEM go here."
   type        = map(string)
@@ -91,7 +98,7 @@ variable "app_settings" {
 variable "browser_paths" {
   description = "Function App paths the browser reaches through the Static Web App. Every other path, the agents' included, needs a TLS client certificate."
   type        = list(string)
-  default     = ["/api/status", "/api/summary", "/api/export"]
+  default     = ["/api/status", "/api/summary", "/api/export", "/api/GetRoles"]
 }
 
 variable "unauthenticated_paths" {

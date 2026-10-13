@@ -134,7 +134,30 @@ def export_events(req: func.HttpRequest) -> func.HttpResponse:
 
 
 # Registered without rebinding the names, so tests call the plain functions.
+def swa_roles(mapping: str, claims: list) -> list[str]:
+    """The Static Web App roles for a user's Entra app-role claims. mapping is
+    PULSE_SWA_ROLES, e.g. "Pulse.Everyone=everyone,Pulse.ITS=its"; claims the mapping does
+    not name are dropped."""
+    names = dict(pair.split("=", 1) for pair in mapping.split(",") if "=" in pair)
+    names = {k.strip(): v.strip() for k, v in names.items()}
+    role_types = {"roles", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"}
+    found = {names[c.get("val", "")] for c in claims if isinstance(c, dict)
+             and c.get("typ") in role_types and c.get("val") in names}
+    return sorted(found)
+
+
+def get_roles(req: func.HttpRequest) -> func.HttpResponse:
+    """Static Web Apps posts the signed-in user's claims here (auth.rolesSource) and grants
+    the roles returned. It is behind the link's sign-in like the read routes."""
+    try:
+        claims = json.loads(req.get_body() or b"{}").get("claims") or []
+    except (ValueError, AttributeError):
+        claims = []
+    return _json(200, {"roles": swa_roles(os.environ.get("PULSE_SWA_ROLES", ""), claims)})
+
+
 app.route(route="ingest", methods=["POST"])(ingest)
+app.route(route="GetRoles", methods=["POST"])(get_roles)
 app.route(route="status", methods=["GET"])(status)
 app.route(route="summary", methods=["GET"])(summary)
 app.route(route="export/events", methods=["GET"])(export_events)

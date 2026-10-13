@@ -61,6 +61,7 @@ The module sets the storage ones; the rest come from its `app_settings`.
 | `PULSE_DEVICE_MAP` | `catalog` | Where a seat's device ids come from; `catalog` is the only source so far |
 | `PULSE_INGEST_KEY` | none | A shared key accepted in `X-Pulse-Key`. Unset, key auth is off |
 | `PULSE_TITLE` | `Computers` | Title in the summary |
+| `PULSE_SWA_ROLES` | unset | Entra app role to Static Web App role, e.g. `Pulse.Everyone=everyone,Pulse.ITS=its`, for `/api/GetRoles` (the Static Web App's `rolesSource`) |
 
 ### Device certificates
 
