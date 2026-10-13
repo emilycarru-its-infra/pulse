@@ -38,14 +38,16 @@ Intune or Group Policy writes. Otherwise it uses the machine settings under
 | `IngestKey` | string | none | Optional shared key sent as `X-Pulse-Key`, for a pilot. Read only from `HKLM\SOFTWARE\<product>\Secrets`, which SYSTEM and Administrators alone can read; never from policy or the readable keys |
 | `CheckIntervalSeconds` | DWORD | 15 | 5 to 300 |
 | `HeartbeatIntervalSeconds` | DWORD | 60 | 15 to 3600, never below the check interval |
-| `UseDeviceCertificate` | DWORD | 1 | Present the Entra device certificate |
+| `UseDeviceCertificate` | DWORD | 1 | Present the Intune MDM device certificate |
 | `VerboseLogging` | DWORD | 0 | Log every event body |
 
 ## Authentication
 
-On an Entra-joined computer, the agent presents the device's Entra certificate as its TLS
-client certificate. That certificate is issued by `MS-Organization-Access`, its subject is the
-Entra device id, and its key is held by the TPM. The ingest service checks the chain and maps the
+On an Intune-enrolled computer, the agent presents the device's Intune MDM certificate as its
+TLS client certificate, as the Mac agent presents the Intune agent's. That certificate is issued
+by `Microsoft Intune MDM Device CA`, its subject is the Intune device id, and its key is in the
+machine store. The Entra device certificate is not used: its issuer is not published, so the
+service has no CA to check it against. The ingest service checks the chain and maps the
 device id to a seat. A shared key can be added for a pilot.
 
 ## Build

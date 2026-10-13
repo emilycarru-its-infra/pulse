@@ -21,7 +21,7 @@ public sealed record AgentSettings
     public int CheckIntervalSeconds { get; init; } = DefaultCheckSeconds;
     public int HeartbeatIntervalSeconds { get; init; } = DefaultHeartbeatSeconds;
 
-    /// <summary>Present the device's Entra certificate as the TLS client certificate.</summary>
+    /// <summary>Present the device's Intune MDM certificate as the TLS client certificate.</summary>
     public bool UseDeviceCertificate { get; init; } = true;
 
     public bool VerboseLogging { get; init; }

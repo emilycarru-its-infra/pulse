@@ -41,12 +41,14 @@ public static class Device
     }
 }
 
-/// <summary>The device's Entra certificate: issued by MS-Organization-Access when the computer
-/// joined Entra, held in the machine store with a TPM-protected key, its subject the Entra device
-/// id. The agent presents it as its TLS client certificate.</summary>
+/// <summary>The device's Intune MDM certificate: issued by the Microsoft Intune MDM Device CA when
+/// the computer enrolled, held in the machine store, its subject the Intune device id. The agent
+/// presents it as its TLS client certificate, as the Mac agent presents the Intune agent's. The
+/// Entra device certificate is not used: its issuer is not published, so the service cannot
+/// verify the chain.</summary>
 public static class DeviceCertificate
 {
-    public const string Issuer = "MS-Organization-Access";
+    public const string Issuer = "Microsoft Intune MDM Device CA";
 
     /// <summary>The newest valid device certificate, or null. Using its private key needs SYSTEM or
     /// an administrator; finding it does not.</summary>
@@ -58,7 +60,7 @@ public static class DeviceCertificate
             using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
             return store.Certificates
-                .Where(c => c.Issuer.Contains($"CN={Issuer}", StringComparison.OrdinalIgnoreCase)
+                .Where(c => IsIssuedByCa(c.Issuer)
                             && c.HasPrivateKey && c.NotBefore <= at && c.NotAfter > at)
                 .OrderByDescending(c => c.NotAfter)
                 .FirstOrDefault();
@@ -69,6 +71,11 @@ public static class DeviceCertificate
         }
     }
 
-    /// <summary>The Entra device id a certificate names.</summary>
+    /// <summary>Whether an issuer name is exactly the Intune MDM Device CA, not a CA whose name
+    /// merely contains it.</summary>
+    public static bool IsIssuedByCa(string issuer) =>
+        issuer.Split(',').Select(p => p.Trim()).Contains($"CN={Issuer}", StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The Intune device id a certificate names.</summary>
     public static string DeviceId(X509Certificate2 cert) => cert.GetNameInfo(X509NameType.SimpleName, false);
 }

@@ -11,7 +11,7 @@ from cryptography.x509.oid import NameOID
 NOW = datetime(2027, 1, 4, 17, 0, tzinfo=timezone.utc)
 START = datetime(2025, 1, 1, tzinfo=timezone.utc)  # before NOW and before today, so both are in date
 MAC_CA = "Microsoft Intune MDM Agent CA"
-WIN_CA = "MS-Organization-Access"
+WIN_CA = "Microsoft Intune MDM Device CA"
 
 
 def _name(cn: str) -> x509.Name:
