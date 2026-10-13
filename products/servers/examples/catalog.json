@@ -1,0 +1,292 @@
+{
+ "title": "Servers",
+ "locations": [
+  {
+   "id": "cloud",
+   "name": "Cloud",
+   "detail": "Workloads account, one region",
+   "kind": "cloud",
+   "sources": [
+    "Site24x7",
+    "CloudWatch"
+   ]
+  },
+  {
+   "id": "cluster",
+   "name": "On-premises cluster",
+   "detail": "Three-node hypervisor cluster",
+   "kind": "onprem",
+   "sources": [
+    "Site24x7",
+    "Hypervisor collector"
+   ]
+  },
+  {
+   "id": "rack",
+   "name": "Data centre racks",
+   "detail": "Physical servers and appliances",
+   "kind": "physical",
+   "sources": [
+    "Site24x7"
+   ]
+  }
+ ],
+ "services": [
+  {
+   "id": "directory",
+   "name": "Directory and DNS"
+  },
+  {
+   "id": "sis",
+   "name": "Student information system"
+  },
+  {
+   "id": "print",
+   "name": "Printing"
+  },
+  {
+   "id": "files",
+   "name": "File storage"
+  },
+  {
+   "id": "idp",
+   "name": "Single sign-on"
+  },
+  {
+   "id": "radius",
+   "name": "Wi-Fi and VPN sign-in"
+  },
+  {
+   "id": "render",
+   "name": "Render farm"
+  },
+  {
+   "id": "docs",
+   "name": "Document management"
+  }
+ ],
+ "servers": [
+  {
+   "id": "cloud-dc-01",
+   "name": "DC-CLOUD",
+   "location": "cloud",
+   "role": "Domain controller",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "directory"
+   ]
+  },
+  {
+   "id": "cloud-sis-01",
+   "name": "SIS-APP",
+   "location": "cloud",
+   "role": "Student information system",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "sis"
+   ]
+  },
+  {
+   "id": "cloud-db-01",
+   "name": "SIS-DB",
+   "location": "cloud",
+   "role": "Database server",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "sis"
+   ]
+  },
+  {
+   "id": "cloud-idp-01",
+   "name": "IDP1",
+   "location": "cloud",
+   "role": "Identity provider",
+   "env": "Production",
+   "os": "Ubuntu 24.04",
+   "services": [
+    "idp"
+   ]
+  },
+  {
+   "id": "cloud-dns-01",
+   "name": "NS1",
+   "location": "cloud",
+   "role": "External DNS",
+   "env": "Production",
+   "os": "Ubuntu 24.04",
+   "services": [
+    "directory"
+   ]
+  },
+  {
+   "id": "cloud-dns-02",
+   "name": "NS2",
+   "location": "cloud",
+   "role": "External DNS",
+   "env": "Production",
+   "os": "Ubuntu 24.04",
+   "services": [
+    "directory"
+   ]
+  },
+  {
+   "id": "cloud-rad-01",
+   "name": "RADIUS-B",
+   "location": "cloud",
+   "role": "RADIUS",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "radius"
+   ]
+  },
+  {
+   "id": "cloud-doc-01",
+   "name": "DOCS-APP",
+   "location": "cloud",
+   "role": "Document management",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "docs"
+   ]
+  },
+  {
+   "id": "cloud-doc-02",
+   "name": "DOCS-DB",
+   "location": "cloud",
+   "role": "Database server",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "docs"
+   ]
+  },
+  {
+   "id": "vm-prt-01",
+   "name": "PRINT1",
+   "location": "cluster",
+   "role": "Print server",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "print"
+   ]
+  },
+  {
+   "id": "vm-prt-02",
+   "name": "PRINT2",
+   "location": "cluster",
+   "role": "Print server",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "print"
+   ]
+  },
+  {
+   "id": "vm-db-01",
+   "name": "PRINT-DB",
+   "location": "cluster",
+   "role": "Database server",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "print"
+   ]
+  },
+  {
+   "id": "vm-rad-01",
+   "name": "RADIUS-A",
+   "location": "cluster",
+   "role": "RADIUS",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "radius"
+   ]
+  },
+  {
+   "id": "vm-nfs-01",
+   "name": "NFS1",
+   "location": "cluster",
+   "role": "File server",
+   "env": "Production",
+   "os": "Ubuntu 24.04",
+   "services": [
+    "files"
+   ]
+  },
+  {
+   "id": "vm-ren-01",
+   "name": "RENDER-REPO",
+   "location": "cluster",
+   "role": "Render repository",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "render"
+   ]
+  },
+  {
+   "id": "vm-dc-01",
+   "name": "DC-VM",
+   "location": "cluster",
+   "role": "Domain controller",
+   "env": "Production",
+   "os": "Windows Server 2025",
+   "services": [
+    "directory"
+   ]
+  },
+  {
+   "id": "phy-dc-01",
+   "name": "DC-PHY",
+   "location": "rack",
+   "role": "Domain controller",
+   "env": "Production",
+   "os": "Windows Server 2025",
+   "services": [
+    "directory"
+   ]
+  },
+  {
+   "id": "phy-nas-01",
+   "name": "NAS1",
+   "location": "rack",
+   "role": "Storage appliance",
+   "env": "Production",
+   "os": null,
+   "services": [
+    "files",
+    "render"
+   ]
+  },
+  {
+   "id": "phy-gpu-01",
+   "name": "GPU1",
+   "location": "rack",
+   "role": "Render node",
+   "env": "Production",
+   "os": "Windows Server 2022",
+   "services": [
+    "render"
+   ]
+  },
+  {
+   "id": "cloud-old-01",
+   "name": "OLD-FILES",
+   "location": "cloud",
+   "role": "File server",
+   "env": "Production",
+   "os": "Windows Server 2019",
+   "services": [
+    "files"
+   ],
+   "stopped": true
+  }
+ ]
+}
