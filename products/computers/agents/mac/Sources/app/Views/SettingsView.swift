@@ -10,7 +10,6 @@ import PulseAgentCore
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     @Environment(XPCClient.self) private var xpc
-    @State private var revealKey = false
 
     var body: some View {
         ScrollView {
@@ -36,6 +35,9 @@ struct SettingsView: View {
         .onAppear {
             viewModel.configure(client: xpc)
             viewModel.load()
+            // Nothing is focused at launch, so the first field shows no focus ring; Tab
+            // still reaches every control.
+            DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
         }
     }
 
@@ -104,25 +106,7 @@ struct SettingsView: View {
                     TextField("https://status.example.edu/computers/api/ingest", text: $viewModel.ingestURL)
                         .textFieldStyle(.roundedBorder)
                 }
-                row(.ingestKey, "Ingest key") {
-                    HStack(spacing: 6) {
-                        Group {
-                            if revealKey {
-                                TextField(keyPlaceholder, text: $viewModel.ingestKey)
-                            } else {
-                                SecureField(keyPlaceholder, text: $viewModel.ingestKey)
-                            }
-                        }
-                        .textFieldStyle(.roundedBorder)
-                        Image(systemName: revealKey ? "eye.slash" : "eye")
-                            .foregroundStyle(.secondary)
-                            .help("Hold to show the key you are typing")
-                            .gesture(DragGesture(minimumDistance: 0)
-                                .onChanged { _ in revealKey = true }
-                                .onEnded { _ in revealKey = false })
-                            .accessibilityLabel("Show key while held")
-                    }
-                }
+                ingestKeyStatus
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Device certificate").font(.caption).foregroundStyle(.secondary)
                     if let cert = viewModel.certificate {
@@ -155,9 +139,28 @@ struct SettingsView: View {
         }
     }
 
-    private var keyPlaceholder: String {
-        if viewModel.isManaged(.ingestKey) { return "Set by profile" }
-        return viewModel.hasStoredKey ? "Saved; enter a new value to replace" : "Optional shared key"
+    /// The ingest key as status only: its value is never read into the window, and only
+    /// a configuration profile sets it. The device certificate is the main credential.
+    private var ingestKeyStatus: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("Ingest key").font(.caption).foregroundStyle(.secondary)
+            switch viewModel.ingestKeyState {
+            case .managed:
+                Label("Set by profile", systemImage: "lock.fill")
+                    .foregroundStyle(.secondary)
+            case .set:
+                Text("Set")
+            case .notSet:
+                Text("Not set").foregroundStyle(.secondary)
+            }
+            if viewModel.ingestKeyState != .managed {
+                Text("Optional shared key, set by a configuration profile for \(PulseConstants.domain).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private var timingCard: some View {

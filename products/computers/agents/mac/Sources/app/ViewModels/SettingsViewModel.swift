@@ -1,7 +1,8 @@
 //
 //  The Prefs page's values. Reads what the agent reads (a profile's value wins), and
 //  saves each change through the helper a moment after the last edit, asking for an
-//  administrator the first time. Managed keys are never written.
+//  administrator the first time. Managed keys are never written, and the ingest key is
+//  status only: never read into the window and never saved from it.
 //
 
 import Foundation
@@ -13,9 +14,9 @@ final class SettingsViewModel {
     enum SaveStatus: Equatable { case idle, saving, saved, failed(String) }
 
     var ingestURL = "" { didSet { changed(.ingestURL) } }
-    /// A new key typed in; the stored one is never shown or re-saved.
-    var ingestKey = "" { didSet { changed(.ingestKey) } }
-    private(set) var hasStoredKey = false
+    /// The ingest key's status. Its value never enters the app.
+    enum SecretState: Equatable { case notSet, set, managed }
+    private(set) var ingestKeyState: SecretState = .notSet
     var checkInterval = 15 { didSet { changed(.checkInterval) } }
     var heartbeatInterval = 60 { didSet { changed(.heartbeatInterval) } }
     var verboseLogging = false { didSet { changed(.verboseLogging) } }
@@ -43,8 +44,8 @@ final class SettingsViewModel {
         let s = PulseSettings.load()
         managed = Set(PulseSettings.Key.allCases.filter { PulseSettings.isManaged($0) })
         ingestURL = s.ingestURL
-        hasStoredKey = !s.ingestKey.isEmpty
-        ingestKey = ""
+        ingestKeyState = isManaged(.ingestKey) ? .managed
+            : (PulseSettings.isSet(.ingestKey) ? .set : .notSet)
         checkInterval = s.checkInterval
         heartbeatInterval = s.heartbeatInterval
         verboseLogging = s.verboseLogging
@@ -54,7 +55,7 @@ final class SettingsViewModel {
     }
 
     private func changed(_ key: PulseSettings.Key) {
-        guard !loading, !isManaged(key) else { return }
+        guard !loading, !isManaged(key), !HelperPolicy.readOnlyKeys.contains(key) else { return }
         dirty.insert(key)
         saveTask?.cancel()
         saveTask = Task { [weak self] in
@@ -67,7 +68,7 @@ final class SettingsViewModel {
     private func value(for key: PulseSettings.Key) -> Any?? {
         switch key {
         case .ingestURL: return ingestURL.isEmpty ? .some(nil) : .some(ingestURL)
-        case .ingestKey: return ingestKey.isEmpty ? nil : .some(ingestKey)
+        case .ingestKey: return nil
         case .checkInterval: return .some(min(max(checkInterval, PulseSettings.checkRange.lowerBound), PulseSettings.checkRange.upperBound))
         case .heartbeatInterval: return .some(min(max(heartbeatInterval, PulseSettings.heartbeatRange.lowerBound), PulseSettings.heartbeatRange.upperBound))
         case .verboseLogging: return .some(verboseLogging)
@@ -76,7 +77,7 @@ final class SettingsViewModel {
 
     private func save() async {
         guard let client else { return }
-        let keys = dirty.filter { !isManaged($0) }
+        let keys = dirty.filter { !isManaged($0) && !HelperPolicy.readOnlyKeys.contains($0) }
         dirty.removeAll()
         let writes = keys.compactMap { key in value(for: key).map { (key, $0) } }
         guard !writes.isEmpty else { return }
@@ -96,12 +97,6 @@ final class SettingsViewModel {
             if !ok { refused.append(key.rawValue) }
         }
         if refused.isEmpty {
-            if writes.contains(where: { $0.0 == .ingestKey }) {
-                hasStoredKey = true
-                loading = true
-                ingestKey = ""
-                loading = false
-            }
             saveStatus = .saved
             try? await Task.sleep(for: .seconds(2.5))
             if saveStatus == .saved { saveStatus = .idle }
