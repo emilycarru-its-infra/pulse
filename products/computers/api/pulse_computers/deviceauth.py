@@ -3,8 +3,10 @@
 An agent proves which computer it is with a TLS client certificate its management system
 issued: on a Mac the Intune agent's (subject `IntuneMDMAgent-<Intune device id>`, issuer
 `Microsoft Intune MDM Agent CA`), on Windows the Entra device certificate (subject the
-Entra device id, issuer `MS-Organization-Access`). App Service ends TLS and forwards that
-certificate, base64 DER, in `X-ARR-ClientCert`; it does not check it, so this module does:
+Entra device id, issuer `MS-Organization-Access`). App Service requires a client certificate
+on the ingest path, ends TLS only when the client proves it holds the key, and forwards that
+certificate, base64 DER, in `X-ARR-ClientCert`. It does not check the issuer, so this
+module does:
 
 1. the certificate is signed by one of the configured issuing CAs and is in date,
 2. its subject gives a device id, and

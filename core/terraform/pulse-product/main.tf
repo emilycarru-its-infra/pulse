@@ -97,11 +97,15 @@ resource "azurerm_function_app_flex_consumption" "this" {
   storage_authentication_type = "SystemAssignedIdentity"
 
   https_only = true
-  # Optional: TLS asks every client for a certificate but accepts a connection without one,
-  # so the Static Web App's proxy needs none and the agents present theirs. App Service does
-  # not check the certificate; the code does.
-  client_certificate_enabled = true
-  client_certificate_mode    = "Optional"
+  # Required everywhere except the browser routes: on the agents' paths App Service ends
+  # TLS only for a client that presents a certificate and proves it holds the key, and
+  # X-ARR-ClientCert then carries that certificate. A request with no handshake
+  # certificate never reaches the code, so a header someone types in proves nothing. The
+  # browser routes, reached through the Static Web App's proxy, are excluded. App Service
+  # does not check who issued the certificate; the code does.
+  client_certificate_enabled         = true
+  client_certificate_mode            = "Required"
+  client_certificate_exclusion_paths = join(";", var.browser_paths)
 
   webdeploy_publish_basic_authentication_enabled = false
 
@@ -150,7 +154,6 @@ resource "azurerm_static_web_app" "this" {
 # authentication with the Static Web App as its only identity provider, so the read routes
 # answer only through the Static Web App and its sign-in.
 resource "azurerm_static_web_app_function_app_registration" "this" {
-  count             = var.link_static_web_app ? 1 : 0
   static_web_app_id = azurerm_static_web_app.this.id
   function_app_id   = azurerm_function_app_flex_consumption.this.id
 }
@@ -158,7 +161,6 @@ resource "azurerm_static_web_app_function_app_registration" "this" {
 # ...except the agents' paths, which must reach the code directly. This merges into the
 # settings the link wrote rather than replacing them, which azurerm's auth_settings_v2 would.
 resource "azapi_update_resource" "auth_exclusions" {
-  count       = var.link_static_web_app ? 1 : 0
   type        = "Microsoft.Web/sites/config@2024-04-01"
   resource_id = "${azurerm_function_app_flex_consumption.this.id}/config/authsettingsV2"
 

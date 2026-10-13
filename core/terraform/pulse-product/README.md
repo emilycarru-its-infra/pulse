@@ -8,7 +8,7 @@ already exists:
 - **Application Insights**, on a Log Analytics workspace you pass in or one it creates.
 - **Function App** on Flex Consumption, Python 3.12, with a system-assigned identity that
   reaches storage with Storage Table Data Contributor and Storage Blob Data Owner (no keys
-  or connection strings). HTTPS only, TLS 1.2, and client certificates `Optional`.
+  or connection strings). HTTPS only, TLS 1.2, and client certificates `Required` except on the browser routes.
 - **Static Web App** (Standard) for the page, with the Function App linked as its `/api`
   backend.
 - Optionally a **custom domain**: a CNAME in an Azure DNS zone, validated by the Static Web
@@ -27,16 +27,19 @@ as its only identity provider, so the read routes answer only through the Static
 after its sign-in. The module then excludes `unauthenticated_paths` (`/api/ingest`) from
 that authentication, merging into what the link wrote, so agents reach the code directly.
 
-Client certificates are `Optional`: every TLS connection is asked for one and accepted
-without, so the Static Web App needs none and the agents present theirs. App Service
-forwards the certificate to the code in `X-ARR-ClientCert` without checking it; the
-product checks the chain and maps the device to a seat. Leave HTTP/2 off on the Function
+Client certificates are `Required` on every path except `browser_paths`. On the agents'
+paths App Service ends TLS only for a client that presents a certificate and proves it holds
+the key, then forwards that certificate in `X-ARR-ClientCert`; a request without one never
+reaches the code, so the header cannot be supplied by hand. App Service does not check who
+issued it: the product checks the chain and maps the device to a seat. The browser routes
+are excluded, since the Static Web App's proxy presents no certificate. Leave HTTP/2 off on the Function
 App (the default), since App Service client certificates are only dependable over HTTP/1.1.
 
 Microsoft documents linked Function Apps on the Consumption, Premium and Dedicated plans
 and does not yet list Flex Consumption. Plain `/api/*` routing has been reported to work
-with Flex; check `/api/summary` through the Static Web App after the first deploy. If it
-fails, set `link_static_web_app = false` and front the Function App another way.
+with Flex; check `/api/summary` through the Static Web App after the first deploy. There is no
+unlinked mode: without the link the read routes would answer anyone on the Function
+App's own host.
 
 ## Example
 
@@ -99,7 +102,7 @@ cd examples/basic && terraform init -backend=false && terraform validate
 | `instance_memory_in_mb` | number | `2048` | 512, 2048 or 4096 |
 | `maximum_instance_count` | number | `40` | |
 | `app_settings` | map(string) | `{}` | Merged over the module's own settings |
-| `link_static_web_app` | bool | `true` | Off leaves the read routes open on the Function App host |
+| `browser_paths` | list(string) | `["/api/status", "/api/summary", "/api/export"]` | Paths that need no client certificate; every other path does |
 | `unauthenticated_paths` | list(string) | `["/api/ingest"]` | Paths App Service authentication lets through |
 | `custom_domain` | string | null | Must sit inside `dns_zone_name` |
 | `dns_zone_name` | string | null | Azure DNS zone for the CNAME |

@@ -64,8 +64,9 @@ The module sets the storage ones; the rest come from its `app_settings`.
 
 ### Device certificates
 
-App Service forwards the agent's TLS client certificate in `X-ARR-ClientCert` and does not
-check it. The API accepts an event when the certificate is signed by a CA in the bundle and
+`/api/ingest` requires a TLS client certificate: App Service completes the handshake only
+when the agent proves it holds the certificate's key, then forwards the certificate in
+`X-ARR-ClientCert`. It does not check the issuer. The API accepts an event when the certificate is signed by a CA in the bundle and
 in date, and the device id in its subject is one the catalog lists for the event's hostname:
 
 - Mac: subject `IntuneMDMAgent-<Intune device id>`, issued by `Microsoft Intune MDM Agent CA`.

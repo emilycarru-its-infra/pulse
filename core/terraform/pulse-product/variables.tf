@@ -88,10 +88,10 @@ variable "app_settings" {
   default     = {}
 }
 
-variable "link_static_web_app" {
-  description = "Link the Function App to the Static Web App as its /api backend, so the browser calls go through the Static Web App's sign-in. Turning this off leaves the read routes open on the Function App's own host."
-  type        = bool
-  default     = true
+variable "browser_paths" {
+  description = "Function App paths the browser reaches through the Static Web App. Every other path, the agents' included, needs a TLS client certificate."
+  type        = list(string)
+  default     = ["/api/status", "/api/summary", "/api/export"]
 }
 
 variable "unauthenticated_paths" {
