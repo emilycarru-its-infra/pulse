@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Software Catalog</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="software.css">
+</head>
+<body class="app">
+  <main class="doc wide">
+    <p id="notice" role="status">Loading software…</p>
+    <section id="browse" aria-label="Software catalog">
+      <div class="catalog-toolbar">
+        <div class="segmented" role="group" aria-label="View" id="view">
+          <button type="button" data-v="software" aria-pressed="true">Software</button>
+          <button type="button" data-v="locations" aria-pressed="false">Locations</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Platform" id="platform">
+          <button type="button" class="platform-toggle" data-v="mac" aria-pressed="false" aria-label="Mac" title="Mac"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg></button>
+          <button type="button" class="platform-toggle" data-v="windows" aria-pressed="false" aria-label="Windows" title="Windows"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/></svg></button>
+        </div>
+        <div class="select-control"><select id="category" aria-label="Category"><option value="">All categories</option></select></div>
+        <input type="search" id="search" aria-label="Search software" placeholder="Search software" autocomplete="off">
+        <p id="result-count" aria-live="polite"></p>
+      </div>
+      <div id="software-list" class="software-list"></div>
+      <p id="empty" hidden>No software matches your search.</p>
+    </section>
+    <section id="detail" hidden aria-labelledby="software-title">
+      <a class="back" href="#">← All software</a>
+      <div class="software-heading"><div id="detail-icon"></div><div><p id="detail-category" class="eyebrow"></p><h2 id="software-title" tabindex="-1"></h2><p id="detail-platforms"></p></div></div>
+      <div class="location-heading"><div><h3>Where to find it</h3><p id="location-count"></p></div><label for="version">Version<select id="version"><option value="">All versions</option></select></label></div>
+      <div id="locations" class="locations"></div>
+      <p id="no-locations" hidden>No recent installation reports for this software on shared campus computers.</p>
+    </section>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="software.js"></script>
+</body>
+</html>

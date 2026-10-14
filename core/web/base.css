@@ -107,6 +107,10 @@ main.doc > * { width: 90%; margin-left: auto; margin-right: auto; }
 .segmented button[aria-pressed="true"] { background: var(--text-primary); color: var(--page); }
 .segmented button:hover:not([aria-pressed="true"]), .segmented button:focus-visible { background: var(--accent-band); color: #000; }
 
+.segmented .platform-toggle { display:inline-flex; align-items:center; justify-content:center; min-width:40px; }
+.platform-toggle svg { display:block; width:20px; height:20px; pointer-events:none; }
+.platform-toggle[data-v="mac"] svg { transform:translateY(-1px); }
+
 .foot { margin-top: 40px; border-top: 1px solid var(--hair); padding-top: 12px; }
 
 /* Masonry grids (core/web/masonry.js): small implicit rows that each card spans by its height;
