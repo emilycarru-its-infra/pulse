@@ -120,12 +120,12 @@ main.doc > * { width: 90%; margin-left: auto; margin-right: auto; }
 
 /* Product pages share one centered row, including in narrow windows. */
 .masthead.compact { flex-wrap: nowrap; align-items: center; gap: clamp(4px, 1vw, 24px); }
-.masthead.compact .logo { width: clamp(32px, 10vw, 146px); height: auto; }
+.masthead.compact .logo { width: clamp(96px, 12vw, 146px); height: auto; }
 .masthead.compact .masthead-text { flex: 1 1 auto; min-width: 0; }
-.masthead.compact h1 { font-size: clamp(10px, 3.25vw, 26px); line-height: 1.1; white-space: nowrap; }
+.masthead.compact h1 { font-size: clamp(18px, 2.5vw, 26px); line-height: 1.1; white-space: nowrap; }
 .masthead.compact .context { display: none; }
 .masthead.compact .masthead-nav { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: 0 0 auto; flex-wrap: nowrap; align-items: center; gap: clamp(3px, .6vw, 8px); }
-.masthead.compact .masthead-nav > * { font-size: clamp(8px, 2.3vw, 14px); padding: clamp(4px, .8vw, 7px) clamp(4px, 1vw, 14px); white-space: nowrap; text-align: center; justify-content: center; }
+.masthead.compact .masthead-nav > * { font-size: clamp(8px, 2.3vw, 14px); padding: clamp(4px, .8vw, 7px) clamp(4px, 1vw, 14px); white-space: nowrap; text-align: center; justify-content: center; display: inline-flex; align-items: center; }
 
 main.doc.product-page { padding: 16px 24px 12px; }
 main.doc.product-page > * { width: auto; margin-left: 0; margin-right: 0; }
@@ -134,7 +134,15 @@ main.doc.product-page > .band { margin-bottom: 16px; }
   main.doc.product-page { padding: 8px 12px; }
   main.doc.product-page > .band { margin-bottom: 8px; }
 }
+.nav-icon { display: none; width: 16px; height: 16px; flex-shrink: 0; }
+@media (max-width: 700px) {
+  .masthead.compact .logo { width: clamp(56px, 20vw, 120px); }
+  .masthead.compact h1 { font-size: clamp(12px, 4vw, 22px); }
+  .masthead.compact .masthead-nav > .has-icon { width: 26px; min-width: 26px; height: 26px; padding: 4px; }
+  .masthead.compact .has-icon .nav-icon { display: block; }
+  .masthead.compact .has-icon .nav-label, .masthead.compact .has-icon small { display: none; }
+}
 @media (max-width: 359px) {
-  .masthead.compact .logo { width: 28px; }
-  .masthead.compact h1 { font-size: 9px; }
+  .masthead.compact .logo { width: 56px; }
+  .masthead.compact h1 { font-size: 12px; }
 }

@@ -38,6 +38,24 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
   menu.className = "masthead-nav";
   menu.setAttribute("aria-label", "Products");
   const items = Array.isArray(nav) ? nav : [{ id: "hub", title: "Overview", href: "/" }, ...products.filter((p) => !p.soon)];
+  const productIcons = {
+    computers: "M3 4h18v12H3z M8 21h8 M12 16v5",
+    software: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
+    printers: "M7 8V3h10v5 M7 17H3V9h18v8h-4 M7 14h10v7H7z",
+  };
+  const productLabel = (node, product) => {
+    const label = document.createElement("span"); label.className = "nav-label";
+    label.textContent = product.title; node.append(label);
+    if (!productIcons[product.id]) return;
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "1.8"); svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("class", "nav-icon");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", productIcons[product.id]); svg.append(path); node.prepend(svg);
+    node.classList.add("has-icon"); node.setAttribute("aria-label", product.title); node.title = product.title;
+  };
   for (const p of items) {
     if (hideCurrent && p.id === current) continue;
     if (p.soon || !p.href) {
@@ -45,7 +63,7 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
       const span = document.createElement("span");
       span.className = p.soon ? "soon" : "unavailable";
       span.setAttribute("aria-disabled", "true");
-      span.textContent = p.title;
+      productLabel(span, p);
       if (p.soon) {
         const note = document.createElement("small");
         note.textContent = "Coming soon";
@@ -56,7 +74,7 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
     }
     const a = document.createElement("a");
     a.href = p.href;
-    a.textContent = p.title;
+    productLabel(a, p);
     if (p.id === current) a.setAttribute("aria-current", "page");
     menu.append(a);
   }
