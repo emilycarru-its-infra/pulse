@@ -43,12 +43,14 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false }) 
     if (p.soon || !p.href) {
       // Named but not linked: the product is coming and has nothing to show yet.
       const span = document.createElement("span");
-      span.className = "soon";
+      span.className = p.soon ? "soon" : "unavailable";
       span.setAttribute("aria-disabled", "true");
       span.textContent = p.title;
-      const note = document.createElement("small");
-      note.textContent = "Coming soon";
-      span.append(note);
+      if (p.soon) {
+        const note = document.createElement("small");
+        note.textContent = "Coming soon";
+        span.append(note);
+      }
       menu.append(span);
       continue;
     }

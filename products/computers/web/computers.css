@@ -132,9 +132,9 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .drawer .rows .tag.out_of_service { background: var(--surface-2); border-color: var(--bad); color: var(--bad); }
 
 @media (max-width: 900px) {
-  body.app { height: auto; overflow: auto; }
+  body.app { height: 100vh; height: 100dvh; overflow: hidden; }
   .stage { flex-direction: column; }
-  .floormap { height: 70vh; flex: none; }
+  .floormap { height: auto; flex: 1 1 0; }
   .drawer { width: auto; }
 }
 
@@ -235,16 +235,17 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 
 @media (max-width: 700px) {
   body.app main.doc.wide { padding: 8px 12px; }
-  body.app .masthead { display: flex; align-items: center; gap: 8px 12px; padding-bottom: 8px; }
-  body.app .masthead .logo { width: 96px; height: auto; }
-  body.app .masthead-text { flex: 1 1 112px; min-width: 112px; }
-  body.app .masthead h1 { font-size: 20px; }
-  body.app .masthead-nav { flex: 0 0 auto; align-self: center; gap: 6px; }
-  body.app .masthead-nav a, body.app .masthead-nav .soon { font-size: 11px; padding: 4px 8px; }
+  body.app { height: 100vh; height: 100dvh; overflow: hidden; }
+  body.app .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 12px; padding-bottom: 8px; flex-shrink: 0; }
+  body.app .masthead .logo { width: 96px; height: auto; grid-row: 1 / 3; }
+  body.app .masthead-text { min-width: 0; grid-column: 2; }
+  body.app .masthead h1 { font-size: clamp(16px, 5vw, 20px); white-space: nowrap; }
+  body.app .masthead-nav { grid-column: 2; justify-self: end; gap: 6px; }
+  body.app .masthead-nav a, body.app .masthead-nav .soon, body.app .masthead-nav .unavailable { font-size: 11px; padding: 4px 8px; }
   body.app .masthead-nav .soon { gap: 4px; }
   body.app .masthead-nav .soon small { font-size: 10px; }
-  body.app main.doc.wide > .band { margin-bottom: 8px; }
-  body.app main.doc.wide > .map-toolbar { margin-bottom: 10px; }
+  body.app main.doc.wide > .band { margin-bottom: 8px; flex-shrink: 0; }
+  body.app main.doc.wide > .map-toolbar { margin-bottom: 10px; flex-shrink: 0; }
   .map-toolbar { gap: 6px 8px; }
   #mode { order: 0; }
   .search { order: 1; flex: 1 1 120px; width: auto; }
@@ -252,11 +253,13 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
   #platform, .map-toolbar > [aria-label="Space type"] { order: 3; }
   .zoom { order: 4; margin-left: auto; }
   .toolbar-end { order: 5; flex: 0 0 100%; flex-wrap: nowrap; gap: 8px; }
-  .toolbar-end .legend { flex: 1 1 auto; gap: 4px 8px; font-size: 11px; }
+  .toolbar-end .legend { flex: 1 1 auto; justify-content: space-between; gap: 4px 8px; font-size: clamp(11px, 3vw, 14px); }
   .legend li { gap: 4px; }
   .key { width: 11px; height: 11px; }
-  .total { flex: 0 0 64px; font-size: 11px; }
-  .total b { font-size: 18px; }
+  .total { flex: 0 0 auto; font-size: clamp(11px, 3vw, 14px); margin-left: 10px; }
+  .total b { font-size: 20px; }
   .total .word { display: none; }
   .segmented button { padding: 9px 12px; }
+  .floormap { flex: 1 1 0; height: auto; min-height: 0; }
+  .map-foot { display: none; }
 }

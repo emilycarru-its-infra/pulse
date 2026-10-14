@@ -18,6 +18,17 @@ for the people who use it.
   <a href="core/README.md">Build with Pulse</a>
 </p>
 
+## One front door
+
+The **Pulse hub** brings product summaries, active incidents, scheduled maintenance and
+service history into one overview. See what is working, what needs attention and what is
+changing before opening a product for the details.
+
+Single sign-on and product audiences keep the overview relevant to each viewer. Your site
+supplies the service catalog, incident updates and maintenance schedule.
+
+[Explore the Pulse hub →](hub/README.md)
+
 ## A place to work
 
 **ComputersPulse** turns shared computers into a live view of your spaces. See what's
@@ -41,11 +52,28 @@ where those applications have been observed. Package icons bring the catalog to 
 
 [Explore SoftwarePulse →](products/software/README.md)
 
-## One front door
+## A clearer path to print
 
-The **Pulse hub** brings product summaries, active incidents, scheduled maintenance and
-service history into one overview. Each product has its own page and audience, behind
-single sign-on.
+**PrintersPulse** puts printers on the same floorplans as shared computers. Browse the
+map or list to find a printer, then check its state, supplies, paper and queue in one place.
+
+The interface and inventory catalog are implemented with sample status data. A collector
+integration will connect the experience to the print-management system for real state.
+
+[Explore PrintersPulse →](products/printers/README.md)
+
+## Know what needs attention
+
+**ServersPulse** brings server and service health into a focused view for IT staff. See
+where a server runs, the services it supports, and its health, load and alerts without
+losing the connection between infrastructure and the people who depend on it.
+
+The current experience uses a sample health source. Planned collectors read existing
+monitoring systems, cloud metrics and hypervisor APIs, with access set by product audience.
+
+[Explore ServersPulse →](products/servers/README.md)
+
+## The product family
 
 | Experience | What it answers | What's here today |
 |---|---|---|
