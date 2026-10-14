@@ -190,7 +190,7 @@ function renderBrowse() {
     return;
   }
   ui.empty.textContent = "No software matches your search.";
-  const apps = catalog.filter((a) => a.name.toLocaleLowerCase().includes(query) && (!ui.category.value || a.category === ui.category.value) && (!platformFilter || a.platforms.includes(platformFilter)));
+  const apps = catalog.filter((a) => a.name.toLocaleLowerCase().includes(query) && (!ui.category.value || a.category === ui.category.value) && (!platformFilter || a.platforms.includes(platformFilter)) && (!locationFilter || a.locations.some((location) => location.id === locationFilter && (!platformFilter || location.platforms.includes(platformFilter)))));
   ui["result-count"].textContent = `${apps.length} software titles`;
   ui.empty.hidden = apps.length > 0;
   const focused = document.activeElement?.closest(".software-card");
