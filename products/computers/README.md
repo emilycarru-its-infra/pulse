@@ -47,8 +47,8 @@ installs `requirements.txt`. The page's files (`web/`, `core/web/`, a theme and 
 plan images under `catalog/`) go to the Static Web App.
 
 The masthead menu lists the products in `/nav.json` when the site deploys one: an array of
-`{ "id", "title", "href", "soon" }`. An entry with `soon` or no `href` is named but not linked,
-marked "Coming soon". Without the file the menu links the hub's Overview and every live
+`{ "id", "title", "href", "soon" }`. An entry with `soon` is named but not linked and marked "Coming soon". An entry
+with no `href` is a muted, inactive product name without an extra label. Without the file the menu links the hub's Overview and every live
 product the hub lists. Leave out any product this page's audience may not see.
 
 ### App settings
