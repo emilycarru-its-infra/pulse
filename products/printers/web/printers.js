@@ -55,6 +55,24 @@ const countsOf = (ps) => Object.fromEntries(ORDER.map((k) => [k, ps.filter((p) =
 const countsLine = (c) => ["printing", "attention", "error", "offline"]
   .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${WORD[k].toLowerCase()}`).join(" · ") || "Every printer is ready";
 
+function printerURL(extra = {}) {
+  return Pulse.linkURL({ view: state.mode, floor: state.floor, room: state.picked, printer: state.printer, audience: state.audience === "all" ? "" : state.audience, ...extra }, true);
+}
+function recordView(push = true) {
+  const url = printerURL();
+  if (url !== location.href) history[push ? "pushState" : "replaceState"](null, "", url);
+}
+function readView() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  state.mode = params.get("view") === "list" ? "list" : params.get("view") === "map" || params.has("room") ? "map" : phone.matches ? "list" : "map";
+  state.floor = params.get("floor"); state.picked = params.get("room"); state.printer = params.get("printer");
+  state.audience = ["students", "staff"].includes(params.get("audience")) ? params.get("audience") : "all";
+  state.drawn = null;
+  for (const [id, value] of [["mode", state.mode], ["audience", state.audience]]) for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute("aria-pressed", String(b.dataset.v === value));
+}
+window.addEventListener("popstate", () => { readView(); if (state.status) { render(); if (state.picked && state.mode === "map") pick(state.picked, state.printer, true, false); } });
+window.addEventListener("hashchange", () => { if (location.href !== printerURL()) { readView(); if (state.status) render(); } });
+
 function renderFloors() {
   const tabs = document.getElementById("floors");
   const all = rooms();
@@ -182,7 +200,10 @@ function printerRow(p) {
       <div class="levels"></div><p class="meta stats"></p><p class="queues"></p></div>`;
   row.querySelector(".ptag").textContent = kindOf(p);
   row.querySelector(".ptag").setAttribute("aria-hidden", "true");
-  row.querySelector(".pname").textContent = p.name;
+  const title = row.querySelector(".pname"); title.textContent = p.name;
+  title.classList.add("share-heading", "share-scope");
+  const room = rooms().find((r) => r.printers.some((item) => item.id === p.id));
+  title.append(Pulse.copyLink(() => printerURL({ view: room?.floor ? "map" : "list", floor: room?.floor, room: room?.id, printer: p.id }), p.name));
   row.querySelector(".meta").textContent = `${p.model} · ${kindWord(p)} · ${p.audience === "students" ? "Students" : "Staff"}`;
   const what = row.querySelector(".what");
   what.textContent = p.detail && p.detail !== WORD[p.state] ? `${WORD[p.state]}: ${p.detail}` : WORD[p.state];
@@ -216,7 +237,9 @@ function renderList() {
       card.innerHTML = `<div class="head"><div><p class="room"></p><h3></h3><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${working(r.printers)}</b><span>ready of ${r.printers.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="printers"></div>`;
-      card.querySelector(".room").textContent = r.room;
+      const title = card.querySelector(".room"); title.textContent = r.room;
+      const heading = document.createElement("div"); heading.className = "share-heading share-scope";
+      title.replaceWith(heading); heading.append(title, Pulse.copyLink(() => printerURL({ view: r.floor ? "map" : "list", floor: r.floor, room: r.id, printer: "" }), r.room));
       card.querySelector("h3").textContent = r.name === r.room ? "" : r.name;
       const floorName = r.floor ? state.status.floors.find((f) => f.id === r.floor)?.name : "Not on the floorplans";
       card.querySelector(".kicker").textContent = floorName ?? "";
@@ -251,7 +274,9 @@ function renderDrawer() {
     <p class="big">${working(room.printers)}</p><p class="of">ready of ${room.printers.length}</p>
     <p class="counts">${countsLine(c)}</p><h4>Printers</h4><div class="printers"></div>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, room.room].filter(Boolean).join(" · ");
-  drawer.querySelector("h3").textContent = room.name;
+  const title = drawer.querySelector("h3"); title.textContent = room.name;
+  const heading = document.createElement("div"); heading.className = "share-heading share-scope";
+  title.replaceWith(heading); heading.append(title, Pulse.copyLink(() => printerURL({ printer: "" }), room.name));
   drawer.querySelector(".printers").replaceChildren(...room.printers.map(printerRow));
   drawer.querySelector(".close").onclick = () => pick(null);
   drawer.querySelector(".printer-row.picked")?.scrollIntoView({ block: "nearest" });
@@ -285,7 +310,7 @@ function showOnMap(room) {
   requestAnimationFrame(() => pick(room.id));
 }
 
-function pick(id, printer = null, zoom = true) {
+function pick(id, printer = null, zoom = true, record = true) {
   state.picked = id;
   state.printer = printer;
   render();
@@ -306,7 +331,7 @@ function pick(id, printer = null, zoom = true) {
       vp.frameRect(box, true, 2.5);
     }
   }
-  try { history.replaceState(null, "", `#floor=${state.floor}${id ? `&room=${encodeURIComponent(id)}` : ""}`); } catch {}
+  if (record) recordView();
 }
 
 function setFloor(id) {
@@ -319,10 +344,7 @@ function setFloor(id) {
   state.printer = null;
   state.drawn = null;
   render();
-  try {
-    history.replaceState(null, "", id ? `#floor=${id}` : location.pathname);
-    if (id) localStorage.setItem("pulse.printers.floor", id); else localStorage.removeItem("pulse.printers.floor");
-  } catch {}
+  recordView();
 }
 
 document.getElementById("floors").addEventListener("click", (e) => {
@@ -344,7 +366,7 @@ for (const [id, key] of [["audience", "audience"], ["mode", "mode"]]) {
     state[key] = off ? "all" : b.dataset.v;
     for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b && !off));
     if (key === "mode") state.drawn = null;
-    render();
+    render(); recordView();
   });
 }
 document.getElementById("zoom-in").onclick = () => { vp.touch(); vp.zoomAt(1.25, undefined, undefined, true); };
@@ -369,19 +391,15 @@ svg.addEventListener("keydown", (e) => {
 });
 
 (async () => {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  try { state.floor = hash.get("floor") || localStorage.getItem("pulse.printers.floor"); } catch { state.floor = hash.get("floor"); }
-  const room = hash.get("room");
-  if ((phone.matches && !room) || hash.get("view") === "list") {
-    state.mode = "list";
-    for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
-  }
+  readView();
   await Pulse.shell({ current: "printers", compact: true, title: "Printer Status", context: "Printers across campus" });
+  const toolbar = document.querySelector(".map-toolbar"); toolbar.classList.add("share-scope"); toolbar.append(Pulse.copyLink(() => printerURL(), "this view"));
   let first = true;
   Pulse.poll(async () => {
     state.status = await fetch("api/status").then((r) => r.json());
     render();
-    if (first && room) requestAnimationFrame(() => pick(room));
+    if (first && state.picked) requestAnimationFrame(() => pick(state.picked, state.printer, true, false));
+    if (first) { recordView(false); if (state.mode === "list") document.querySelector("#list-view .printer-row.picked")?.scrollIntoView({ block: "nearest" }); }
     first = false;
   }, 15000);
 })();

@@ -4,7 +4,7 @@ const WORD = { available: "free", in_use: "in use", offline: "off or not reporti
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
 const ORDER = ["available", "in_use", "offline", "out_of_service"];
 
-const state = { query: "", classroom: false, floor: null, platform: "all", mode: "list", picked: null, hover: null, status: null, drawn: null };
+const state = { query: "", classroom: false, floor: null, platform: "all", mode: "list", picked: null, device: null, hover: null, status: null, drawn: null };
 const phone = window.matchMedia("(max-width: 700px)");
 const svg = document.getElementById("map");
 const content = document.getElementById("content");
@@ -218,6 +218,7 @@ function captureGroupOrder() {
     if (!groupOrder.has(key)) groupOrder.set(key, groupOrder.size);
 }
 
+const mappedSpace = (spaces) => spaces.some((s) => s.floor && s.label);
 function renderList() {
   const groups = new Map();
   for (const space of visibleSpaces()) {
@@ -236,12 +237,16 @@ function renderList() {
     .map(({ spaces, seats, c, rooms }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
+      card.classList.toggle("link-selected", spaces.some((s) => s.id === state.picked));
       card.dataset.group = groupKey(spaces[0]);
       card.innerHTML = `<div class="head"><div><h3></h3><p class="room"></p><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${c.available}</b><span>free of ${seats.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
       card.querySelector(".room").textContent = roomsLine(rooms);
-      card.querySelector("h3").textContent = spaces[0].name;
+      const title = card.querySelector("h3"); title.textContent = spaces[0].name;
+      const heading = document.createElement("div"); heading.className = "share-heading share-scope";
+      const target = spaces.find((s) => s.floor && s.label) || spaces[0];
+      title.replaceWith(heading); heading.append(title, Pulse.copyLink(() => computerURL({ view: mappedSpace(spaces) ? "map" : "list", floor: target.floor, room: target.id, device: "" }), spaces[0].name));
       const floorName = state.floor ? null : state.status.floors.find((f) => f.id === spaces[0].floor)?.name;
       card.querySelector(".kicker").textContent = [floorName, KIND[spaces[0].kind]].filter(Boolean).join(" · ");
       const mapped = spaces.find((s) => s.floor && s.label);
@@ -304,7 +309,9 @@ function renderDrawer() {
       <button type="button" class="relayout">Lay the seats out again</button></p>` : ""}
     <h4>Seats</h4><ul class="rows"></ul>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, space.room, KIND[space.kind]].filter(Boolean).join(" · ");
-  drawer.querySelector("h3").textContent = space.name;
+  const title = drawer.querySelector("h3"); title.textContent = space.name;
+  const heading = document.createElement("div"); heading.className = "share-heading share-scope";
+  title.replaceWith(heading); heading.append(title, Pulse.copyLink(() => computerURL({ room: space.id, device: "" }), space.name));
   // The map beside it already draws the seats, so the drawer lists them: each with the label
   // it carries on the map, its name and its state.
   const names = labelsFor(seats);
@@ -316,9 +323,12 @@ function renderDrawer() {
     li.title = mobileHint(s).replace(/^\. /, "");
     li.querySelector(".tag").textContent = names.get(s.hostname);
     li.querySelector(".host").textContent = seatName(s);
+    li.classList.add("share-scope"); li.classList.toggle("link-selected", state.device === s.hostname);
+    li.append(Pulse.copyLink(() => computerURL({ view: "map", floor: space.floor, room: space.id, device: s.hostname }), seatName(s)));
     return li;
   }));
   drawer.querySelector(".close").onclick = () => pick(null);
+  drawer.querySelector(".link-selected")?.scrollIntoView({ block: "nearest" });
   const relayout = drawer.querySelector(".relayout");
   if (relayout) relayout.onclick = () => saveRoom(space, roomBox(space), { relayout: true });
 }
@@ -386,18 +396,13 @@ function updateLive() {
 
 function viewState() {
   return { mode: state.mode, floor: state.floor, picked: state.picked,
-    platform: state.platform, classroom: state.classroom, query: state.query,
+    device: state.device, platform: state.platform, classroom: state.classroom, query: state.query,
     scroll: document.getElementById("list-view").scrollTop };
 }
-function viewURL() {
-  const params = new URLSearchParams({ view: state.mode });
-  if (state.floor) params.set("floor", state.floor);
-  if (state.picked) params.set("room", state.picked);
-  if (state.platform !== "all") params.set("platform", state.platform);
-  if (state.classroom) params.set("classroom", "1");
-  if (state.query) params.set("q", state.query);
-  return `#${params}`;
+function computerURL(extra = {}) {
+  return Pulse.linkURL({ view: state.mode, floor: state.floor, room: state.picked, device: state.device, platform: state.platform === "all" ? "" : state.platform, classroom: state.classroom ? "1" : "", q: state.query, ...extra }, true);
 }
+function viewURL() { return new URL(computerURL()).hash; }
 function rememberView() {
   history.replaceState({ pulse: viewState() }, "", location.href);
 }
@@ -408,7 +413,7 @@ function recordView(push = true) {
 function readView() {
   const params = new URLSearchParams(location.hash.slice(1));
   return { mode: params.get("view") === "map" || (!params.has("view") && (params.has("floor") || params.has("room"))) ? "map" : "list",
-    floor: params.get("floor"), picked: params.get("room"),
+    floor: params.get("floor"), picked: params.get("room"), device: params.get("device"),
     platform: ["mac", "windows"].includes(params.get("platform")) ? params.get("platform") : "all",
     classroom: params.get("classroom") === "1", query: params.get("q") || "", scroll: 0 };
 }
@@ -427,7 +432,7 @@ function restoreView(view) {
   const restoreScroll = () => { document.getElementById("list-view").scrollTop = view.scroll || 0; };
   restoreScroll();
   requestAnimationFrame(() => requestAnimationFrame(restoreScroll));
-  if (state.status && state.mode === "map" && state.picked) pick(state.picked, true, false);
+  if (state.status && state.mode === "map" && state.picked) pick(state.picked, true, false, state.device);
 }
 window.addEventListener("popstate", (event) => restoreView(event.state?.pulse || readView()));
 window.addEventListener("hashchange", () => {
@@ -476,9 +481,10 @@ function showOnMap(space) {
   document.getElementById("map-view").scrollIntoView({ block: "start" });
 }
 
-function pick(id, zoom = true, record = true) {
+function pick(id, zoom = true, record = true, device = null) {
   if (record) rememberView();
   state.picked = id;
+  state.device = device;
   render();
   openBadges();
   const space = state.status.spaces.find((s) => s.id === id);
@@ -507,6 +513,7 @@ function setFloor(id) {
   }
   state.floor = id;
   state.picked = null;
+  state.device = null;
   state.drawn = null;
   render();
   recordView();
@@ -531,13 +538,14 @@ for (const [id, key] of [["platform", "platform"], ["mode", "mode"]]) {
     const off = key === "platform" && state.platform === b.dataset.v;
     state[key] = off ? "all" : b.dataset.v;
     for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b && !off));
-    if (key === "mode") { state.drawn = null; state.picked = null; }
+    if (key === "mode") { state.drawn = null; state.picked = null; state.device = null; }
     render();
     recordView();
   });
 }
 function applyFilters() {
   state.picked = null;
+  state.device = null;
   state.hover = null;
   render();
   if (state.mode === "map") {
@@ -572,7 +580,7 @@ svg.addEventListener("click", (e) => {
   if (vp.wasDrag() || edit.dropped) return void (edit.dropped = false);
   if (edit.on && (e.target.closest(".seat-g, .handles") || e.target.closest(".space")?.dataset.id === state.picked)) return;
   const g = e.target.closest(".space, .badge");
-  pick(g ? g.dataset.id : null, !!g);
+  pick(g ? g.dataset.id : null, !!g, true, e.target.closest(".seat-g")?.dataset.host || null);
 });
 const hover = (e) => {
   const id = e.target.closest?.(".space, .badge")?.dataset.id ?? null;
@@ -793,6 +801,7 @@ content.addEventListener("keydown", (e) => {
   Object.assign(state, initial);
   syncControls();
   await Pulse.shell({ current: "computers", compact: true, title: "Computers Availability", context: "Shared computers across campus" });
+  const toolbar = document.querySelector(".map-toolbar"); toolbar.classList.add("share-scope"); toolbar.append(Pulse.copyLink(() => computerURL(), "this view"));
   let first = true;
   Pulse.poll(async () => {
     const status = await fetch("api/status").then((r) => r.json());
@@ -804,7 +813,7 @@ content.addEventListener("keydown", (e) => {
       else updateLive();
     }
     if (first) {
-      if (state.picked) pick(state.picked, true, false);
+      if (state.picked) { pick(state.picked, true, false, state.device); if (state.mode === "list") document.querySelector("#spaces .link-selected")?.scrollIntoView({ block: "nearest" }); }
       recordView(false);
     }
     first = false;

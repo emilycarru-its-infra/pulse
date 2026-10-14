@@ -109,3 +109,31 @@ Pulse.poll = function (fn, ms) {
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { clearTimeout(timer); tick(); } });
   tick();
 };
+
+// Product links encode view state, never the current authentication URL or browser history.
+Pulse.linkURL = function (values, hash = false) {
+  const url = new URL(location.pathname, location.origin);
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) if (value !== null && value !== undefined && value !== "" && value !== false) params.set(key, value);
+  if (hash) url.hash = params.toString(); else url.search = params.toString();
+  return url.href;
+};
+Pulse.copyLink = function (getURL, name = "view") {
+  const button = document.createElement("button");
+  button.type = "button"; button.className = "copy-link"; button.dataset.action = "copy";
+  const label = `Copy link to ${name}`;
+  button.title = label; button.setAttribute("aria-label", label);
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';
+  button.addEventListener("click", async (event) => {
+    event.preventDefault(); event.stopPropagation();
+    let message;
+    try { await navigator.clipboard.writeText(getURL()); message = "Link copied"; }
+    catch { message = "Could not copy link"; }
+    button.title = message; button.setAttribute("aria-label", message);
+    let status = document.getElementById("link-copy-status");
+    if (!status) { status = document.createElement("span"); status.id = "link-copy-status"; status.className = "sr-only"; status.setAttribute("role", "status"); document.body.append(status); }
+    status.textContent = message;
+    setTimeout(() => { if (button.isConnected) { button.title = label; button.setAttribute("aria-label", label); } }, 2000);
+  });
+  return button;
+};
