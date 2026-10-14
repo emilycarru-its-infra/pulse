@@ -13,6 +13,10 @@
     <p id="notice" role="status">Loading software…</p>
     <section id="browse" aria-label="Software catalog">
       <div class="catalog-toolbar">
+        <div class="segmented" role="group" aria-label="View" id="view">
+          <button type="button" data-v="software" aria-pressed="true">Software</button>
+          <button type="button" data-v="locations" aria-pressed="false">Locations</button>
+        </div>
         <div class="segmented" role="group" aria-label="Platform" id="platform">
           <button type="button" data-v="mac" aria-pressed="false">Mac</button>
           <button type="button" data-v="windows" aria-pressed="false">Windows</button>
