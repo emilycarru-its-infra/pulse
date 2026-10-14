@@ -8,7 +8,7 @@ catalog, and a shared view of service health. One product family, with focused e
 for the people who use it.
 
 <p align="left">
-  <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
+  <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. The status hub above previews of Computers, Software, Printers and Servers." width="1200">
 </p>
 
 <p align="left">

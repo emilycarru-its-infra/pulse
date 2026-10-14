@@ -1,38 +1,236 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
-<title id="title">Pulse — find your place</title><desc id="desc">Illustrative product preview with a computer floorplan, software tiles and a service status strip. All data is fictional.</desc>
-<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101b32"/><stop offset="1" stop-color="#172d3e"/></linearGradient><linearGradient id="accent"><stop stop-color="#5eead4"/><stop offset="1" stop-color="#a3e635"/></linearGradient></defs>
-<rect width="1200" height="620" rx="24" fill="url(#bg)"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1160" viewBox="0 0 1200 1160" role="img" aria-labelledby="title desc">
+<title id="title">Pulse — one connected view</title>
+<desc id="desc">The status hub sits above four product samples: a computer floorplan, software catalog, printer availability and server health. All data is fictional. Printer and server samples illustrate integrations still in development.</desc>
+<defs>
+<linearGradient id="bg" x2="1" y2="1"><stop stop-color="#101b32"/><stop offset="1" stop-color="#172d3e"/></linearGradient>
+<linearGradient id="accent"><stop stop-color="#5eead4"/><stop offset="1" stop-color="#a3e635"/></linearGradient>
+</defs>
+<rect width="1200" height="1160" rx="24" fill="url(#bg)"/>
 <g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif">
-<path d="M54 67h20l9-18 14 37 13-27 9 8h22" fill="none" stroke="url(#accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-<text x="158" y="78" fill="#f8fafc" font-size="36" font-weight="750">Pulse</text>
-<text x="1144" y="73" text-anchor="end" fill="#94a3b8" font-size="14" letter-spacing="2">PLACES · SOFTWARE · STATUS</text>
-<text x="54" y="157" fill="#f8fafc" font-size="61" font-weight="750" letter-spacing="-2">Find your place.</text>
-<text x="56" y="194" fill="#b9c9db" font-size="21">The right computer. The right software. A clear way forward.</text>
-<rect x="54" y="239" width="532" height="277" rx="16" fill="#f8fafc"/>
-<text x="77" y="275" fill="#172b42" font-size="19" font-weight="700">Computers</text><circle cx="468" cy="269" r="4" fill="#0d9488"/><text x="481" y="274" fill="#52706d" font-size="12">Live presence</text>
-<rect x="77" y="295" width="486" height="196" rx="9" fill="#e9eff4"/>
-<path d="M96 321h204v144H96z M318 321h226v144H318z" fill="#fff" stroke="#bdcbd7" stroke-width="2"/>
-<text x="110" y="343" fill="#62758a" font-size="12">Open studio</text><text x="333" y="343" fill="#62758a" font-size="12">Project space</text>
-<rect x="119" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M124 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="159" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M164 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="199" y="365" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M204 389h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="239" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M244 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="119" y="411" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M124 435h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="159" y="411" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M164 435h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="199" y="411" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M204 435h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="239" y="411" width="24" height="19" rx="4" fill="#cbd5e1"/><path d="M244 435h14" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
-<rect x="341" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M346 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="381" y="365" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M386 389h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="421" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M426 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="461" y="365" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M466 389h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="501" y="365" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M506 389h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="341" y="411" width="24" height="19" rx="4" fill="#94a3b8"/><path d="M346 435h14" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/>
-<rect x="381" y="411" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M386 435h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="421" y="411" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M426 435h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="461" y="411" width="24" height="19" rx="4" fill="#cbd5e1"/><path d="M466 435h14" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round"/>
-<rect x="501" y="411" width="24" height="19" rx="4" fill="#14b8a6"/><path d="M506 435h14" stroke="#14b8a6" stroke-width="3" stroke-linecap="round"/>
-<rect x="606" y="239" width="540" height="277" rx="16" fill="#f8fafc"/><text x="629" y="275" fill="#172b42" font-size="19" font-weight="700">Software</text><text x="1122" y="274" text-anchor="end" fill="#64748b" font-size="12">Explore by app or location</text>
-<rect x="629" y="295" width="155" height="195" rx="10" fill="white" stroke="#dbe3ea"/><rect x="681" y="317" width="50" height="50" rx="13" fill="#7c3aed"/><text x="706" y="352" text-anchor="middle" fill="white" font-size="30">✦</text><text x="706" y="402" text-anchor="middle" fill="#172b42" font-size="18" font-weight="700">Create</text><text x="706" y="430" text-anchor="middle" fill="#64748b" font-size="12">Explore locations</text><path d="M694 456h24m-6-6 6 6-6 6" stroke="#7c3aed" fill="none" stroke-width="2"/>
-<rect x="798" y="295" width="155" height="195" rx="10" fill="white" stroke="#dbe3ea"/><rect x="850" y="317" width="50" height="50" rx="13" fill="#0284c7"/><text x="875" y="352" text-anchor="middle" fill="white" font-size="30">⌘</text><text x="875" y="402" text-anchor="middle" fill="#172b42" font-size="18" font-weight="700">Build</text><text x="875" y="430" text-anchor="middle" fill="#64748b" font-size="12">Explore locations</text><path d="M863 456h24m-6-6 6 6-6 6" stroke="#0284c7" fill="none" stroke-width="2"/>
-<rect x="967" y="295" width="155" height="195" rx="10" fill="white" stroke="#dbe3ea"/><rect x="1019" y="317" width="50" height="50" rx="13" fill="#0d9488"/><text x="1044" y="352" text-anchor="middle" fill="white" font-size="30">◈</text><text x="1044" y="402" text-anchor="middle" fill="#172b42" font-size="18" font-weight="700">Explore</text><text x="1044" y="430" text-anchor="middle" fill="#64748b" font-size="12">Explore locations</text><path d="M1032 456h24m-6-6 6 6-6 6" stroke="#0d9488" fill="none" stroke-width="2"/>
-<circle cx="65" cy="557" r="5" fill="#5eead4"/><text x="81" y="562" fill="#c6d5e3" font-size="15">One connected view.</text><text x="1144" y="562" text-anchor="end" fill="#94a3b8" font-size="13">ILLUSTRATIVE PREVIEW</text></g></svg>
+<path d="M54 57h20l9-18 14 37 13-27 9 8h22" fill="none" stroke="url(#accent)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="158" y="68" fill="#f8fafc" font-size="36" font-weight="750" >Pulse</text>
+<text x="1146" y="63" fill="#94a3b8" font-size="14" font-weight="500" text-anchor="end" letter-spacing="2">ONE CONNECTED VIEW</text>
+<text x="54" y="135" fill="#f8fafc" font-size="49" font-weight="750" letter-spacing="-1.5">A campus at a glance.</text>
+<text x="56" y="170" fill="#b9c9db" font-size="20" font-weight="400" >One front door. Four focused experiences. Answers that keep people moving.</text>
+<rect x="54" y="208" width="1092" height="228" rx="16" fill="#f8fafc"/>
+<text x="78" y="245" fill="#172b42" font-size="21" font-weight="700" >Status hub</text>
+<circle cx="914" cy="239" r="4" fill="#d97706"/>
+<text x="926" y="244" fill="#b45309" font-size="14" font-weight="400" >Service needs attention</text>
+<rect x="78" y="266" width="244" height="67" rx="9" fill="#fff" stroke="#dbe3ea"/>
+<circle cx="96" cy="289" r="4" fill="#14b8a6"/>
+<text x="108" y="294" fill="#172b42" font-size="16" font-weight="650" >Computers</text>
+<text x="94" y="317" fill="#64748b" font-size="12" font-weight="400" >Find a free seat</text>
+<rect x="346" y="266" width="244" height="67" rx="9" fill="#fff" stroke="#dbe3ea"/>
+<circle cx="364" cy="289" r="4" fill="#14b8a6"/>
+<text x="376" y="294" fill="#172b42" font-size="16" font-weight="650" >Software</text>
+<text x="362" y="317" fill="#64748b" font-size="12" font-weight="400" >Find it on campus</text>
+<rect x="614" y="266" width="244" height="67" rx="9" fill="#fff" stroke="#dbe3ea"/>
+<circle cx="632" cy="289" r="4" fill="#14b8a6"/>
+<text x="644" y="294" fill="#172b42" font-size="16" font-weight="650" >Printers</text>
+<text x="630" y="317" fill="#64748b" font-size="12" font-weight="400" >Find a ready printer</text>
+<rect x="882" y="266" width="244" height="67" rx="9" fill="#fff" stroke="#dbe3ea"/>
+<circle cx="900" cy="289" r="4" fill="#d97706"/>
+<text x="912" y="294" fill="#172b42" font-size="16" font-weight="650" >Servers</text>
+<text x="898" y="317" fill="#64748b" font-size="12" font-weight="400" >Check service health</text>
+<path d="M78 352H1122" stroke="#dbe3ea" stroke-width="1"/>
+<text x="78" y="379" fill="#172b42" font-size="13" font-weight="650" >Service history</text>
+<rect x="78" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="90" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="102" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="114" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="126" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="138" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="150" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="162" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="174" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="186" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="198" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="210" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="222" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="234" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="246" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="258" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="270" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="282" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="294" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="306" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="318" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="330" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="342" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="354" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="366" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="378" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="390" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="402" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="414" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="426" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="438" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="450" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="462" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="474" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="486" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="498" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="510" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="522" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="534" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="546" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="558" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="570" y="394" width="8" height="16" rx="2" fill="#fbbf24"/>
+<rect x="582" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="594" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="606" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="618" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="630" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="642" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="654" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="666" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="678" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="690" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="702" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="714" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="726" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="738" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="750" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="762" y="394" width="8" height="16" rx="2" fill="#2dd4bf"/>
+<rect x="813" y="371" width="309" height="42" rx="7" fill="#edf2f7"/>
+<text x="828" y="397" fill="#52677e" font-size="12" font-weight="400" >Next maintenance · Network · Sunday</text>
+<path d="M600 436L600 453" stroke="#51727c" stroke-width="2"/>
+<path d="M320 453H880" stroke="#51727c" stroke-width="2"/>
+<path d="M320 453L320 470" stroke="#51727c" stroke-width="2"/>
+<path d="M880 453L880 470" stroke="#51727c" stroke-width="2"/>
+<rect x="54" y="470" width="536" height="301" rx="16" fill="#f8fafc"/>
+<text x="77" y="506" fill="#172b42" font-size="21" font-weight="700" >Computers</text>
+<text x="566" y="504" fill="#64748b" font-size="11" font-weight="550" text-anchor="end" letter-spacing=".7">LIVE PRESENCE</text>
+<rect x="610" y="470" width="536" height="301" rx="16" fill="#f8fafc"/>
+<text x="633" y="506" fill="#172b42" font-size="21" font-weight="700" >Software</text>
+<text x="1122" y="504" fill="#64748b" font-size="11" font-weight="550" text-anchor="end" letter-spacing=".7">APP DISCOVERY</text>
+<rect x="54" y="795" width="536" height="301" rx="16" fill="#f8fafc"/>
+<text x="77" y="831" fill="#172b42" font-size="21" font-weight="700" >Printers</text>
+<text x="566" y="829" fill="#64748b" font-size="11" font-weight="550" text-anchor="end" letter-spacing=".7">INTEGRATION PREVIEW</text>
+<rect x="610" y="795" width="536" height="301" rx="16" fill="#f8fafc"/>
+<text x="633" y="831" fill="#172b42" font-size="21" font-weight="700" >Servers</text>
+<text x="1122" y="829" fill="#64748b" font-size="11" font-weight="550" text-anchor="end" letter-spacing=".7">INTEGRATION PREVIEW</text>
+<rect x="77" y="527" width="490" height="174" rx="9" fill="#e9eff4"/>
+<rect x="96" y="543" width="204" height="141" rx="0" fill="#fff" stroke="#bdcbd7"/>
+<text x="110" y="565" fill="#64748b" font-size="12" font-weight="400" >Open studio</text>
+<rect x="114" y="584" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M119 606H132" stroke="#14b8a6" stroke-width="3"/>
+<rect x="153" y="584" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M158 606H171" stroke="#14b8a6" stroke-width="3"/>
+<rect x="192" y="584" width="23" height="17" rx="4" fill="#94a3b8"/>
+<path d="M197 606H210" stroke="#94a3b8" stroke-width="3"/>
+<rect x="231" y="584" width="23" height="17" rx="4" fill="#cbd5e1"/>
+<path d="M236 606H249" stroke="#cbd5e1" stroke-width="3"/>
+<rect x="114" y="626" width="23" height="17" rx="4" fill="#cbd5e1"/>
+<path d="M119 648H132" stroke="#cbd5e1" stroke-width="3"/>
+<rect x="153" y="626" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M158 648H171" stroke="#14b8a6" stroke-width="3"/>
+<rect x="192" y="626" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M197 648H210" stroke="#14b8a6" stroke-width="3"/>
+<rect x="231" y="626" width="23" height="17" rx="4" fill="#94a3b8"/>
+<path d="M236 648H249" stroke="#94a3b8" stroke-width="3"/>
+<rect x="318" y="543" width="230" height="141" rx="0" fill="#fff" stroke="#bdcbd7"/>
+<text x="332" y="565" fill="#64748b" font-size="12" font-weight="400" >Project space</text>
+<rect x="336" y="584" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M341 606H354" stroke="#14b8a6" stroke-width="3"/>
+<rect x="375" y="584" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M380 606H393" stroke="#14b8a6" stroke-width="3"/>
+<rect x="414" y="584" width="23" height="17" rx="4" fill="#94a3b8"/>
+<path d="M419 606H432" stroke="#94a3b8" stroke-width="3"/>
+<rect x="453" y="584" width="23" height="17" rx="4" fill="#cbd5e1"/>
+<path d="M458 606H471" stroke="#cbd5e1" stroke-width="3"/>
+<rect x="492" y="584" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M497 606H510" stroke="#14b8a6" stroke-width="3"/>
+<rect x="336" y="626" width="23" height="17" rx="4" fill="#cbd5e1"/>
+<path d="M341 648H354" stroke="#cbd5e1" stroke-width="3"/>
+<rect x="375" y="626" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M380 648H393" stroke="#14b8a6" stroke-width="3"/>
+<rect x="414" y="626" width="23" height="17" rx="4" fill="#14b8a6"/>
+<path d="M419 648H432" stroke="#14b8a6" stroke-width="3"/>
+<rect x="453" y="626" width="23" height="17" rx="4" fill="#94a3b8"/>
+<path d="M458 648H471" stroke="#94a3b8" stroke-width="3"/>
+<rect x="492" y="626" width="23" height="17" rx="4" fill="#cbd5e1"/>
+<path d="M497 648H510" stroke="#cbd5e1" stroke-width="3"/>
+<circle cx="82" cy="732" r="4" fill="#14b8a6"/>
+<text x="94" y="737" fill="#64748b" font-size="13" font-weight="400" >Free</text>
+<circle cx="171" cy="732" r="4" fill="#94a3b8"/>
+<text x="183" y="737" fill="#64748b" font-size="13" font-weight="400" >In use</text>
+<circle cx="278" cy="732" r="4" fill="#cbd5e1"/>
+<text x="290" y="737" fill="#64748b" font-size="13" font-weight="400" >Offline</text>
+<rect x="633" y="527" width="154" height="220" rx="10" fill="#fff" stroke="#dbe3ea"/>
+<rect x="685" y="549" width="50" height="50" rx="13" fill="#7c3aed"/>
+<text x="710" y="584" fill="#fff" font-size="30" font-weight="400" text-anchor="middle">✦</text>
+<text x="710" y="631" fill="#172b42" font-size="17" font-weight="650" text-anchor="middle">Create</text>
+<text x="710" y="659" fill="#64748b" font-size="12" font-weight="400" text-anchor="middle">Explore locations</text>
+<path d="M698 706h24m-6-6 6 6-6 6" stroke="#7c3aed" fill="none" stroke-width="2"/>
+<rect x="801" y="527" width="154" height="220" rx="10" fill="#fff" stroke="#dbe3ea"/>
+<rect x="853" y="549" width="50" height="50" rx="13" fill="#0284c7"/>
+<text x="878" y="584" fill="#fff" font-size="30" font-weight="400" text-anchor="middle">⌘</text>
+<text x="878" y="631" fill="#172b42" font-size="17" font-weight="650" text-anchor="middle">Build</text>
+<text x="878" y="659" fill="#64748b" font-size="12" font-weight="400" text-anchor="middle">Explore locations</text>
+<path d="M866 706h24m-6-6 6 6-6 6" stroke="#0284c7" fill="none" stroke-width="2"/>
+<rect x="969" y="527" width="154" height="220" rx="10" fill="#fff" stroke="#dbe3ea"/>
+<rect x="1021" y="549" width="50" height="50" rx="13" fill="#0d9488"/>
+<text x="1046" y="584" fill="#fff" font-size="30" font-weight="400" text-anchor="middle">◈</text>
+<text x="1046" y="631" fill="#172b42" font-size="17" font-weight="650" text-anchor="middle">Explore</text>
+<text x="1046" y="659" fill="#64748b" font-size="12" font-weight="400" text-anchor="middle">Explore locations</text>
+<path d="M1034 706h24m-6-6 6 6-6 6" stroke="#0d9488" fill="none" stroke-width="2"/>
+<rect x="78" y="861" width="42" height="42" rx="9" fill="#e9eff4"/>
+<path d="M89 876v-7h19v7m-22 0h25v18h-25z m5-3h15v17h-15z" fill="none" stroke="#52677e" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="134" y="878" fill="#172b42" font-size="15" font-weight="600" >Library</text>
+<circle cx="138" cy="896" r="3" fill="#14b8a6"/>
+<text x="149" y="900" fill="#14b8a6" font-size="12" font-weight="400" >Ready</text>
+<text x="464" y="877" fill="#64748b" font-size="11" font-weight="400" >Supplies</text>
+<rect x="464" y="887" width="98" height="7" rx="3" fill="#e2e8f0"/>
+<rect x="464" y="887" width="82" height="7" rx="3" fill="#14b8a6"/>
+<path d="M134 915H563" stroke="#dbe3ea" stroke-width="1"/>
+<rect x="78" y="929" width="42" height="42" rx="9" fill="#e9eff4"/>
+<path d="M89 944v-7h19v7m-22 0h25v18h-25z m5-3h15v17h-15z" fill="none" stroke="#52677e" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="134" y="946" fill="#172b42" font-size="15" font-weight="600" >Creative studio</text>
+<circle cx="138" cy="964" r="3" fill="#0284c7"/>
+<text x="149" y="968" fill="#0284c7" font-size="12" font-weight="400" >Printing</text>
+<text x="464" y="945" fill="#64748b" font-size="11" font-weight="400" >Supplies</text>
+<rect x="464" y="955" width="98" height="7" rx="3" fill="#e2e8f0"/>
+<rect x="464" y="955" width="61" height="7" rx="3" fill="#0284c7"/>
+<path d="M134 983H563" stroke="#dbe3ea" stroke-width="1"/>
+<rect x="78" y="997" width="42" height="42" rx="9" fill="#e9eff4"/>
+<path d="M89 1012v-7h19v7m-22 0h25v18h-25z m5-3h15v17h-15z" fill="none" stroke="#52677e" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="134" y="1014" fill="#172b42" font-size="15" font-weight="600" >Project space</text>
+<circle cx="138" cy="1032" r="3" fill="#d97706"/>
+<text x="149" y="1036" fill="#d97706" font-size="12" font-weight="400" >Low paper</text>
+<text x="464" y="1013" fill="#64748b" font-size="11" font-weight="400" >Supplies</text>
+<rect x="464" y="1023" width="98" height="7" rx="3" fill="#e2e8f0"/>
+<rect x="464" y="1023" width="20" height="7" rx="3" fill="#d97706"/>
+<rect x="634" y="861" width="42" height="42" rx="9" fill="#e9eff4"/>
+<rect x="643" y="870" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="874.5" r="1" fill="#52677e"/>
+<rect x="643" y="881" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="885.5" r="1" fill="#52677e"/>
+<text x="690" y="878" fill="#172b42" font-size="15" font-weight="600" >Web services</text>
+<circle cx="694" cy="896" r="3" fill="#14b8a6"/>
+<text x="705" y="900" fill="#14b8a6" font-size="12" font-weight="400" >Healthy</text>
+<path d="M1013 882 L1026 878 L1039 884 L1052 879 L1065 883 L1078 878 L1091 881 L1104 880 L1117 884" stroke="#14b8a6" stroke-width="2" stroke-linejoin="round" fill="none"/>
+<path d="M690 915H1122" stroke="#dbe3ea" stroke-width="1"/>
+<rect x="634" y="929" width="42" height="42" rx="9" fill="#e9eff4"/>
+<rect x="643" y="938" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="942.5" r="1" fill="#52677e"/>
+<rect x="643" y="949" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="953.5" r="1" fill="#52677e"/>
+<text x="690" y="946" fill="#172b42" font-size="15" font-weight="600" >File services</text>
+<circle cx="694" cy="964" r="3" fill="#14b8a6"/>
+<text x="705" y="968" fill="#14b8a6" font-size="12" font-weight="400" >Healthy</text>
+<path d="M1013 947 L1026 952 L1039 949 L1052 954 L1065 946 L1078 951 L1091 948 L1104 950 L1117 946" stroke="#14b8a6" stroke-width="2" stroke-linejoin="round" fill="none"/>
+<path d="M690 983H1122" stroke="#dbe3ea" stroke-width="1"/>
+<rect x="634" y="997" width="42" height="42" rx="9" fill="#e9eff4"/>
+<rect x="643" y="1006" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="1010.5" r="1" fill="#52677e"/>
+<rect x="643" y="1017" width="24" height="9" rx="2" fill="none" stroke="#52677e"/>
+<circle cx="647" cy="1021.5" r="1" fill="#52677e"/>
+<text x="690" y="1014" fill="#172b42" font-size="15" font-weight="600" >Background jobs</text>
+<circle cx="694" cy="1032" r="3" fill="#d97706"/>
+<text x="705" y="1036" fill="#d97706" font-size="12" font-weight="400" >Degraded</text>
+<path d="M1013 1014 L1026 1017 L1039 1016 L1052 1023 L1065 1021 L1078 1011 L1091 1022 L1104 1008 L1117 1018" stroke="#d97706" stroke-width="2" stroke-linejoin="round" fill="none"/>
+<circle cx="65" cy="1127" r="5" fill="#5eead4"/>
+<text x="81" y="1132" fill="#c6d5e3" font-size="15" font-weight="400" >Places. Tools. Services. Together.</text>
+<text x="1146" y="1132" fill="#94a3b8" font-size="12" font-weight="400" text-anchor="end">ILLUSTRATIVE DATA</text>
+</g></svg>
