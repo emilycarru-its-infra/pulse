@@ -98,12 +98,12 @@ a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow
   main.doc > section { margin-bottom: 16px; }
   .alerts { grid-template-columns: 1fr; gap: 12px; }
   .overall-title { font-size: 20px; }
-  .masthead { display: grid; grid-template-columns: 96px 1fr; gap: 2px 12px; }
-  .masthead .logo { grid-column: 1; grid-row: 1 / span 2; width: 96px; height: auto; }
-  .masthead-text, .masthead-nav { grid-column: 2; }
+  .masthead { display: flex; align-items: center; gap: 8px 12px; }
+  .masthead .logo { width: 96px; height: auto; }
+  .masthead-text { flex: 1 1 112px; min-width: 112px; }
   .masthead h1 { font-size: 22px; }
   .masthead .context { display: none; }
-  .masthead-nav { justify-self: end; gap: 6px; }
+  .masthead-nav { flex: 0 0 auto; align-self: center; gap: 6px; }
   .masthead-nav a { font-size: 11px; padding: 4px 8px; }
   .updates li { grid-template-columns: 1fr auto; }
   .updates li > span { grid-column: 1 / -1; grid-row: 2; }

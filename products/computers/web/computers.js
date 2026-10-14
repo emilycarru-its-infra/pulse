@@ -4,7 +4,7 @@ const WORD = { available: "free", in_use: "in use", offline: "off or not reporti
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
 const ORDER = ["available", "in_use", "offline", "out_of_service"];
 
-const state = { query: "", classroom: false, floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
+const state = { query: "", classroom: false, floor: null, platform: "all", mode: "list", picked: null, hover: null, status: null, drawn: null };
 const phone = window.matchMedia("(max-width: 700px)");
 const svg = document.getElementById("map");
 const content = document.getElementById("content");
@@ -204,15 +204,28 @@ function homeFor(floor) {
 
 // The list has one card per space name on the floor, so a lab or a set of stations spread over
 // several rooms reads as one place; the rooms are named on the card and above their seats.
-// Cards with the most free seats come first, then by room number; inside a card the biggest
-// room comes first.
+// Cards are ranked by free seats once at page load, then keep that order; inside a card
+// the biggest room comes first.
 const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0]} +${rooms.length - 1} rooms`;
+
+const groupKey = (s) => `${s.floor}|${s.name}`;
+const groupOrder = new Map();
+function captureGroupOrder() {
+  const groups = new Map();
+  for (const space of state.status.spaces) {
+    const key = groupKey(space);
+    if (!groups.has(key)) groups.set(key, { free: 0, room: space.room || "" });
+    groups.get(key).free += countsOf(space.seats).available;
+  }
+  for (const [key] of [...groups].sort(([, a], [, b]) => b.free - a.free || a.room.localeCompare(b.room)))
+    if (!groupOrder.has(key)) groupOrder.set(key, groupOrder.size);
+}
 
 function renderList() {
   const groups = new Map();
   for (const space of visibleSpaces()) {
     if ((state.floor && space.floor !== state.floor) || !seatsOf(space).length) continue;
-    const key = `${space.floor}|${space.name}`;
+    const key = groupKey(space);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(space);
   }
@@ -222,10 +235,11 @@ function renderList() {
       const seats = spaces.flatMap(seatsOf);
       return { spaces, seats, c: countsOf(seats), rooms: spaces.map((s) => s.room).filter(Boolean) };
     })
-    .sort((a, b) => b.c.available - a.c.available || (a.rooms[0] ?? "").localeCompare(b.rooms[0] ?? ""))
+    .sort((a, b) => groupOrder.get(groupKey(a.spaces[0])) - groupOrder.get(groupKey(b.spaces[0])))
     .map(({ spaces, seats, c, rooms }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
+      card.dataset.group = groupKey(spaces[0]);
       card.innerHTML = `<div class="head"><div><h3></h3><p class="room"></p><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${c.available}</b><span>free of ${seats.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
@@ -266,6 +280,7 @@ function renderList() {
 
 function tile(s, names) {
   const li = document.createElement("li");
+  li.dataset.host = s.hostname;
   li.className = `tile ${s.state}${s.mobile ? " mobile" : ""}`;
   li.textContent = names.get(s.hostname);
   li.title = `${seatName(s)}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}${mobileHint(s)}`;
@@ -298,6 +313,7 @@ function renderDrawer() {
   const names = labelsFor(seats);
   drawer.querySelector(".rows").replaceChildren(...seats.map((s) => {
     const li = document.createElement("li");
+    li.dataset.host = s.hostname;
     li.innerHTML = `<span class="tag ${s.state}"></span><span class="host"></span><span class="state">${WORD[s.state]}</span>`;
     li.querySelector(".tag").classList.toggle("mobile", !!s.mobile);
     li.title = mobileHint(s).replace(/^\. /, "");
@@ -310,11 +326,122 @@ function renderDrawer() {
   if (relayout) relayout.onclick = () => saveRoom(space, roomBox(space), { relayout: true });
 }
 
+// Live status updates retain computer nodes, room cards and their initial ranking.
+function updateLive() {
+  const text = (node, value) => { if (node && node.textContent !== String(value)) node.textContent = value; };
+  const attr = (node, key, value) => { if (node && node.getAttribute(key) !== String(value)) node.setAttribute(key, value); };
+  const counts = (node, seats) => {
+    const html = countsLine(countsOf(seats));
+    if (node && node.innerHTML !== html) node.innerHTML = html;
+  };
+  const all = visibleSpaces().flatMap(seatsOf);
+  text(document.querySelector("#total b"), countsOf(all).available);
+  for (const button of document.querySelectorAll("#floors button")) {
+    const own = floorSpaces(button.dataset.id).flatMap(seatsOf);
+    const node = button.querySelector("small").firstChild;
+    if (node.nodeValue !== String(countsOf(own).available)) node.nodeValue = String(countsOf(own).available);
+  }
+  const byHost = new Map(state.status.spaces.flatMap((s) => s.seats).map((s) => [s.hostname, s]));
+  for (const node of document.querySelectorAll(".tile[data-host], .seat-g[data-host], .rows li[data-host]")) {
+    const seat = byHost.get(node.dataset.host);
+    if (!seat) continue;
+    if (node.classList.contains("tile")) {
+      const cls = `tile ${seat.state}${seat.mobile ? " mobile" : ""}`;
+      if (node.className !== cls) node.className = cls;
+      node.title = `${seatName(seat)}: ${WORD[seat.state]}. Last heard ${Pulse.ago(seat.lastSeen)}${mobileHint(seat)}`;
+      attr(node, "aria-label", `${seatName(seat)}, ${WORD[seat.state]}${mobileHint(seat)}`);
+    } else if (node.classList.contains("seat-g")) {
+      attr(node.querySelector(".seat"), "class", `seat ${seat.state}`);
+      attr(node.querySelector(".num"), "class", `num ${seat.state}`);
+      text(node.querySelector("title"), `${seatName(seat)}: ${WORD[seat.state]}${mobileHint(seat)}`);
+    } else {
+      attr(node.querySelector(".tag"), "class", `tag ${seat.state}${seat.mobile ? " mobile" : ""}`);
+      text(node.querySelector(".state"), WORD[seat.state]);
+    }
+  }
+  for (const card of document.querySelectorAll(".space-card")) {
+    const own = visibleSpaces().filter((s) => groupKey(s) === card.dataset.group).flatMap(seatsOf);
+    text(card.querySelector(".free b"), countsOf(own).available);
+    counts(card.querySelector(".counts"), own);
+  }
+  for (const space of floorSpaces(state.floor)) {
+    const own = seatsOf(space), free = countsOf(own).available;
+    const group = content.querySelector(`.space[data-id="${CSS.escape(space.id)}"]`);
+    group?.classList.toggle("none", !free);
+    attr(group, "aria-label", `${space.name}, room ${space.room ?? ""}: ${free} of ${own.length} free`);
+    const badge = content.querySelector(`.badge[data-id="${CSS.escape(space.id)}"]`);
+    if (badge) {
+      badge.classList.toggle("none", !free);
+      const label = badge.querySelector(".long text");
+      text(label.querySelector(".free"), `${free}/${own.length} free`);
+      attr(badge.querySelector(".long rect"), "width", label.getBBox().width + 14);
+    }
+  }
+  const drawer = document.getElementById("drawer");
+  if (!drawer.hidden) {
+    const own = state.status.spaces.find((s) => s.id === state.picked);
+    if (own) {
+      text(drawer.querySelector(".big"), countsOf(seatsOf(own)).available);
+      counts(drawer.querySelector(".counts"), seatsOf(own));
+    }
+  }
+}
+
+function viewState() {
+  return { mode: state.mode, floor: state.floor, picked: state.picked,
+    platform: state.platform, classroom: state.classroom, query: state.query,
+    scroll: document.getElementById("list-view").scrollTop };
+}
+function viewURL() {
+  const params = new URLSearchParams({ view: state.mode });
+  if (state.floor) params.set("floor", state.floor);
+  if (state.picked) params.set("room", state.picked);
+  if (state.platform !== "all") params.set("platform", state.platform);
+  if (state.classroom) params.set("classroom", "1");
+  if (state.query) params.set("q", state.query);
+  return `#${params}`;
+}
+function rememberView() {
+  history.replaceState({ pulse: viewState() }, "", location.href);
+}
+function recordView(push = true) {
+  const method = push && location.hash !== viewURL() ? "pushState" : "replaceState";
+  history[method]({ pulse: viewState() }, "", viewURL());
+}
+function readView() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  return { mode: params.get("view") === "map" || (!params.has("view") && (params.has("floor") || params.has("room"))) ? "map" : "list",
+    floor: params.get("floor"), picked: params.get("room"),
+    platform: ["mac", "windows"].includes(params.get("platform")) ? params.get("platform") : "all",
+    classroom: params.get("classroom") === "1", query: params.get("q") || "", scroll: 0 };
+}
+function syncControls() {
+  for (const key of ["mode", "platform"]) for (const b of document.querySelectorAll(`#${key} button`))
+    b.setAttribute("aria-pressed", String(b.dataset.v === state[key]));
+  document.getElementById("classroom").setAttribute("aria-pressed", String(state.classroom));
+  document.getElementById("filter").value = state.query;
+}
+function restoreView(view) {
+  Object.assign(state, view);
+  state.drawn = null;
+  state.hover = null;
+  syncControls();
+  render();
+  const restoreScroll = () => { document.getElementById("list-view").scrollTop = view.scroll || 0; };
+  restoreScroll();
+  requestAnimationFrame(() => requestAnimationFrame(restoreScroll));
+  if (state.status && state.mode === "map" && state.picked) pick(state.picked, true, false);
+}
+window.addEventListener("popstate", (event) => restoreView(event.state?.pulse || readView()));
+window.addEventListener("hashchange", () => {
+  if (location.hash !== viewURL()) restoreView(readView());
+});
+
 function render() {
   if (!state.status) return;
   // The map always shows one floor; the list can show every floor at once.
   const known = state.status.floors.some((f) => f.id === state.floor);
-  if (state.mode === "map" && !known) state.floor = state.status.floors[0]?.id ?? null;
+  if (state.mode === "map" && !known) state.floor = state.status.floors.find((f) => visibleSpaces().some((s) => s.floor === f.id))?.id ?? state.status.floors[0]?.id ?? null;
   else if (state.floor && !known) state.floor = null;
   renderFloors();
   const seats = visibleSpaces().flatMap(seatsOf);
@@ -322,6 +449,7 @@ function render() {
     `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length}${state.query || state.classroom || state.platform !== "all" ? " matching" : " on campus"}</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
+  document.querySelector(".zoom").hidden = state.mode !== "map";
   if (!state.status.editable && edit.on) {
     edit.on = false;
     document.getElementById("edit").setAttribute("aria-pressed", "false");
@@ -341,16 +469,18 @@ function render() {
 }
 
 function showOnMap(space) {
+  rememberView();
   state.mode = "map";
-  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "map"));
-  if (space.floor !== state.floor) setFloor(space.floor);
+  state.floor = space.floor;
   state.drawn = null;
-  render();
+  syncControls();
+  pick(space.id, true, false);
+  recordView();
   document.getElementById("map-view").scrollIntoView({ block: "start" });
-  requestAnimationFrame(() => pick(space.id));
 }
 
-function pick(id, zoom = true) {
+function pick(id, zoom = true, record = true) {
+  if (record) rememberView();
   state.picked = id;
   render();
   openBadges();
@@ -368,11 +498,12 @@ function pick(id, zoom = true) {
     vp.touch();
     vp.frameRect(box, true, 2.5);
   }
-  try { history.replaceState(null, "", `#floor=${state.floor}${id ? `&room=${id}` : ""}`); } catch {}
+  if (record) recordView();
 }
 
 // Picking the floor already shown clears the filter in the list, which then shows every floor.
 function setFloor(id) {
+  rememberView();
   if (id === state.floor) {
     if (state.mode !== "list") return;
     id = null;
@@ -381,10 +512,7 @@ function setFloor(id) {
   state.picked = null;
   state.drawn = null;
   render();
-  try {
-    history.replaceState(null, "", id ? `#floor=${id}` : location.pathname);
-    if (id) localStorage.setItem("pulse.floor", id); else localStorage.removeItem("pulse.floor");
-  } catch {}
+  recordView();
 }
 
 document.getElementById("floors").addEventListener("click", (e) => {
@@ -402,11 +530,13 @@ for (const [id, key] of [["platform", "platform"], ["mode", "mode"]]) {
     const b = e.target.closest("button");
     if (!b) return;
     // Mac and Windows filter; pressing the one already on shows every platform again.
+    rememberView();
     const off = key === "platform" && state.platform === b.dataset.v;
     state[key] = off ? "all" : b.dataset.v;
     for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b && !off));
-    if (key === "mode") state.drawn = null;
+    if (key === "mode") { state.drawn = null; state.picked = null; }
     render();
+    recordView();
   });
 }
 function applyFilters() {
@@ -425,13 +555,17 @@ function applyFilters() {
   }
 }
 document.getElementById("filter").addEventListener("input", (e) => {
+  rememberView();
   state.query = e.target.value;
   applyFilters();
+  recordView(false);
 });
 document.getElementById("classroom").onclick = (e) => {
+  rememberView();
   state.classroom = !state.classroom;
   e.currentTarget.setAttribute("aria-pressed", String(state.classroom));
   applyFilters();
+  recordView();
 };
 
 document.getElementById("zoom-in").onclick = () => { vp.touch(); vp.zoomAt(1.25, undefined, undefined, true); };
@@ -658,21 +792,24 @@ content.addEventListener("keydown", (e) => {
 });
 
 (async () => {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  try { state.floor = hash.get("floor") || localStorage.getItem("pulse.floor"); } catch { state.floor = hash.get("floor"); }
-  const room = hash.get("room");
-  if (phone.matches && !room) {
-    state.mode = "list";
-    for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
-  }
-  await Pulse.shell({ current: "computers", title: "Computer Status", context: "Shared computers across campus" });
+  const initial = readView();
+  Object.assign(state, initial);
+  syncControls();
+  await Pulse.shell({ current: "computers", hideCurrent: true, title: "Computer Status", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
     const status = await fetch("api/status").then((r) => r.json());
     keepMoves(status);
     state.status = status;
-    if (!edit.drag && !edit.box) render();
-    if (first && room) requestAnimationFrame(() => pick(room));
+    if (first) captureGroupOrder();
+    if (!edit.drag && !edit.box) {
+      if (first) render();
+      else updateLive();
+    }
+    if (first) {
+      if (state.picked) pick(state.picked, true, false);
+      recordView(false);
+    }
     first = false;
   }, 15000);
 })();
