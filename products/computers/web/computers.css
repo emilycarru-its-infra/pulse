@@ -229,12 +229,14 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 
 @media (max-width: 700px) {
   body.app main.doc.wide { padding: 8px 12px; }
-  body.app .masthead { display: grid; grid-template-columns: 96px 1fr; gap: 2px 12px; padding-bottom: 8px; }
-  body.app .masthead .logo { grid-column: 1; grid-row: 1 / span 2; width: 96px; height: auto; }
-  body.app .masthead-text { grid-column: 2; }
+  body.app .masthead { display: flex; align-items: center; gap: 8px 12px; padding-bottom: 8px; }
+  body.app .masthead .logo { width: 96px; height: auto; }
+  body.app .masthead-text { flex: 1 1 112px; min-width: 112px; }
   body.app .masthead h1 { font-size: 20px; }
-  body.app .masthead-nav { grid-column: 2; justify-self: end; gap: 6px; }
-  body.app .masthead-nav a { font-size: 11px; padding: 4px 8px; }
+  body.app .masthead-nav { flex: 0 0 auto; align-self: center; gap: 6px; }
+  body.app .masthead-nav a, body.app .masthead-nav .soon { font-size: 11px; padding: 4px 8px; }
+  body.app .masthead-nav .soon { gap: 4px; }
+  body.app .masthead-nav .soon small { font-size: 10px; }
   body.app main.doc.wide > .band { margin-bottom: 8px; }
   body.app main.doc.wide > .map-toolbar { margin-bottom: 10px; }
   .map-toolbar { gap: 6px 8px; }
