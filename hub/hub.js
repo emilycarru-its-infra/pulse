@@ -131,7 +131,7 @@ function productCard(p, s) {
   if (!p.soon) node.href = p.href;
   const head = el("div", "head");
   head.append(el("h3", null, p.title),
-    p.soon ? el("span", "chip idle", "Coming")
+    p.soon ? el("span", "chip idle", "Upcoming")
       : s ? el("span", `chip ${s.level}`, LEVEL[s.level]) : el("span", "chip bad", "Not answering"));
   node.append(head, el("p", "line", p.soon ? "Not yet live" : s ? s.line : "The product did not answer"));
   if (s?.counts && s.seats) {
@@ -147,7 +147,7 @@ function productCard(p, s) {
     }
     node.append(meter);
   }
-  node.append(el("p", "about", p.about + (p.restricted ? ` (${p.restricted === true ? "restricted audience" : p.restricted})` : "")));
+  if (p.about) node.append(el("p", "about", p.about + (p.restricted ? ` (${p.restricted === true ? "restricted audience" : p.restricted})` : "")));
   const li = el("li");
   li.append(node);
   return li;

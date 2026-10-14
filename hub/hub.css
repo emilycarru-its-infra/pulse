@@ -41,7 +41,7 @@ main.doc > .band { margin-bottom: 14px; }
 
 /* --- Products --------------------------------------------------------------- */
 
-.products { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
+.products { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
 .product { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; min-height: 108px; }
 a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow: inset 0 -4px 0 var(--accent-band); }
 .product .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
