@@ -62,7 +62,7 @@ def test_ingest_key_when_set(pulse):
 
 def test_routes_are_registered():
     routes = {f.get_trigger().route for f in function_app.app.get_functions()}
-    assert routes == {"ingest", "status", "summary", "export/events", "GetRoles"}
+    assert routes == {"ingest", "status", "summary", "export/events", "GetRoles", "positions"}
 
 
 def test_ingest_refuses_any_path_but_its_own(pulse):

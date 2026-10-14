@@ -22,9 +22,13 @@ App settings:
     PULSE_DEVICE_CA_FILE   or a file holding it, relative to this file
     PULSE_DEVICE_MAP       where device ids come from; only "catalog" (each seat's deviceIds) for now
     PULSE_INGEST_KEY       shared key accepted in X-Pulse-Key; unset (the default) turns key auth off
+    PULSE_EDIT_ROLE        SWA role allowed to edit seats; unset disables editing
+    PULSE_LAYOUT_TABLE     durable seat overrides; unset disables editing
     PULSE_TITLE            the product title the summary shows (default Computers)
 """
 
+import base64
+import binascii
 import json
 import logging
 import os
@@ -37,6 +41,7 @@ import azure.functions as func
 from pulse_computers.deviceauth import CatalogDeviceMap, authorize, load_bundle
 from pulse_computers.service import ComputersService, ValidationError
 from pulse_computers.store import MemoryStore, TableStore
+from pulse_computers.layout import LayoutConflict, MemoryLayouts, TableLayouts, apply_positions, validate_moves
 
 HERE = Path(__file__).resolve().parent
 MAX_EVENT = 16_384
@@ -55,6 +60,11 @@ class Pulse:
         store = (TableStore.from_account(account, env.get("PULSE_EVENTS_TABLE", "events"),
                                          env.get("PULSE_STATE_TABLE", "state")) if account else MemoryStore())
         self.service = ComputersService(catalog, store, env.get("PULSE_TITLE", "Computers"))
+        self.edit_role = env.get("PULSE_EDIT_ROLE", "")
+        self.layouts = None
+        if env.get("PULSE_LAYOUT_TABLE"):
+            self.layouts = (TableLayouts.from_account(account, env["PULSE_LAYOUT_TABLE"])
+                            if account else MemoryLayouts())
         kind = env.get("PULSE_DEVICE_MAP", "catalog")
         if kind not in MAPS:
             raise ValueError(f"PULSE_DEVICE_MAP must be one of {', '.join(MAPS)}")
@@ -113,7 +123,52 @@ def ingest(req: func.HttpRequest) -> func.HttpResponse:
 
 
 def status(req: func.HttpRequest) -> func.HttpResponse:
-    return _json(200, {**pulse().service.status(), "editable": False})
+    p = pulse()
+    result = p.service.status()
+    if p.layouts is not None:
+        positions, version = p.layouts.read()
+        apply_positions(result, positions)
+        result["layoutVersion"] = version
+    return _json(200, {**result, "editable": can_edit(req, p), "editableRooms": False})
+
+
+def can_edit(req: func.HttpRequest, p: Pulse) -> bool:
+    if p.layouts is None or not p.edit_role:
+        return False
+    try:
+        principal = json.loads(base64.b64decode(req.headers.get("x-ms-client-principal", ""), validate=True))
+        roles = principal.get("userRoles")
+        return (isinstance(principal.get("userId"), str) and bool(principal["userId"])
+                and isinstance(roles, list) and "authenticated" in roles and p.edit_role in roles)
+    except (ValueError, AttributeError, binascii.Error):
+        return False
+
+
+def save_positions(req: func.HttpRequest) -> func.HttpResponse:
+    if not _exact_path(req.url, "/api/positions"):
+        return _json(404, {"error": "not found"})
+    p = pulse()
+    if not can_edit(req, p):
+        return _json(403, {"error": "seat editing requires an administrator"})
+    if req.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
+        return _json(415, {"error": "send application/json"})
+    if len(req.get_body()) > MAX_EVENT:
+        return _json(413, {"error": "layout changes are too large"})
+    version = req.headers.get("If-Match")
+    if not version:
+        return _json(428, {"error": "load the current layout before editing"})
+    try:
+        moves = validate_moves(p.service.catalog, json.loads(req.get_body()))
+        positions, current = p.layouts.read()
+        if version != current:
+            raise LayoutConflict
+        positions.update(moves)
+        saved = p.layouts.write(positions, current)
+    except LayoutConflict:
+        return _json(409, {"error": "another administrator saved changes; reload and try again"})
+    except ValueError as e:
+        return _json(400, {"error": str(e)})
+    return _json(200, {"layoutVersion": saved})
 
 
 def summary(req: func.HttpRequest) -> func.HttpResponse:
@@ -159,5 +214,6 @@ def get_roles(req: func.HttpRequest) -> func.HttpResponse:
 app.route(route="ingest", methods=["POST"])(ingest)
 app.route(route="GetRoles", methods=["POST"])(get_roles)
 app.route(route="status", methods=["GET"])(status)
+app.route(route="positions", methods=["POST"])(save_positions)
 app.route(route="summary", methods=["GET"])(summary)
 app.route(route="export/events", methods=["GET"])(export_events)

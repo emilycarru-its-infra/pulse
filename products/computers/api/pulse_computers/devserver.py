@@ -159,7 +159,7 @@ def make_handler(service: ComputersService, theme: Path, key: str, assets: Path,
             url = urllib.parse.urlparse(self.path)
             p = url.path
             if p == "/computers/api/status":
-                return self._json(200, {**service.status(), "editable": positions is not None})
+                return self._json(200, {**service.status(), "editable": positions is not None, "editableRooms": positions is not None})
             if p == "/computers/api/summary":
                 return self._json(200, service.summary())
             if p == "/computers/api/export/events":
