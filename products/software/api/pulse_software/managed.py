@@ -12,6 +12,9 @@ from .inventory import app_id
 
 def identity(name):
     text = re.sub(r"\.app$", "", name.casefold())
+    text = re.sub(r"\(\s*git\s+[0-9a-f]+\s*\)", "", text)
+    text = re.sub(r"\bsp\d+(?:\.\d+)*\b", "", text)
+    text = re.sub(r"(?<=[a-z])\d+(?:\.\d+)+(?:v\d+)?\b", "", text)
     text = re.sub(r"\b(?:x64|x86|arm64|64-bit|32-bit)\b", "", text)
     text = re.sub(r"\bv?\d+(?:\.\d+)+(?:v\d+)?\b", "", text)
     text = re.sub(r"\b\d+(?:\.\d+)*\b", "", text)

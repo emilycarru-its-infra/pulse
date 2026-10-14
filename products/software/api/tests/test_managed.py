@@ -44,4 +44,8 @@ def test_manifest_uninstalls_are_not_eligible_and_version_names_normalize():
     assert identity("Sketch Studio 2026 (64-bit)") == identity("Sketch Studio")
     assert identity("Sketch Studio 2026.app") == identity("Sketch Studio")
     assert identity("Sketch Studio 17.0v7") == identity("Sketch Studio")
+    assert identity("Sketch9.0v3") == identity("Sketch")
+    assert identity("Sketch 2026 SP03.2") == identity("Sketch")
+    assert identity("Sketch (x64) 5.3.4 (git bd6e8d0)") == identity("Sketch")
     assert identity("Sketch Engine") != identity("Sketch")
+    assert identity("Sketch Studio") != identity("Sketch")
