@@ -25,16 +25,12 @@ changing before opening a product for the details.
 Single sign-on and product audiences keep the overview relevant to each viewer. Your site
 supplies the service catalog, incident updates and maintenance schedule.
 
-[Explore the Pulse hub →](hub/README.md)
-
 **ComputersPulse** turns shared computers into a live view of your spaces. See what's
 free, in use or offline. Explore a floorplan or scan the list. Filter for Mac or Windows
 and find a seat before making the trip.
 
 Small native agents report presence from managed computers. Inventory supplies the
 devices and their recorded locations; your floorplans put them on the map.
-
-[Explore ComputersPulse →](products/computers/README.md)
 
 **SoftwarePulse** starts with the application. Browse a curated icon grid, search by name,
 or narrow the collection by platform and category. Expand an app to see its locations,
@@ -44,15 +40,11 @@ Prefer to start with a room? Switch to **Locations** and see its software collec
 Munki and Cimian manifests define the collection; ReportMate installation reports show
 where those applications have been observed. Package icons bring the catalog to life.
 
-[Explore SoftwarePulse →](products/software/README.md)
-
 **PrintersPulse** puts printers on the same floorplans as shared computers. Browse the
 map or list to find a printer, then check its state, supplies, paper and queue in one place.
 
 The interface and inventory catalog are implemented with sample status data. A collector
 integration will connect the experience to the print-management system for real state.
-
-[Explore PrintersPulse →](products/printers/README.md)
 
 **ServersPulse** brings server and service health into a focused view for IT staff. See
 where a server runs, the services it supports, and its health, load and alerts without
@@ -60,8 +52,6 @@ losing the connection between infrastructure and the people who depend on it.
 
 The current experience uses a sample health source. Planned collectors read existing
 monitoring systems, cloud metrics and hypervisor APIs, with access set by product audience.
-
-[Explore ServersPulse →](products/servers/README.md)
 
 ## The product family
 
