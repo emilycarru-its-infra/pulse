@@ -1,28 +1,98 @@
-# Pulse
+<p align="center">
+  <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
+</p>
 
-Pulse is an intranet status platform. A hub page summarizes everything, and each
-kind of resource is its own product on a subdomain:
+<p align="center">
+  <strong>Find a free computer. Find the right software. Get on with your work.</strong>
+</p>
 
-| Product | Example host | Shows | Collector |
-|---|---|---|---|
-| Hub | `status.example.edu` | One-line summary from every product the viewer may see | Reads each product's `/api/summary` |
-| ComputersPulse | `computers.status.example.edu` | Shared computers (labs, open-access stations, kiosks, podiums): free, in use or offline, on floorplans | Small agent on each Mac and Windows machine |
-| PrintersPulse | `printers.status.example.edu` | Printer state, queues and supplies | Pulls from the print-management API |
-| ServersPulse | `servers.status.example.edu` | Server and service health, for a restricted audience | Pulls from existing monitoring |
+<p align="center">
+  <a href="products/computers/README.md">Computers</a> ·
+  <a href="products/software/README.md">Software</a> ·
+  <a href="hub/README.md">Status hub</a> ·
+  <a href="core/README.md">Build with Pulse</a>
+</p>
 
-Every page sits behind single sign-on, and each product declares the audience
-role it requires.
+# A campus has a pulse. Make it visible.
 
-## Layout
+The computer is somewhere. The software is installed somewhere. A service is down,
+maintenance is coming, and someone needs to know before they walk across campus.
 
-- `core/`: event contract, seat states, space catalog and inventory providers ([core/README.md](core/README.md)); web shell; the `pulse-product` Terraform module ([core/terraform/pulse-product](core/terraform/pulse-product))
-- `hub/`: the summary page
-- `products/computers/`: `api` (with a simulator, local dev server and Azure Functions host), `web` and the Mac and Windows agents ([products/computers/README.md](products/computers/README.md))
-- `products/printers/`: PrintersPulse, on sample data until its collector exists ([products/printers/README.md](products/printers/README.md))
-- `products/servers/`: ServersPulse, with a sample health source until its collectors exist ([products/servers/README.md](products/servers/README.md))
+Pulse brings those answers together: live computer availability, a searchable software
+catalog, and a shared view of service health. One product family, with focused experiences
+for the people who use it.
 
-This repo holds only generic code. Site-specific values (hostnames, catalogs,
-floorplans, tenant settings) are configuration that a separate deploy repo supplies.
+## A place to work
+
+**ComputersPulse** turns shared computers into a live view of your spaces. See what's
+free, in use or offline. Explore a floorplan or scan the list. Filter for Mac or Windows
+and find a seat before making the trip.
+
+Small native agents report presence from managed computers. Inventory supplies the
+devices and their recorded locations; your floorplans put them on the map.
+
+[Explore ComputersPulse →](products/computers/README.md)
+
+## The software you need. The places that have it.
+
+**SoftwarePulse** starts with the application. Browse a curated icon grid, search by name,
+or narrow the collection by platform and category. Expand an app to see its locations,
+then send someone a dedicated link to the answer.
+
+Prefer to start with a room? Switch to **Locations** and see its software collection.
+Munki and Cimian manifests define the collection; ReportMate installation reports show
+where those applications have been observed. Package icons bring the catalog to life.
+
+[Explore SoftwarePulse →](products/software/README.md)
+
+## One front door
+
+The **Pulse hub** brings product summaries, active incidents, scheduled maintenance and
+service history into one overview. Each product has its own page and audience, behind
+single sign-on.
+
+| Experience | What it answers | What's here today |
+|---|---|---|
+| [ComputersPulse](products/computers/README.md) | Where is a computer free? | Live presence API, Mac and Windows agents, floorplans and list view |
+| [SoftwarePulse](products/software/README.md) | Where can I use this application? | Curated software grid, location collections, shareable app links and installation snapshots |
+| [Hub](hub/README.md) | What's working? What's changing? | Product summaries, incidents, maintenance and service history |
+| [PrintersPulse](products/printers/README.md) | Where can I print? | Interface and sample data; collector integration remains |
+| [ServersPulse](products/servers/README.md) | Which services need attention? | Interface and sample health source; collector integration remains |
+
+## Connected by design
+
+Pulse builds on the systems you already maintain:
+
+- **Inventory → places.** Providers build the computer catalog from your inventory, so
+  device identity and recorded location have an authoritative source.
+- **Managed software → discovery.** Deployment manifests curate the software collection;
+  installation evidence connects applications to locations.
+- **Presence → availability.** Computer agents report state. Installation reports have
+  their own freshness window; an available computer does not imply an available licence.
+- **Products → one overview.** A shared summary contract gives the hub a consistent view
+  across focused products.
+
+Your deployment controls refresh schedules, source integrations and audience assignments.
+A physical move appears when inventory is updated and the catalog is rebuilt.
+
+## Make it yours
+
+The application code is generic. Your deployment supplies the identity configuration,
+hostnames, inventory mappings, floorplans and theme. Products can live on their own
+subdomains—`computers.status.example.edu`, `software.status.example.edu`—with a hub at
+`status.example.edu`.
+
+The shared foundation includes a plain HTML/CSS/JavaScript web shell, Python APIs,
+inventory providers and a reusable Azure Terraform module. Site-specific configuration
+and credentials stay in a separate deployment repository.
+
+| Start here | What you'll find |
+|---|---|
+| [Core](core/README.md) | Catalogs, inventory providers, event contracts and shared states |
+| [Local computer demo](products/computers/README.md#run-it-locally) | Run the hub and computer experience with simulated presence |
+| [Software integration](products/software/README.md) | Collection compilation, installation evidence and freshness |
+| [Azure module](core/terraform/pulse-product) | Functions, Static Web Apps and storage infrastructure |
+| [Hub configuration](hub/README.md) | Products, incidents, maintenance and history |
 
 ## License
 
