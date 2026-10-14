@@ -208,11 +208,24 @@ function homeFor(floor) {
 // room comes first.
 const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0]} +${rooms.length - 1} rooms`;
 
+const groupKey = (s) => `${s.floor}|${s.name}`;
+const groupOrder = new Map();
+function captureGroupOrder() {
+  const groups = new Map();
+  for (const space of state.status.spaces) {
+    const key = groupKey(space);
+    if (!groups.has(key)) groups.set(key, { free: 0, room: space.room || "" });
+    groups.get(key).free += countsOf(space.seats).available;
+  }
+  for (const [key] of [...groups].sort(([, a], [, b]) => b.free - a.free || a.room.localeCompare(b.room)))
+    if (!groupOrder.has(key)) groupOrder.set(key, groupOrder.size);
+}
+
 function renderList() {
   const groups = new Map();
   for (const space of visibleSpaces()) {
     if ((state.floor && space.floor !== state.floor) || !seatsOf(space).length) continue;
-    const key = `${space.floor}|${space.name}`;
+    const key = groupKey(space);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(space);
   }
@@ -222,10 +235,11 @@ function renderList() {
       const seats = spaces.flatMap(seatsOf);
       return { spaces, seats, c: countsOf(seats), rooms: spaces.map((s) => s.room).filter(Boolean) };
     })
-    .sort((a, b) => b.c.available - a.c.available || (a.rooms[0] ?? "").localeCompare(b.rooms[0] ?? ""))
+    .sort((a, b) => groupOrder.get(groupKey(a.spaces[0])) - groupOrder.get(groupKey(b.spaces[0])))
     .map(({ spaces, seats, c, rooms }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
+      card.dataset.group = groupKey(spaces[0]);
       card.innerHTML = `<div class="head"><div><h3></h3><p class="room"></p><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${c.available}</b><span>free of ${seats.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
@@ -266,6 +280,7 @@ function renderList() {
 
 function tile(s, names) {
   const li = document.createElement("li");
+  li.dataset.host = s.hostname;
   li.className = `tile ${s.state}${s.mobile ? " mobile" : ""}`;
   li.textContent = names.get(s.hostname);
   li.title = `${seatName(s)}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}${mobileHint(s)}`;
@@ -298,6 +313,7 @@ function renderDrawer() {
   const names = labelsFor(seats);
   drawer.querySelector(".rows").replaceChildren(...seats.map((s) => {
     const li = document.createElement("li");
+    li.dataset.host = s.hostname;
     li.innerHTML = `<span class="tag ${s.state}"></span><span class="host"></span><span class="state">${WORD[s.state]}</span>`;
     li.querySelector(".tag").classList.toggle("mobile", !!s.mobile);
     li.title = mobileHint(s).replace(/^\. /, "");
@@ -308,6 +324,66 @@ function renderDrawer() {
   drawer.querySelector(".close").onclick = () => pick(null);
   const relayout = drawer.querySelector(".relayout");
   if (relayout) relayout.onclick = () => saveRoom(space, roomBox(space), { relayout: true });
+}
+
+// Live status updates retain computer nodes, room cards and their initial ranking.
+function updateLive() {
+  const text = (node, value) => { if (node && node.textContent !== String(value)) node.textContent = value; };
+  const counts = (node, seats) => {
+    const html = countsLine(countsOf(seats));
+    if (node && node.innerHTML !== html) node.innerHTML = html;
+  };
+  const all = visibleSpaces().flatMap(seatsOf);
+  text(document.querySelector("#total b"), countsOf(all).available);
+  for (const button of document.querySelectorAll("#floors button")) {
+    const own = floorSpaces(button.dataset.id).flatMap(seatsOf);
+    const node = button.querySelector("small").firstChild;
+    if (node.nodeValue !== String(countsOf(own).available)) node.nodeValue = String(countsOf(own).available);
+  }
+  const byHost = new Map(state.status.spaces.flatMap((s) => s.seats).map((s) => [s.hostname, s]));
+  for (const node of document.querySelectorAll(".tile[data-host], .seat-g[data-host], .rows li[data-host]")) {
+    const seat = byHost.get(node.dataset.host);
+    if (!seat) continue;
+    if (node.classList.contains("tile")) {
+      const cls = `tile ${seat.state}${seat.mobile ? " mobile" : ""}`;
+      if (node.className !== cls) node.className = cls;
+      node.title = `${seatName(seat)}: ${WORD[seat.state]}. Last heard ${Pulse.ago(seat.lastSeen)}${mobileHint(seat)}`;
+      node.setAttribute("aria-label", `${seatName(seat)}, ${WORD[seat.state]}${mobileHint(seat)}`);
+    } else if (node.classList.contains("seat-g")) {
+      node.querySelector(".seat").setAttribute("class", `seat ${seat.state}`);
+      node.querySelector(".num").setAttribute("class", `num ${seat.state}`);
+      text(node.querySelector("title"), `${seatName(seat)}: ${WORD[seat.state]}${mobileHint(seat)}`);
+    } else {
+      node.querySelector(".tag").className = `tag ${seat.state}${seat.mobile ? " mobile" : ""}`;
+      text(node.querySelector(".state"), WORD[seat.state]);
+    }
+  }
+  for (const card of document.querySelectorAll(".space-card")) {
+    const own = visibleSpaces().filter((s) => groupKey(s) === card.dataset.group).flatMap(seatsOf);
+    text(card.querySelector(".free b"), countsOf(own).available);
+    counts(card.querySelector(".counts"), own);
+  }
+  for (const space of floorSpaces(state.floor)) {
+    const own = seatsOf(space), free = countsOf(own).available;
+    const group = content.querySelector(`.space[data-id="${CSS.escape(space.id)}"]`);
+    group?.classList.toggle("none", !free);
+    group?.setAttribute("aria-label", `${space.name}, room ${space.room ?? ""}: ${free} of ${own.length} free`);
+    const badge = content.querySelector(`.badge[data-id="${CSS.escape(space.id)}"]`);
+    if (badge) {
+      badge.classList.toggle("none", !free);
+      const label = badge.querySelector(".long text");
+      text(label.querySelector(".free"), `${free}/${own.length} free`);
+      badge.querySelector(".long rect").setAttribute("width", label.getBBox().width + 14);
+    }
+  }
+  const drawer = document.getElementById("drawer");
+  if (!drawer.hidden) {
+    const own = state.status.spaces.find((s) => s.id === state.picked);
+    if (own) {
+      text(drawer.querySelector(".big"), countsOf(seatsOf(own)).available);
+      counts(drawer.querySelector(".counts"), seatsOf(own));
+    }
+  }
 }
 
 function viewState() {
@@ -724,7 +800,11 @@ content.addEventListener("keydown", (e) => {
     const status = await fetch("api/status").then((r) => r.json());
     keepMoves(status);
     state.status = status;
-    if (!edit.drag && !edit.box) render();
+    if (first) captureGroupOrder();
+    if (!edit.drag && !edit.box) {
+      if (first) render();
+      else updateLive();
+    }
     if (first) {
       if (state.picked) pick(state.picked, true, false);
       recordView(false);

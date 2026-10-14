@@ -1,4 +1,4 @@
-body.app { --occupied: color-mix(in srgb, var(--text-primary) 25%, var(--surface-1)); }
+body.app { --occupied: color-mix(in srgb, var(--text-primary) 8%, var(--surface-1)); }
 /* A full-height app: masthead, toolbar, then the map fills what is left. */
 body.app { height: 100vh; overflow: hidden; }
 body.app main.doc.wide { height: 100%; display: flex; flex-direction: column; padding: 16px 24px 12px; }
@@ -198,6 +198,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .space-card .free { text-align: right; white-space: nowrap; }
 .space-card .free b { font-size: 26px; line-height: 1; display: block; }
 .space-card .free span, .space-card .counts { font-size: 12px; color: var(--text-secondary); }
+.space-card .counts { min-height: 2lh; }
 .tiles { list-style: none; display: grid; gap: 5px; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); }
 .tile { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 4px; font-size: 10px; overflow: visible; white-space: nowrap; font-weight: 700; border: 2px solid transparent; }
 .tile.available { background: var(--ok); color: #fff; }
@@ -224,4 +225,30 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 @media (max-width: 700px) {
   .toolbar-end { flex: 0 1 100%; flex-wrap: wrap; justify-content: flex-end; }
   .toolbar-end .legend { flex: 1 1 210px; }
+}
+
+@media (max-width: 700px) {
+  body.app main.doc.wide { padding: 8px 12px; }
+  body.app .masthead { display: grid; grid-template-columns: 96px 1fr; gap: 2px 12px; padding-bottom: 8px; }
+  body.app .masthead .logo { grid-column: 1; grid-row: 1 / span 2; width: 96px; height: auto; }
+  body.app .masthead-text { grid-column: 2; }
+  body.app .masthead h1 { font-size: 20px; }
+  body.app .masthead-nav { grid-column: 2; justify-self: end; gap: 6px; }
+  body.app .masthead-nav a { font-size: 11px; padding: 4px 8px; }
+  body.app main.doc.wide > .band { margin-bottom: 8px; }
+  body.app main.doc.wide > .map-toolbar { margin-bottom: 10px; }
+  .map-toolbar { gap: 6px 8px; }
+  #mode { order: 0; }
+  .search { order: 1; flex: 1 1 120px; width: auto; }
+  .floors { order: 2; }
+  #platform, .map-toolbar > [aria-label="Space type"] { order: 3; }
+  .zoom { order: 4; margin-left: auto; }
+  .toolbar-end { order: 5; flex: 0 0 100%; flex-wrap: nowrap; gap: 8px; }
+  .toolbar-end .legend { flex: 1 1 auto; gap: 4px 8px; font-size: 11px; }
+  .legend li { gap: 4px; }
+  .key { width: 11px; height: 11px; }
+  .total { flex: 0 0 64px; font-size: 11px; }
+  .total b { font-size: 18px; }
+  .total .word { display: none; }
+  .segmented button { padding: 9px 12px; }
 }

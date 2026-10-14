@@ -115,7 +115,8 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
           plan_index: dict | None = None, boxes: dict | None = None) -> tuple[dict, Report]:
     """boxes: room outlines drawn in the seat editor, {room: [x0, y0, x1, y1]} in plan pixels,
     which replace the plan index's."""
-    devices = [d for d in devices if d.deployed]
+    catalogs = set(site.get("inventory", {}).get("catalogs", []))
+    devices = [d for d in devices if d.deployed and (not catalogs or d.catalog in catalogs)]
     categories = set(site.get("inventory", {}).get("categories", []))
     plan_cfg = site.get("plans", {})
     plans = Plans(plan_index, plan_cfg.get("rooms", {}), plan_cfg.get("room_pattern", r"^(\S+)"))

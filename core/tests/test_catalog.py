@@ -176,3 +176,17 @@ def test_classification_keeps_mobile_devices_separate_from_classrooms():
     assert lab["tags"] == ["classroom"]
     assert "tags" not in mobile and mobile["seats"][0]["mobile"] is True
     assert "mobile" not in lab["seats"][0]
+
+
+def test_catalog_filter_excludes_staff_in_shared_fleet():
+    rows = [asset(str(i), f"SHARED-{i:02}") for i in range(4)]
+    for row, catalog in zip(rows, ["Curriculum", "Kiosk", "Staff", ""]):
+        row["custom_fields"]["Catalog"] = {"value": catalog}
+    site = {"inventory": {"catalogs": ["Curriculum", "Kiosk"]},
+            "spaces": [{"id": "shared", "name": "Shared computers", "kind": "station",
+                        "match": {"group": "Open Mac Lab"}}]}
+    catalog, _ = build(site, provider(rows).devices(), "snipeit")
+    assert [s["hostname"] for s in catalog["spaces"][0]["seats"]] == ["SHARED-00", "SHARED-01"]
+    site["inventory"].pop("catalogs")
+    catalog, _ = build(site, provider(rows).devices(), "snipeit")
+    assert len(catalog["spaces"][0]["seats"]) == 4
