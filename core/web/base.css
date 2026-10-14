@@ -52,6 +52,12 @@ main.doc > * { width: 90%; margin-left: auto; margin-right: auto; }
 .masthead-nav a[aria-current="page"], .masthead-nav a:hover, .masthead-nav a:focus-visible {
   background: var(--accent-band); color: #000000;
 }
+.masthead-nav .soon {
+  display: inline-flex; align-items: baseline; gap: 6px; font-size: 14px; font-weight: 700;
+  color: var(--text-secondary); padding: 7px 14px; border: 1px dashed var(--rule); border-radius: 4px;
+  cursor: default;
+}
+.masthead-nav .soon small { font-size: 12px; font-weight: 400; }
 
 .logo { height: 44px; width: auto; flex-shrink: 0; }
 .logo-dark { display: none; }

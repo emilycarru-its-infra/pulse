@@ -46,6 +46,11 @@ both packages, the contract and the files you add. Deploy it with a remote build
 installs `requirements.txt`. The page's files (`web/`, `core/web/`, a theme and the catalog's
 plan images under `catalog/`) go to the Static Web App.
 
+The masthead menu lists the products in `/nav.json` when the site deploys one: an array of
+`{ "id", "title", "href", "soon" }`. An entry with `soon` or no `href` is named but not linked,
+marked "Coming soon". Without the file the menu links the hub's Overview and every live
+product the hub lists. Leave out any product this page's audience may not see.
+
 ### App settings
 
 The module sets the storage ones; the rest come from its `app_settings`.

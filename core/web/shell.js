@@ -7,6 +7,9 @@ window.Pulse = window.Pulse || {};
 Pulse.shell = async function ({ current, context, title }) {
   const brand = await fetch("/theme/brand.json").then((r) => r.json()).catch(() => ({}));
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
+  // A site may list the products its menu offers in /nav.json, each { id, title, href, soon }.
+  // Without one the menu is the hub's Overview plus every product the hub lists as live.
+  const nav = await fetch("/nav.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const site = brand.site || "Status";
   document.title = title ?? (current === "hub" ? site : `${products.find((p) => p.id === current)?.title ?? ""} · ${site}`);
 
@@ -24,17 +27,30 @@ Pulse.shell = async function ({ current, context, title }) {
   text.querySelector(".context").textContent = context ?? "";
   header.append(text);
 
-  const nav = document.createElement("nav");
-  nav.className = "masthead-nav";
-  nav.setAttribute("aria-label", "Products");
-  for (const p of [{ id: "hub", title: "Overview", href: "/" }, ...products.filter((p) => !p.soon)]) {
+  const menu = document.createElement("nav");
+  menu.className = "masthead-nav";
+  menu.setAttribute("aria-label", "Products");
+  const items = Array.isArray(nav) ? nav : [{ id: "hub", title: "Overview", href: "/" }, ...products.filter((p) => !p.soon)];
+  for (const p of items) {
+    if (p.soon || !p.href) {
+      // Named but not linked: the product is coming and has nothing to show yet.
+      const span = document.createElement("span");
+      span.className = "soon";
+      span.setAttribute("aria-disabled", "true");
+      span.textContent = p.title;
+      const note = document.createElement("small");
+      note.textContent = "Coming soon";
+      span.append(note);
+      menu.append(span);
+      continue;
+    }
     const a = document.createElement("a");
     a.href = p.href;
     a.textContent = p.title;
     if (p.id === current) a.setAttribute("aria-current", "page");
-    nav.append(a);
+    menu.append(a);
   }
-  header.append(nav);
+  if (menu.childElementCount) header.append(menu);
 
   const band = document.createElement("div");
   band.className = "band";
