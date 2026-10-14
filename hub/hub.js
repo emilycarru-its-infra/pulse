@@ -187,11 +187,13 @@ function render(data, products, summaries) {
 
   document.getElementById("products").replaceChildren(...products.map((p, i) => productCard(p, summaries[i])));
 
+  const expanded = new Map([...document.querySelectorAll(".group")].map((g) => [g.dataset.group, g.open]));
   const groups = (data.groups || []).map((g) => {
     const levels = (g.components || []).map((c) => current.get(c.id));
     const level = worst(levels);
     const det = el("details", "group card");
-    det.open = true;
+    det.dataset.group = g.name;
+    det.open = expanded.get(g.name) ?? true;
     const sum = el("summary");
     sum.append(el("h3", null, g.name), chip(level, level === "ok" ? "Operational" : `${levels.filter((l) => l !== "ok").length} affected`));
     det.append(sum);
@@ -245,3 +247,5 @@ function render(data, products, summaries) {
     render(data, products, summaries);
   }, 30000);
 })();
+
+Pulse.masonry(document.getElementById("groups"));

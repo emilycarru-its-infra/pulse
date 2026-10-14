@@ -17,6 +17,7 @@
       <p class="fine" id="updated"></p>
     </section>
 
+    <div class="alerts">
     <section id="active-wrap" hidden>
       <p class="kicker">Active incidents</p>
       <ol class="incidents" id="active"></ol>
@@ -26,6 +27,8 @@
       <p class="kicker">Scheduled maintenance</p>
       <ol class="incidents" id="maintenance"></ol>
     </section>
+
+    </div>
 
     <section>
       <p class="kicker">Live detail</p>
@@ -40,7 +43,8 @@
           <span class="key"><i class="day warn"></i>Degraded</span>
           <span class="key"><i class="day bad"></i>Outage</span>
           <span class="key"><i class="day maint"></i>Maintenance</span>
-          <span class="key">90 days, oldest left</span>
+          <span class="key desktop-range">90 days, oldest left</span>
+          <span class="key mobile-range">30 days, oldest left</span>
         </p>
       </div>
       <div class="groups" id="groups"></div>
@@ -54,6 +58,7 @@
     <p class="fine foot" id="foot">Pulse shows live state; history lives in the data warehouse.</p>
   </main>
   <script src="/core/shell.js"></script>
+  <script src="/core/masonry.js"></script>
   <script src="/hub.js"></script>
 </body>
 </html>
