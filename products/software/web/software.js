@@ -24,6 +24,7 @@ function icon(app, size = 48) {
 }
 function platformBadges(platforms) {
   const badges = document.createElement("div"); badges.className = "platform-badges";
+  if (platformFilter) return document.createDocumentFragment();
   const paths = {'mac': 'M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z', 'windows': 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z'};
   for (const platform of [...platforms].sort()) {
     if (!paths[platform]) continue;
@@ -108,6 +109,14 @@ function renderLocationBrowse(query) {
     card.append(apps); return card;
   }));
 }
+function collapseAppsExcept(keep) {
+  openApps.clear();
+  for (const card of ui["software-list"].querySelectorAll(".software-card[open]")) {
+    if (card === keep) openApps.add(card.dataset.id);
+    else card.open = false;
+  }
+}
+document.addEventListener("click", (event) => collapseAppsExcept(event.target.closest(".software-card")));
 function renderBrowse() {
   const query = ui.search.value.trim().toLocaleLowerCase();
   cardObserver.disconnect();
@@ -127,12 +136,12 @@ function renderBrowse() {
   ui["software-list"].replaceChildren(...apps.map((app) => {
     const card = document.createElement("details"); card.className = "software-card"; card.dataset.id = app.id;
     card.open = openApps.has(app.id);
-    card.addEventListener("toggle", () => { if (card.isConnected) { if (card.open) openApps.add(app.id); else openApps.delete(app.id); scheduleLayout(); } });
+    card.addEventListener("toggle", () => { if (card.isConnected) { if (card.open) collapseAppsExcept(card); else openApps.delete(app.id); scheduleLayout(); } });
     const summary = document.createElement("summary");
     summary.append(icon(app, 64));
     const name = document.createElement("div"); name.className = "software-name";
     name.append(text("h2", app.name), text("span", app.category, "category")); summary.append(name);
-    summary.append(text("span", app.platforms.map(platformName).join(" · "), "platforms"));
+    summary.append(platformBadges(app.platforms));
     const locations = groupedLocations(app);
     summary.append(text("span", locations.length ? `${locations.length} location${locations.length === 1 ? "" : "s"}` : "No recent reports", "location-total"));
     card.append(summary);
@@ -167,9 +176,9 @@ function renderLocations(app) {
     const row = document.createElement("article"); row.className = "location-row";
 
     const rooms = [...location.rooms].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
-    if (rooms.length) row.append(text("p", `${rooms.length === 1 ? "Room" : "Rooms"} ${rooms.join(" · ")}`, "location-rooms"));
-    row.append(text("h4", location.name));
-    row.append(text("span", [...location.platforms].sort().map(platformName).join(" · "), "location-platforms"));
+    row.append(text("h4", rooms.length ? rooms.join(" · ") : location.name, "room-number"));
+    if (rooms.length) row.append(text("p", location.name, "room-name"));
+    row.append(platformBadges(location.platforms));
     return row;
   }));
 }

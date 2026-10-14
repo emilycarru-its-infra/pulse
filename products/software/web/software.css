@@ -15,15 +15,13 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 #notice { margin-top:1.25rem; margin-bottom:0; font-size:.9rem; }
 .software-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); column-gap:1rem; grid-auto-rows:1px; align-items:start; }
 .software-card { border:1px solid var(--line,#d3d3d3); border-radius:8px; background:var(--surface-1,transparent); overflow:hidden; }
-.software-card summary { display:flex; flex-direction:column; align-items:center; text-align:center; gap:.6rem; padding:1.5rem 1rem 1rem; cursor:pointer; list-style:none; }
+.software-card summary { display:flex; flex-direction:column; position:relative; align-items:center; text-align:center; gap:.6rem; padding:1.5rem 1rem 1rem; cursor:pointer; list-style:none; }
 .software-card summary::-webkit-details-marker { display:none; }
-.software-card summary::after { content:"⌄"; opacity:.55; }
-.software-card[open] summary::after { content:"⌃"; }
 .software-card summary:hover { background:color-mix(in srgb,currentColor 4%,transparent); }
 .app-locations { border-top:1px solid var(--line,#ddd); padding:.5rem .85rem .85rem; }
 .compact-location { padding:.65rem 0; border-bottom:1px solid var(--line,#ddd); font-size:.8rem; }
 .compact-location strong, .compact-location small { display:block; }
-.compact-location small { margin-top:.3rem; opacity:.7; line-height:1.5; }
+.compact-location small { width:100%; margin-top:.35rem; font-size:1rem; opacity:.85; line-height:1.4; }
 .compact-location .room-number { font-size:1.15rem; line-height:1.4; }
 .app-locations > p { font-size:.8rem; }
 .app-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.65rem; padding-top:.85rem; }
@@ -43,12 +41,14 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 .location-heading h3 { margin:0 0 .35rem; }
 .location-heading p { margin:0; font-size:.85rem; opacity:.7; }
 .locations { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); column-gap:2rem; }
-.location-row { padding:1.25rem 0; border-bottom:1px solid var(--line,#ccc); }
-.location-row h4 { font-size:1rem; margin:0 0 .5rem; }
+.location-row { position:relative; padding:1.25rem 3.75rem 1.25rem 0; border-bottom:1px solid var(--line,#ccc); }
+.location-row .room-number { font-size:1.4rem; line-height:1.4; margin:0 0 .5rem; }
+.location-row .room-name { font-size:1rem; line-height:1.4; margin:0; opacity:.85; }
+.location-row .platform-badges { right:0; }
 .location-row .location-rooms { margin:0 0 .5rem; font-size:1.5rem; font-weight:700; }
 .location-platforms { font-size:.8rem; opacity:.65; }
 :focus-visible { outline:2px solid currentColor; outline-offset:4px; }
-@media(max-width:600px) { .software-list { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:1rem; } .software-card summary { padding:1rem .65rem .65rem; } .location-heading { align-items:start; } .locations { grid-template-columns:1fr; } }
+@media(max-width:600px) { .software-list { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:1rem; } .software-card summary { padding:1rem .65rem 1rem; } .location-heading { align-items:start; } .locations { grid-template-columns:1fr; } }
 
 .location-catalog { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); column-gap:1.25rem; grid-auto-rows:1px; align-items:start; }
 .location-card { border:1px solid var(--line,#d3d3d3); border-radius:8px; background:var(--surface-1,transparent); overflow:hidden; }
@@ -62,5 +62,7 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 .location-software .icon-fallback { width:32px; height:32px; border-radius:6px; }
 
 .platform-badges { position:absolute; top:1.25rem; right:1.25rem; display:flex; gap:.5rem; }
-.platform-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:4px; background:color-mix(in srgb,currentColor 5%,transparent); color:var(--text-primary); }
+.platform-badge { display:inline-flex; align-items:center; justify-content:center; width:20px; height:24px; color:var(--text-primary); }
 .platform-badge svg { width:20px; height:20px; opacity:.55; }
+
+.software-card .platform-badges { position:static; justify-content:center; }
