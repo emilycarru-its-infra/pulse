@@ -33,6 +33,12 @@
         <button type="button" id="edit" aria-pressed="false">Edit seats</button>
       </div>
       <div class="toolbar-end">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="key available"></span>Free</li>
+        <li><span class="key in_use"></span>In use</li>
+        <li><span class="key offline"></span>Off</li>
+        <li><span class="key out_of_service"></span>Out of service</li>
+      </ul>
         <p class="total" id="total" aria-live="polite"></p>
       </div>
     </div>
@@ -57,12 +63,6 @@
     </div>
 
     <div class="map-foot">
-      <ul class="legend" aria-label="Legend">
-        <li><span class="key available"></span>Free</li>
-        <li><span class="key in_use"></span>In use</li>
-        <li><span class="key offline"></span>Off</li>
-        <li><span class="key out_of_service"></span>Out of service</li>
-      </ul>
       <p class="canvas-hint" id="hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a room for its seats</p>
       <p class="canvas-hint" id="edit-hint" hidden><span id="room-edit-hint">Pick a room to move or resize it · </span>drag a seat to place it · arrow keys nudge the focused seat, Shift for 10 · <span id="edit-note" aria-live="polite">saved as you go</span></p>
     </div>
