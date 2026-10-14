@@ -1,10 +1,17 @@
 /* The hub: an overall state, incidents, product cards and the systems with 90 days of history. */
 
-main.doc > section { margin-bottom: 32px; }
+main.doc { max-width: 1320px; margin: 0 auto; padding: 20px 24px 32px; }
+main.doc > * { width: 100%; margin-left: 0; margin-right: 0; }
+main.doc > section { margin-bottom: 20px; }
+main.doc > .band { margin-bottom: 14px; }
+.alerts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+.alerts:has(> section[hidden]) { grid-template-columns: 1fr; }
+.alerts:has(> section[hidden]):not(:has(> section:not([hidden]))) { display: none; }
+.alerts .card, .overall, .product { padding: 14px 16px; }
 
 .chip.maint { color: var(--maint, #2f6fdb); }
 
-.notice.sample { border: 1px solid var(--rule); border-radius: 4px; font-weight: 600; margin-top: 0; margin-bottom: 16px; }
+.notice.sample { border: 1px solid var(--rule); border-radius: 4px; font-weight: 600; margin-top: 0; margin-bottom: 12px; font-size: 12px; }
 
 /* --- Overall state ---------------------------------------------------------- */
 
@@ -17,15 +24,15 @@ main.doc > section { margin-bottom: 32px; }
 .overall.warn .overall-title::before { background: var(--warn); }
 .overall.bad .overall-title::before { background: var(--bad); }
 .overall.maint .overall-title::before { background: var(--maint, #2f6fdb); }
-.overall-title { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.overall-title { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 
 /* --- Incidents -------------------------------------------------------------- */
 
-.incidents { list-style: none; display: grid; gap: 12px; }
+.incidents { list-style: none; display: grid; gap: 10px; }
 .incident { display: flex; flex-direction: column; gap: 6px; }
 .incident-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.incident h3 { font-size: 18px; font-weight: 700; }
-.updates { list-style: none; display: grid; gap: 8px; margin-top: 6px; border-top: 1px solid var(--hair); padding-top: 10px; }
+.incident h3 { font-size: 16px; font-weight: 700; }
+.updates { font-size: 13px; list-style: none; display: grid; gap: 8px; margin-top: 6px; border-top: 1px solid var(--hair); padding-top: 10px; }
 .updates li { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: baseline; }
 .updates time { white-space: nowrap; }
 @media (max-width: 700px) {
@@ -34,13 +41,13 @@ main.doc > section { margin-bottom: 32px; }
 
 /* --- Products --------------------------------------------------------------- */
 
-.products { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); }
-.product { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; min-height: 150px; }
+.products { list-style: none; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); }
+.product { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; min-height: 108px; }
 a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow: inset 0 -4px 0 var(--accent-band); }
 .product .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.product h3 { font-size: 20px; font-weight: 700; }
-.product .line { font-size: 17px; font-weight: 600; }
-.product .about { color: var(--text-secondary); font-size: 13px; margin-top: auto; }
+.product h3 { font-size: 18px; font-weight: 700; }
+.product .line { font-size: 15px; font-weight: 600; }
+.product .about { color: var(--text-secondary); font-size: 12px; line-height: 1.35; margin-top: auto; }
 .product.soon { background: transparent; border-style: dashed; }
 .product.soon h3, .product.soon .line { color: var(--text-muted); }
 .meter { display: flex; height: 8px; border-radius: 2px; overflow: hidden; background: var(--surface-2); }
@@ -53,29 +60,30 @@ a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow
 .legend .key { display: inline-flex; align-items: center; gap: 6px; }
 .legend .day { width: 8px; height: 14px; }
 
-.groups { display: grid; gap: 12px; }
+.groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .group { padding: 0; }
 .group summary {
   display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer;
-  padding: 14px 24px; list-style: none;
+  padding: 10px 14px; list-style: none;
 }
 .group summary::-webkit-details-marker { display: none; }
-.group summary h3 { font-size: 17px; font-weight: 700; }
+.group summary h3 { font-size: 15px; font-weight: 700; }
 .group summary h3::before { content: "▸"; display: inline-block; width: 1.2em; transition: transform 0.15s; }
 .group[open] summary h3::before { transform: rotate(90deg); }
 .group summary:focus-visible { outline: 2px solid var(--accent-band); outline-offset: -2px; }
 
 .system {
-  display: grid; grid-template-columns: minmax(180px, 1.2fr) 112px minmax(0, 3fr) 112px; align-items: center;
-  gap: 8px 16px; padding: 12px 24px; border-top: 1px solid var(--hair);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: 5px 10px; padding: 9px 14px; border-top: 1px solid var(--hair);
 }
-.system-name { display: flex; flex-direction: column; min-width: 0; }
+.system-name { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
 .system-name > :first-child { font-weight: 700; }
 .system-name a { text-underline-offset: 3px; }
-.uptime { white-space: nowrap; text-align: right; }
-.system > .chip { justify-self: start; }
+.system-name .fine { font-size: 11px; }
+.system > .chip { justify-self: end; font-size: 11px; }
+.uptime { white-space: nowrap; text-align: right; font-size: 11px; }
 
-.bars { display: flex; gap: 2px; height: 26px; min-width: 0; }
+.bars { display: flex; gap: 1px; height: 16px; min-width: 0; }
 .day { display: block; flex: 1 1 0; min-width: 2px; border-radius: 1px; background: var(--ok); opacity: 0.85; }
 .day.warn { background: var(--warn); opacity: 1; }
 .day.bad { background: var(--bad); opacity: 1; }
@@ -83,20 +91,39 @@ a.product:hover, a.product:focus-visible { border-color: var(--rule); box-shadow
 .bars .day:hover { opacity: 0.55; }
 
 @media (max-width: 900px) {
-  .system { grid-template-columns: 1fr auto; }
-  .bars, .uptime { grid-column: 1 / -1; }
-  .uptime { text-align: left; margin-top: -4px; }
+  .groups { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
-  .group summary, .system { padding-left: 16px; padding-right: 16px; }
+  main.doc { padding: 12px 16px 24px; }
+  main.doc > section { margin-bottom: 16px; }
+  .alerts { grid-template-columns: 1fr; gap: 12px; }
+  .overall-title { font-size: 20px; }
+  .masthead { display: grid; grid-template-columns: 96px 1fr; gap: 2px 12px; }
+  .masthead .logo { grid-column: 1; grid-row: 1 / span 2; width: 96px; height: auto; }
+  .masthead-text, .masthead-nav { grid-column: 2; }
+  .masthead h1 { font-size: 22px; }
+  .masthead .context { display: none; }
+  .masthead-nav { justify-self: end; gap: 6px; }
+  .masthead-nav a { font-size: 11px; padding: 4px 8px; }
+  .updates li { grid-template-columns: 1fr auto; }
+  .updates li > span { grid-column: 1 / -1; grid-row: 2; }
+  .updates time { font-size: 11px; }
+  .incident h3 { line-height: 1.3; }
+  .section-head .legend { font-size: 11px; gap: 4px 10px; margin-bottom: 8px; }
+  .group summary, .system { padding-left: 12px; padding-right: 12px; }
   /* A phone shows the last 30 days. */
   .bars .day:nth-child(-n + 60) { display: none; }
 }
 
 /* --- Past incidents --------------------------------------------------------- */
 
-.history { list-style: none; display: grid; gap: 0; }
-.history-day { padding: 12px 0; border-bottom: 1px solid var(--hair); display: grid; gap: 6px; }
+.history { list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.history-day { padding: 8px 0; border-bottom: 1px solid var(--hair); display: grid; gap: 6px; }
 .history-day h3 { font-size: 15px; font-weight: 700; }
 .past { display: grid; gap: 2px; }
 .past-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+@media (max-width: 700px) { .history { grid-template-columns: 1fr; } }
+
+.legend .mobile-range { display: none; }
+@media (max-width: 700px) { .legend .desktop-range { display: none; } .legend .mobile-range { display: inline-flex; } }
