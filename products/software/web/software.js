@@ -1,85 +1,93 @@
-Pulse.computersOptions = { current: "software", defaultMode: "list", title: "Find Software", context: "Find the software you need on a free campus computer" };
-const softwareInput = document.getElementById("software");
-const versionInput = document.getElementById("software-version");
-const softwareNote = document.getElementById("software-note");
-let softwareIndex = [], softwareGeneration = 0;
-let softwareIcons = {};
-const iconKey = (name) => name.toLowerCase().replace(/\b(20\d{2}|\d+(?:\.\d+)+)\b/g, "").replace(/[^a-z0-9]/g, "");
-fetch("software-icons/index.json").then((r) => r.ok ? r.json() : {}).then((icons) => { softwareIcons = icons; renderSoftwareSuggestions(); }).catch(() => {});
-function renderSoftwareSuggestions() {
-  const query = softwareInput.value.trim().toLowerCase();
-  const choices = softwareIndex.filter((a) => a.name.toLowerCase().includes(query)).sort((a, b) =>
-    Number(!!softwareIcons[iconKey(b.name)]) - Number(!!softwareIcons[iconKey(a.name)]) || b.computers - a.computers || a.name.localeCompare(b.name)).slice(0, 12);
-  document.getElementById("software-suggestions").replaceChildren(...choices.map((a) => {
-    const b = document.createElement("button"); b.type = "button";
-    b.setAttribute("aria-pressed", String(a.name.toLowerCase() === query));
-    const icon = softwareIcons[iconKey(a.name)];
-    if (icon && /^software-icons\/[a-f0-9]+\.(png|jpg|jpeg|svg|webp)$/i.test(icon)) {
-      const img = document.createElement("img"); img.src = icon; img.alt = ""; img.width = 32; img.height = 32;
-      img.addEventListener("error", () => img.remove(), { once: true }); b.append(img);
-    } else {
-      const fallback = document.createElement("span"); fallback.className = "software-icon-fallback";
-      fallback.setAttribute("aria-hidden", "true"); fallback.textContent = a.name.slice(0, 1).toUpperCase(); b.append(fallback);
-    }
-    const text = document.createElement("span"); text.textContent = a.name;
-    const count = document.createElement("small"); count.textContent = `${a.computers} computer${a.computers === 1 ? "" : "s"} reporting recently`;
-    text.append(count); b.append(text);
-    b.addEventListener("click", () => { softwareInput.value = a.name; softwareInput.dispatchEvent(new Event("input")); });
-    return b;
+const ui = Object.fromEntries(["notice", "browse", "search", "category", "platform", "result-count", "software-list", "empty", "detail", "detail-icon", "detail-category", "software-title", "detail-platforms", "location-count", "version", "locations", "no-locations"].map((id) => [id, document.getElementById(id)]));
+let catalog = [], selected = "", loaded = false;
+const platformName = (p) => p === "mac" ? "Mac" : p === "windows" ? "Windows" : p;
+const text = (tag, value, cls) => { const n = document.createElement(tag); n.textContent = value; if (cls) n.className = cls; return n; };
+function icon(app, size = 48) {
+  if (app.icon && /^software-icons\/[a-f0-9]+\.(png|jpg|jpeg|webp)$/i.test(app.icon)) {
+    const img = document.createElement("img"); img.src = app.icon; img.alt = ""; img.width = size; img.height = size;
+    img.addEventListener("error", () => img.replaceWith(text("span", app.name.slice(0, 1), "icon-fallback")), { once: true });
+    return img;
+  }
+  return text("span", app.name.slice(0, 1), "icon-fallback");
+}
+function renderBrowse() {
+  const query = ui.search.value.trim().toLocaleLowerCase();
+  const apps = catalog.filter((a) => a.name.toLocaleLowerCase().includes(query) && (!ui.category.value || a.category === ui.category.value) && (!ui.platform.value || a.platforms.includes(ui.platform.value)));
+  ui["result-count"].textContent = `${apps.length} software titles`;
+  ui.empty.hidden = apps.length > 0;
+  const focus = document.activeElement?.closest(".software-row")?.dataset.id;
+  ui["software-list"].replaceChildren(...apps.map((app) => {
+    const a = document.createElement("a"); a.href = `#${app.id}`; a.className = "software-row"; a.dataset.id = app.id;
+    a.append(icon(app));
+    const name = document.createElement("div"); name.className = "software-name";
+    name.append(text("h2", app.name), text("span", app.category, "category")); a.append(name);
+    a.append(text("span", app.platforms.map(platformName).join(" · "), "platforms"));
+    a.append(text("span", app.locations.length ? `${app.locations.length} location${app.locations.length === 1 ? "" : "s"}` : "No recent reports", "location-total"));
+    const arrow = text("span", "→", "row-arrow"); arrow.setAttribute("aria-hidden", "true"); a.append(arrow);
+    return a;
+  }));
+  if (focus) [...ui["software-list"].children].find((a) => a.dataset.id === focus)?.focus();
+}
+function renderLocations(app) {
+  const version = ui.version.value;
+  const locations = app.locations.map((location) => {
+    const counts = version ? location.versions.find((v) => v.version === version) : location;
+    return counts ? { ...location, ...counts } : null;
+  }).filter(Boolean);
+  ui["location-count"].textContent = `${locations.length} location${locations.length === 1 ? "" : "s"} with recent installation reports`;
+  ui["no-locations"].hidden = locations.length > 0;
+  ui.locations.replaceChildren(...locations.map((location) => {
+    const row = document.createElement("article"); row.className = "location-row";
+    const name = document.createElement("div"); name.append(text("h4", location.name));
+    name.append(text("p", [location.room && `Room ${location.room}`, location.platforms.map(platformName).join(" · ")].filter(Boolean).join(" · ")));
+    row.append(name);
+    const count = document.createElement("div"); count.className = "location-capacity";
+    count.append(text("strong", `${location.computers} computer${location.computers === 1 ? "" : "s"}`), text("span", `${location.available} free now`)); row.append(count);
+    return row;
   }));
 }
-const originalTitle = "Choose software to find computers where it was recently reported installed.";
-Pulse.loadComputerStatus = async function () {
-  const generation = softwareGeneration;
-  const selected = softwareIndex.find((a) => a.name.toLowerCase() === softwareInput.value.trim().toLowerCase());
-  const params = new URLSearchParams();
-  if (selected) params.set("software", selected.id);
-  if (selected && versionInput.value) params.set("version", versionInput.value);
-  try {
-    const r = await fetch(`api/status?${params}`);
-    if (!r.ok) throw new Error("Software availability is temporarily unavailable. Please try again shortly.");
-    const data = await r.json();
-    if (generation !== softwareGeneration) return Pulse.loadComputerStatus();
-    softwareIndex = data.software;
-    renderSoftwareSuggestions();
-    const options = document.getElementById("software-options");
-    options.replaceChildren(...softwareIndex.map((a) => {
-      const option = document.createElement("option"); option.value = a.name; return option;
-    }));
-    if (softwareInput.value.trim() && !selected) {
-      for (const space of data.spaces) for (const seat of space.seats) seat.softwareMatch = false;
-      softwareNote.textContent = "Choose a software title from the suggestions. No matching title? Its installation may not have been reported yet.";
-    } else if (selected) {
-      softwareNote.textContent = `Showing ${selected.name}${versionInput.value ? ` ${versionInput.value}` : ""}. Installation reports must be less than ${data.inventoryMaxAgeHours} hours old. Free means likely unattended; licence availability is not yet checked.`;
-    } else {
-      softwareNote.textContent = `${originalTitle} ${data.inventoryComputers} of ${data.catalogComputers} computers have recent software reports. Free means likely unattended.`;
-    }
-    document.querySelector(".stage").hidden = false;
-    return data;
-  } catch (e) {
-    softwareNote.textContent = e.message;
-    document.querySelector(".stage").hidden = true;
-    document.getElementById("total").textContent = "Availability unavailable";
-    throw e;
-  }
-};
-let softwareDebounce;
-function softwareChanged() {
-  softwareGeneration++;
-  clearTimeout(softwareDebounce);
-  softwareDebounce = setTimeout(async () => {
-    try {
-      state.status = await Pulse.loadComputerStatus(); state.drawn = null; render();
-    } catch (e) { console.error(e); }
-  }, 250);
+function renderDetail(focus = false) {
+  const app = catalog.find((a) => a.id === selected);
+  if (!app) { ui.detail.hidden = true; ui.browse.hidden = false; return; }
+  ui.browse.hidden = true; ui.detail.hidden = false;
+  ui["detail-icon"].replaceChildren(icon(app, 72));
+  ui["software-title"].textContent = app.name;
+  ui["detail-category"].textContent = app.category;
+  ui["detail-platforms"].textContent = app.platforms.map(platformName).join(" · ");
+  const previous = ui.version.value;
+  ui.version.replaceChildren(new Option("All versions", ""), ...app.versions.map((v) => new Option(v, v)));
+  ui.version.value = app.versions.includes(previous) ? previous : "";
+  renderLocations(app);
+  if (focus) ui["software-title"].focus();
 }
-softwareInput.addEventListener("input", () => {
-  renderSoftwareSuggestions();
-  const selected = softwareIndex.find((a) => a.name.toLowerCase() === softwareInput.value.trim().toLowerCase());
-  versionInput.replaceChildren(new Option("Any version", ""), ...(selected?.versions || []).map((v) => new Option(v, v)));
-  softwareChanged();
-});
-versionInput.addEventListener("change", softwareChanged);
-document.getElementById("clear-software").addEventListener("click", () => {
-  softwareInput.value = ""; versionInput.replaceChildren(new Option("Any version", "")); softwareChanged(); softwareInput.focus();
-});
+function navigate() {
+  selected = location.hash.slice(1);
+  ui.version.value = "";
+  renderDetail(true);
+  if (!selected) { renderBrowse(); ui.search.focus(); }
+}
+window.addEventListener("hashchange", navigate);
+for (const name of ["search", "category", "platform"]) ui[name].addEventListener(name === "search" ? "input" : "change", renderBrowse);
+ui.version.addEventListener("change", () => { const app = catalog.find((a) => a.id === selected); if (app) renderLocations(app); });
+(async () => {
+  await Pulse.shell({ current: "software", title: "Software", context: "Explore campus software and find where it’s available" });
+  selected = location.hash.slice(1);
+  Pulse.poll(async () => {
+    try {
+      const response = await fetch("api/status");
+      if (!response.ok) throw new Error("Software locations are temporarily unavailable. Please try again shortly.");
+      const data = await response.json();
+      catalog = data.software;
+      const category = ui.category.value;
+      ui.category.replaceChildren(new Option("All categories", ""), ...[...new Set(catalog.map((a) => a.category))].sort().map((c) => new Option(c, c)));
+      ui.category.value = category;
+      ui.notice.textContent = "Browse the campus software collection. Choose a title to see its locations.";
+      ui.browse.hidden = !!selected; ui.detail.hidden = !selected;
+      if (selected) renderDetail(!loaded); else renderBrowse();
+      loaded = true;
+    } catch (error) {
+      ui.notice.textContent = error.message;
+      ui.browse.hidden = true; ui.detail.hidden = true;
+    }
+  }, 30000);
+})();

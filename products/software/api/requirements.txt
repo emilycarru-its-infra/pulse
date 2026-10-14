@@ -7,3 +7,4 @@ cryptography>=43,<51
 jsonschema>=4.20
 
 azure-storage-blob>=12.20
+pyyaml>=6

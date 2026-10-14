@@ -1,14 +1,16 @@
 # SoftwarePulse
 
-Find observed software installations on shared computers and see live seat availability on the ComputersPulse map and list. SoftwarePulse is a separate authenticated product; it reuses the computer catalog, presence rules and saved seat positions.
+Browse a curated software collection, then choose a title to see where it is installed. The product has its own software list and location detail view. Location rows show versions, platforms and aggregate computer availability.
 
-The Function uses managed identity. `PULSE_COMPUTERS_STORAGE_ACCOUNT` supplies read-only access to the computer `state` and `layout` tables. `PULSE_STORAGE_ACCOUNT` holds a private `software` blob container for the minimized installation snapshot. `PULSE_REPORTMATE_URL` names the ReportMate API and `PULSE_REPORTMATE_SCOPE` its OAuth resource scope. The workload needs the source API's read role. `PULSE_INSTALL_MAX_AGE_HOURS` defaults to 48.
+`pulse_software.managed.build_suite` compiles the collection from each platform's `manifests/ManagedApps.yaml` and production package metadata. Site policy owns editorial exclusions, product aliases, package variants and bundle expansions. Only manifest-referenced software is eligible. ReportMate supplies installation evidence for that collection; raw observations cannot add titles. Curated titles remain visible when they have no recent installation reports. Matching uses explicit normalized aliases; ambiguous observations are omitted.
 
-A five-minute timer follows every applications page for catalog computers and atomically replaces the snapshot after a complete successful read. Browser requests read that snapshot; a missing snapshot or one older than 15 minutes returns a service error. Installation freshness uses the application's collection time, separately from computer occupancy. Neither installed software nor a free computer proves a licence is available.
+The deployment packages `managed-software.json` with the API and copies its selected icons under `/software-icons`. Background agents, management tools and other excluded packages stay out through site policy, without product-specific exclusions in generic code.
 
-The web deployment overlays `products/software/web` onto `products/computers/web`, adds `core/web` under `/core`, and supplies a theme, floorplan assets and site authentication settings. Optional icons use `/software-icons/index.json`, mapping normalized application names to local image paths; unmatched titles have a fallback. The site owns package aliases and icon extraction.
+The Function uses managed identity. `PULSE_COMPUTERS_STORAGE_ACCOUNT` supplies read-only access to the computer `state` table; its catalog supplies locations and device identity. `PULSE_STORAGE_ACCOUNT` holds a private `software` container for minimized installation snapshots. `PULSE_REPORTMATE_URL` names the source API and `PULSE_REPORTMATE_SCOPE` its OAuth scope. The workload needs the source API's read role. `PULSE_INSTALL_MAX_AGE_HOURS` defaults to 48.
 
-Install the core, computer API and software API into an environment, then run its tests:
+A five-minute timer follows every applications page for catalog computers, joins by serial and atomically replaces the snapshot after successful collection. Browser requests read that snapshot; a missing snapshot or one older than 15 minutes returns a service error. Responses contain software and location aggregates, without device identifiers, application paths or usage records. Installation freshness is separate from computer occupancy. A free computer does not establish licence availability.
+
+The web deployment publishes `products/software/web`, `core/web` under `/core`, a theme and site authentication settings.
 
 ```sh
 pip install -e core -e products/computers/api -e 'products/software/api[test]'

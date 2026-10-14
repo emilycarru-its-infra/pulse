@@ -1,35 +1,47 @@
 from datetime import datetime, timezone
-from copy import deepcopy
 
 import pytest
 
 from pulse_software.inventory import ReportMate, app_id, discovery
 
 NOW = datetime(2026, 10, 14, 12, tzinfo=timezone.utc)
-STATUS = {"spaces": [{"seats": [{"hostname": "SHARED-01", "state": "available"},
-                                  {"hostname": "SHARED-02", "state": "in_use"}]}]}
+STATUS = {"spaces": [{"id": "studio", "name": "Studio", "room": "A", "seats": [
+    {"hostname": "SHARED-01", "state": "available", "platform": "mac"},
+    {"hostname": "SHARED-02", "state": "in_use", "platform": "windows"}]}]}
+PRODUCTS = [{"id": app_id("Sketch"), "name": "Sketch", "aliases": ["sketch"], "icon": None,
+             "category": "Design", "platforms": ["mac", "windows"]},
+            {"id": app_id("Sculpt"), "name": "Sculpt", "aliases": ["sculpt"], "icon": None,
+             "category": "Design", "platforms": ["mac"]}]
 
 
 def row(host="SHARED-01", name="Sketch", version="3", stamp="2026-10-14T11:00:00Z"):
     return {"hostname": host, "id": app_id(name), "name": name, "version": version, "collectedAt": stamp}
 
 
-def test_catalog_boundary_freshness_versions_and_occupancy_are_independent():
-    result = discovery(deepcopy(STATUS), [row(), row(version="4"), row("SHARED-02"), row("PRIVATE-01")],
-                       app_id("Sketch"), "4", now=NOW)
-    seats = result["spaces"][0]["seats"]
-    assert [s["softwareMatch"] for s in seats] == [True, False]
-    assert seats[0]["state"] == "available" and seats[1]["state"] == "in_use"
-    assert result["software"][0]["computers"] == 2
-    assert result["software"][0]["versions"] == ["3", "4"]
-    assert "PRIVATE-01" not in str(result)
+def test_software_is_the_primary_entity_and_locations_are_aggregated():
+    result = discovery(STATUS, [row(), row(version="4"), row("SHARED-02"), row("PRIVATE-01"), row(name="Background Service")], PRODUCTS, now=NOW)
+    assert [a["name"] for a in result["software"]] == ["Sketch", "Sculpt"]
+    assert result["software"][1]["locations"] == []
+    assert result["software"][0]["platforms"] == ["mac", "windows"]
+    location = result["software"][0]["locations"][0]
+    assert location["name"] == "Studio" and location["computers"] == 2 and location["available"] == 1
+    assert location["versions"] == [{"version": "3", "computers": 2, "available": 1, "platforms": ["mac", "windows"]},
+                                    {"version": "4", "computers": 1, "available": 1, "platforms": ["mac"]}]
+    assert "spaces" not in result and "SHARED-01" not in str(result) and "PRIVATE-01" not in str(result)
+    assert "Background Service" not in str(result)
 
 
 @pytest.mark.parametrize("stamp", [None, "bad", "2026-10-10T12:00:00Z", "2026-10-14T11:00:00", "2026-10-15T12:00:00Z"])
-def test_stale_missing_naive_or_future_observations_never_claim_installed(stamp):
-    result = discovery(deepcopy(STATUS), [row(stamp=stamp)], app_id("Sketch"), now=NOW)
+def test_stale_missing_naive_or_future_observations_do_not_claim_a_location(stamp):
+    result = discovery(STATUS, [row(stamp=stamp)], PRODUCTS, now=NOW)
     assert result["software"][0]["computers"] == 0
-    assert not result["spaces"][0]["seats"][0]["softwareMatch"]
+    assert result["software"][0]["locations"] == []
+
+
+def test_ambiguous_alias_never_assigns_an_installation_to_the_wrong_product():
+    products = [dict(p, aliases=["sketch"]) for p in PRODUCTS]
+    result = discovery(STATUS, [row()], products, now=NOW)
+    assert all(a["locations"] == [] for a in result["software"])
 
 
 def test_source_pages_are_complete_minimized_cached_and_refresh_failures_propagate():
@@ -48,12 +60,6 @@ def test_source_pages_are_complete_minimized_cached_and_refresh_failures_propaga
     source.fetch = lambda params: {"error": "source failed"}
     with pytest.raises(ValueError):
         source.rows()
-
-
-def test_unknown_software_cannot_match_and_id_is_stable():
-    assert app_id(" Sketch ") == app_id("sketch")
-    result = discovery(deepcopy(STATUS), [row()], "unknown", now=NOW)
-    assert not any(s["softwareMatch"] for s in result["spaces"][0]["seats"])
 
 
 def test_serial_identity_survives_reported_name_changes_without_exposing_serials():

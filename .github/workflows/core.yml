@@ -60,7 +60,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -e core -e products/computers/api -e 'products/software/api[test]'
       - run: pytest -q products/software/api
-      - run: node --check products/software/web/software.js && node --check products/computers/web/computers.js
+      - run: node --check products/software/web/software.js
 
   windows-agent:
     runs-on: windows-latest

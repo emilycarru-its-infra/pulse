@@ -9,10 +9,10 @@ from azure.storage.blob import BlobServiceClient
 
 import azure.functions as func
 from azure.identity import DefaultAzureCredential
-from pulse_computers.layout import TableLayouts, apply_positions
 from pulse_computers.service import ComputersService
 from pulse_computers.store import TableStore
 from pulse_software.inventory import ReportMate, discovery, recent, InstallationSnapshot
+from pulse_software.managed import identity
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
@@ -23,11 +23,11 @@ def runtime():
     credential = DefaultAzureCredential()
     account = os.environ["PULSE_COMPUTERS_STORAGE_ACCOUNT"]
     service = ComputersService(catalog, TableStore.from_account(account, credential=credential))
-    layouts = TableLayouts.from_account(account, "layout")
+    products = json.loads((Path(__file__).parent / "managed-software.json").read_text())["products"]
     devices = [s for space in catalog["spaces"] for s in space["seats"]]
     inventory = ReportMate(os.environ["PULSE_REPORTMATE_URL"], os.environ["PULSE_REPORTMATE_SCOPE"], devices, credential)
     blob = BlobServiceClient(f"https://{os.environ['PULSE_STORAGE_ACCOUNT']}.blob.core.windows.net", credential=credential)
-    return service, layouts, inventory, InstallationSnapshot(blob.get_blob_client("software", "installations.json"))
+    return service, products, inventory, InstallationSnapshot(blob.get_blob_client("software", "installations.json"))
 
 
 def response(code, body):
@@ -37,14 +37,12 @@ def response(code, body):
 
 def status(req):
     try:
-        service, layouts, _, snapshot = runtime()
+        service, products, _, snapshot = runtime()
         state = service.status()
-        positions, _ = layouts.read()
-        apply_positions(state, positions)
         saved = snapshot.read()
         if not recent(saved.get("fetchedAt"), datetime.now(timezone.utc), 900):
             raise ValueError("application snapshot is stale")
-        result = discovery(state, saved["rows"], req.params.get("software", ""), req.params.get("version", ""),
+        result = discovery(state, saved["rows"], products,
                            max_age=int(os.environ.get("PULSE_INSTALL_MAX_AGE_HOURS", "48")) * 3600)
         result["inventoryFetchedAt"] = saved["fetchedAt"]
         return response(200, result)
@@ -71,6 +69,7 @@ app.route(route="GetRoles", methods=["POST"])(get_roles)
 
 @app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
 def refresh_installations(timer):
-    _, _, inventory, snapshot = runtime()
+    _, products, inventory, snapshot = runtime()
     rows = inventory.rows()
-    snapshot.publish(rows)
+    aliases = {a for p in products for a in p["aliases"]}
+    snapshot.publish([row for row in rows if identity(row["name"]) in aliases])

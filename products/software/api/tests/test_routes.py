@@ -42,9 +42,7 @@ def test_refresh_failure_cannot_publish_a_successful_empty_snapshot(monkeypatch)
 def test_stale_or_missing_snapshot_never_returns_an_empty_success(monkeypatch, stamp, expected):
     class Service:
         def status(self): return {"spaces": []}
-    class Layout:
-        def read(self): return {}, "v1"
     class Snapshot:
         def read(self): return {"fetchedAt": stamp, "rows": []}
-    monkeypatch.setattr(api, "runtime", lambda: (Service(), Layout(), None, Snapshot()))
+    monkeypatch.setattr(api, "runtime", lambda: (Service(), [], None, Snapshot()))
     assert api.status(func.HttpRequest("GET", "/api/status", body=b"")).status_code == expected

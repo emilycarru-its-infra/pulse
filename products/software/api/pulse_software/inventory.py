@@ -74,35 +74,54 @@ class ReportMate:
             return rows
 
 
-def discovery(status, rows, selected="", version="", max_age=172800, now=None):
+def discovery(status, rows, products, max_age=172800, now=None):
+    from .managed import identity
+
     now = now or datetime.now(timezone.utc)
-    allowed = {s["hostname"].upper() for space in status["spaces"] for s in space["seats"]}
-    apps, matches, observed = {}, {}, set()
+    seats, spaces = {}, {}
+    for space in status["spaces"]:
+        spaces[space["id"]] = space
+        for seat in space["seats"]:
+            seats[seat["hostname"].upper()] = (space["id"], seat)
+    aliases = {}
+    for product in products:
+        for alias in product["aliases"]:
+            aliases.setdefault(alias, set()).add(product["id"])
+    installed = {p["id"]: {} for p in products}
+    recent_hosts = set()
     for row in rows:
         host = row["hostname"].upper()
-        if host not in allowed:
+        if host not in seats or not recent(row["collectedAt"], now, max_age):
             continue
-        fresh = recent(row["collectedAt"], now, max_age)
-        item = apps.setdefault(row["id"], {"id": row["id"], "name": row["name"],
-                                           "versions": set(), "hosts": set(), "staleHosts": set()})
-        item["versions"].add(row["version"])
-        item["hosts" if fresh else "staleHosts"].add(host)
-        if fresh:
-            observed.add(host)
-            if row["id"] == selected and (not version or version == row["version"]):
-                matches.setdefault(host, []).append({"version": row["version"], "collectedAt": row["collectedAt"]})
-    for space in status["spaces"]:
-        for seat in space["seats"]:
-            seat["softwareMatch"] = seat["hostname"].upper() in matches if selected else True
-            if selected:
-                seat["installations"] = matches.get(seat["hostname"].upper(), [])
-    index = [{"id": a["id"], "name": a["name"], "versions": sorted(a["versions"]),
-              "computers": len(a["hosts"]), "staleComputers": len(a["staleHosts"] - a["hosts"])}
-             for a in sorted(apps.values(), key=lambda a: a["name"].casefold())]
-    status.update({"software": index, "selectedSoftware": selected, "inventoryComputers": len(observed),
-                   "catalogComputers": len(allowed), "inventoryMaxAgeHours": max_age / 3600,
-                   "editable": False, "editableRooms": False})
-    return status
+        recent_hosts.add(host)
+        matching = aliases.get(identity(row["name"]), set())
+        if len(matching) != 1:
+            continue
+        product_id = next(iter(matching))
+        installed[product_id].setdefault(host, set()).add(row["version"])
+
+    def counts(hosts):
+        hosts = set(hosts)
+        return {"computers": len(hosts), "available": sum(seats[h][1]["state"] == "available" for h in hosts),
+                "platforms": sorted({seats[h][1]["platform"] for h in hosts})}
+
+    result = []
+    for product in products:
+        found = installed[product["id"]]
+        locations = []
+        for space_id in sorted({seats[h][0] for h in found}):
+            space = spaces[space_id]
+            hosts = {h for h in found if seats[h][0] == space_id}
+            versions = sorted({v for h in hosts for v in found[h]})
+            locations.append({"id": space_id, "name": space["name"], "room": space.get("room", ""),
+                "floor": space.get("floor", ""), **counts(hosts),
+                "versions": [{"version": v, **counts(h for h in hosts if v in found[h])} for v in versions]})
+        result.append({**{k: product[k] for k in ("id", "name", "icon", "category", "platforms")},
+                       "computers": len(found), "locations": locations,
+                       "platforms": sorted(set(product["platforms"]) | {seats[h][1]["platform"] for h in found}),
+                       "versions": sorted({v for values in found.values() for v in values})})
+    return {"software": result, "inventoryComputers": len(recent_hosts), "catalogComputers": len(seats),
+            "inventoryMaxAgeHours": max_age / 3600, "generatedAt": now.isoformat()}
 
 
 class InstallationSnapshot:
