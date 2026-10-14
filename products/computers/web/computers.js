@@ -204,8 +204,8 @@ function homeFor(floor) {
 
 // The list has one card per space name on the floor, so a lab or a set of stations spread over
 // several rooms reads as one place; the rooms are named on the card and above their seats.
-// Cards with the most free seats come first, then by room number; inside a card the biggest
-// room comes first.
+// Cards are ranked by free seats once at page load, then keep that order; inside a card
+// the biggest room comes first.
 const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0]} +${rooms.length - 1} rooms`;
 
 const groupKey = (s) => `${s.floor}|${s.name}`;
@@ -329,6 +329,7 @@ function renderDrawer() {
 // Live status updates retain computer nodes, room cards and their initial ranking.
 function updateLive() {
   const text = (node, value) => { if (node && node.textContent !== String(value)) node.textContent = value; };
+  const attr = (node, key, value) => { if (node && node.getAttribute(key) !== String(value)) node.setAttribute(key, value); };
   const counts = (node, seats) => {
     const html = countsLine(countsOf(seats));
     if (node && node.innerHTML !== html) node.innerHTML = html;
@@ -348,13 +349,13 @@ function updateLive() {
       const cls = `tile ${seat.state}${seat.mobile ? " mobile" : ""}`;
       if (node.className !== cls) node.className = cls;
       node.title = `${seatName(seat)}: ${WORD[seat.state]}. Last heard ${Pulse.ago(seat.lastSeen)}${mobileHint(seat)}`;
-      node.setAttribute("aria-label", `${seatName(seat)}, ${WORD[seat.state]}${mobileHint(seat)}`);
+      attr(node, "aria-label", `${seatName(seat)}, ${WORD[seat.state]}${mobileHint(seat)}`);
     } else if (node.classList.contains("seat-g")) {
-      node.querySelector(".seat").setAttribute("class", `seat ${seat.state}`);
-      node.querySelector(".num").setAttribute("class", `num ${seat.state}`);
+      attr(node.querySelector(".seat"), "class", `seat ${seat.state}`);
+      attr(node.querySelector(".num"), "class", `num ${seat.state}`);
       text(node.querySelector("title"), `${seatName(seat)}: ${WORD[seat.state]}${mobileHint(seat)}`);
     } else {
-      node.querySelector(".tag").className = `tag ${seat.state}${seat.mobile ? " mobile" : ""}`;
+      attr(node.querySelector(".tag"), "class", `tag ${seat.state}${seat.mobile ? " mobile" : ""}`);
       text(node.querySelector(".state"), WORD[seat.state]);
     }
   }
@@ -367,13 +368,13 @@ function updateLive() {
     const own = seatsOf(space), free = countsOf(own).available;
     const group = content.querySelector(`.space[data-id="${CSS.escape(space.id)}"]`);
     group?.classList.toggle("none", !free);
-    group?.setAttribute("aria-label", `${space.name}, room ${space.room ?? ""}: ${free} of ${own.length} free`);
+    attr(group, "aria-label", `${space.name}, room ${space.room ?? ""}: ${free} of ${own.length} free`);
     const badge = content.querySelector(`.badge[data-id="${CSS.escape(space.id)}"]`);
     if (badge) {
       badge.classList.toggle("none", !free);
       const label = badge.querySelector(".long text");
       text(label.querySelector(".free"), `${free}/${own.length} free`);
-      badge.querySelector(".long rect").setAttribute("width", label.getBBox().width + 14);
+      attr(badge.querySelector(".long rect"), "width", label.getBBox().width + 14);
     }
   }
   const drawer = document.getElementById("drawer");
