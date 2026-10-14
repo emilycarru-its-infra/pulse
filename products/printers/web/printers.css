@@ -12,7 +12,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 /* Every toolbar control is the same height, whatever its text. */
 .map-toolbar button { height: 34px; line-height: 1; font-size: 13px; }
 .views { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.toolbar-end { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-left: auto; }
+.toolbar-end { display: flex; align-items: center; justify-content: flex-end; gap: 18px; flex-wrap: wrap; margin-left: auto; min-width: 0; }
 
 /* The floor tabs sit on one line at the height of the other toolbar controls. */
 .floors { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
@@ -32,8 +32,8 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .zoom button:hover { background: var(--surface-2); }
 .zoom .zoom-level { min-width: 60px; border-left: 1px solid var(--hair); border-right: 1px solid var(--hair); font-variant-numeric: tabular-nums; font-weight: 600; }
 
-.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--text-secondary); }
-.legend li { display: flex; align-items: center; gap: 6px; }
+.legend { list-style: none; display: flex; flex-wrap: nowrap; gap: 4px 14px; font-size: 13px; color: var(--text-secondary); }
+.legend li { display: flex; flex-shrink: 0; align-items: center; gap: 6px; white-space: nowrap; }
 .total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
 .total b { font-size: 20px; color: var(--text-primary); }
 
@@ -279,3 +279,14 @@ body.app main.doc.wide > .mock { margin-bottom: 12px; }
 
 .metadata { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .space-card .metadata .kicker { margin: 0; }
+
+.legend-short { display: none; }
+@media (max-width: 700px) {
+  .toolbar-end { flex: 1 1 100%; gap: 6px 12px; justify-content: space-between; }
+  .legend { gap: 4px 8px; font-size: 11px; }
+  .legend li { gap: 3px; }
+  .legend .key { width: 10px; height: 10px; }
+  .legend-full { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .legend-short { display: inline; }
+  .total { margin-left: auto; }
+}
