@@ -21,9 +21,9 @@ Pulse.masonry = function (grid) {
       // The vertical gap is the column gap, applied by the span: the grid's own row gap is 0.
       const gap = parseFloat(style.columnGap) || 0;
       for (const card of grid.children) {
-        card.style.gridRowEnd = "";
         const h = card.getBoundingClientRect().height;
-        card.style.gridRowEnd = `span ${Math.max(1, Math.ceil((h + gap) / row))}`;
+        const span = `span ${Math.max(1, Math.ceil((h + gap) / row))}`;
+        if (card.style.gridRowEnd !== span) card.style.gridRowEnd = span;
       }
     });
   };

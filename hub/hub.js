@@ -131,7 +131,7 @@ function productCard(p, s) {
   if (!p.soon) node.href = p.href;
   const head = el("div", "head");
   head.append(el("h3", null, p.title),
-    p.soon ? el("span", "chip idle", "Coming")
+    p.soon ? el("span", "chip idle", "Upcoming")
       : s ? el("span", `chip ${s.level}`, LEVEL[s.level]) : el("span", "chip bad", "Not answering"));
   node.append(head, el("p", "line", p.soon ? "Not yet live" : s ? s.line : "The product did not answer"));
   if (s?.counts && s.seats) {
@@ -147,7 +147,7 @@ function productCard(p, s) {
     }
     node.append(meter);
   }
-  node.append(el("p", "about", p.about + (p.restricted ? ` (${p.restricted === true ? "restricted audience" : p.restricted})` : "")));
+  if (p.about) node.append(el("p", "about", p.about + (p.restricted ? ` (${p.restricted === true ? "restricted audience" : p.restricted})` : "")));
   const li = el("li");
   li.append(node);
   return li;
@@ -187,11 +187,13 @@ function render(data, products, summaries) {
 
   document.getElementById("products").replaceChildren(...products.map((p, i) => productCard(p, summaries[i])));
 
+  const expanded = new Map([...document.querySelectorAll(".group")].map((g) => [g.dataset.group, g.open]));
   const groups = (data.groups || []).map((g) => {
     const levels = (g.components || []).map((c) => current.get(c.id));
     const level = worst(levels);
     const det = el("details", "group card");
-    det.open = true;
+    det.dataset.group = g.name;
+    det.open = expanded.get(g.name) ?? true;
     const sum = el("summary");
     sum.append(el("h3", null, g.name), chip(level, level === "ok" ? "Operational" : `${levels.filter((l) => l !== "ok").length} affected`));
     det.append(sum);
@@ -233,7 +235,7 @@ function render(data, products, summaries) {
 }
 
 (async () => {
-  const brand = await Pulse.shell({ current: "hub", context: "Shared university systems, right now and over the last 90 days" });
+  const brand = await Pulse.shell({ current: "hub", hideCurrent: true, context: "Shared university systems, right now and over the last 90 days" });
   if (brand.foot) document.getElementById("foot").textContent = brand.foot;
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   Pulse.poll(async () => {
@@ -245,3 +247,5 @@ function render(data, products, summaries) {
     render(data, products, summaries);
   }, 30000);
 })();
+
+Pulse.masonry(document.getElementById("groups"));

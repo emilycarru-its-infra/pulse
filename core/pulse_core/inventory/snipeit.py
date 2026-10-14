@@ -34,12 +34,14 @@ class SnipeItProvider:
         device_id_fields: Iterable[str] = (),
         page_size: int = 500,
         fetch: Fetch = _http_get,
+        catalog_field: str = "Catalog",
     ):
         self.base_url = base_url.rstrip("/")
         self.headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
         self.hostname_field = hostname_field
         self.platform_field = platform_field
         self.group_field = group_field
+        self.catalog_field = catalog_field
         self.device_id_fields = tuple(device_id_fields)
         self.page_size = page_size
         self.fetch = fetch
@@ -75,6 +77,7 @@ class SnipeItProvider:
                 category=((row.get("category") or {}).get("name") or ""),
                 location=html.unescape((row.get("location") or {}).get("name") or ""),
                 group=self._custom(row, self.group_field),
+                catalog=self._custom(row, self.catalog_field),
                 deployed=((row.get("status_label") or {}).get("status_meta") == "deployed"),
                 name=html.unescape(row.get("name") or "").strip(),
                 device_ids=tuple(v.lower() for v in (self._custom(row, f) for f in self.device_id_fields) if v),
