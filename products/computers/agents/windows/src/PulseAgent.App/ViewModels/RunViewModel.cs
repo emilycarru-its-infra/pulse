@@ -78,9 +78,8 @@ public partial class RunViewModel : ObservableObject
 
         (SeatText, SeatReason) = status.SeatState switch
         {
-            "available" => ("Free", "Nobody is signed in."),
-            "possibly_free" => ("Possibly free", status.Locked ? "Someone is signed in but the screen is locked." : "Someone is signed in but has been idle 15 minutes or more."),
-            "in_use" => ("In use", "Someone is signed in and using it."),
+            "available" => ("Free", status.Active ? "No input for at least 15 minutes." : "Nobody is signed in."),
+            "in_use" => ("In use", "Someone is signed in with input in the last 15 minutes."),
             _ => (status.SeatState, ""),
         };
         SignedInText = status.Active ? "Yes" : "No";

@@ -1,8 +1,8 @@
 const NS = "http://www.w3.org/2000/svg";
-const WORD = { available: "free", possibly_free: "possibly free", in_use: "in use", offline: "off or not reporting",
+const WORD = { available: "free", in_use: "in use", offline: "off or not reporting",
   out_of_service: "out of service" };
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
-const ORDER = ["available", "possibly_free", "in_use", "offline", "out_of_service"];
+const ORDER = ["available", "in_use", "offline", "out_of_service"];
 
 const state = { floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
 const phone = window.matchMedia("(max-width: 700px)");
@@ -67,7 +67,7 @@ function labelsFor(seats) {
   const clash = new Set(short).size !== short.length;
   return new Map(seats.map((s, i) => [s.hostname, clash ? String(i + 1).padStart(2, "0") : short[i]]));
 }
-const countsLine = (c) => ["in_use", "possibly_free", "offline", "out_of_service"]
+const countsLine = (c) => ["in_use", "offline", "out_of_service"]
   .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${WORD[k]}`).join(" · ") || "Every seat is free";
 
 function bounds(space) {

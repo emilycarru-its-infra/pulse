@@ -15,15 +15,18 @@ The schema rejects unknown fields, so adding one is a contract change, not a qui
 
 ## Seat states
 
-`pulse_core.state.seat_state` turns a seat's last event into one of five states:
+`pulse_core.state.seat_state` turns a seat's last event into one of four states:
 
 | State | When |
 |---|---|
 | `out_of_service` | The site config marks the seat out of service |
 | `offline` | No event for 5 minutes, never seen, or the last event was `shutdown` |
-| `available` | Nobody is signed in |
-| `possibly_free` | Someone is signed in but the session is locked or idle for 15 minutes or more |
-| `in_use` | Someone is signed in and active |
+| `available` | Nobody is signed in, or no input for at least 15 minutes, including locked sessions |
+| `in_use` | Someone is signed in with input in the last 15 minutes, including a brief lock |
+
+Available means likely unattended; it does not guarantee that the previous session has
+signed out. Offline and out-of-service take precedence over inactivity. The existing
+`possibly_free` count field is retained as zero for compatibility.
 
 ## Space catalog
 

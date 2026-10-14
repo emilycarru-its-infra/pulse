@@ -1,6 +1,6 @@
 # ComputersPulse
 
-Shows which shared computers are free, in use, possibly free or off, space by space.
+Shows which shared computers are free, in use or off, space by space.
 
 - `api/pulse_computers/service.py`: the API as plain functions: ingest, status, summary, export.
 - `api/pulse_computers/store.py`: where events are kept. `MemoryStore` for local runs; `TableStore`, on Azure Table Storage, deployed.

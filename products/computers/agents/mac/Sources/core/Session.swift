@@ -16,10 +16,9 @@ public struct SessionSnapshot: Equatable, Sendable {
     }
 
     /// The seat state the server would show for this snapshot, for the app's Run tab.
-    /// Mirrors pulse_core.state: locked or idle 15 minutes reads as possibly free.
+    /// Mirrors pulse_core.state: no session or idle 15 minutes reads as free, including locked sessions.
     public var seatState: String {
-        guard active else { return "available" }
-        return locked || idleSeconds >= 900 ? "possibly_free" : "in_use"
+        return !active || idleSeconds >= 900 ? "available" : "in_use"
     }
 }
 

@@ -71,7 +71,7 @@ public static class Transitions
     }
 
     /// <summary>What the site will show for this reading, mirroring pulse_core.state: free when
-    /// nobody is signed in, possibly free when locked or idle 15 minutes, otherwise in use.</summary>
+    /// nobody is signed in or idle at least 15 minutes, including locked sessions.</summary>
     public static string SeatState(SessionSnapshot s) =>
-        !s.Active ? "available" : s.Locked || s.IdleSeconds >= 15 * 60 ? "possibly_free" : "in_use";
+        !s.Active || s.IdleSeconds >= 15 * 60 ? "available" : "in_use";
 }

@@ -95,3 +95,17 @@ def test_room_editor_moves_and_resizes_rooms(tmp_path):
                 {"space": "lab", "box": [0, 0, 1]}, {"space": "lab", "box": [0, 0, 1, 1], "move": ["a", 1]}):
         with pytest.raises(ValueError):
             editor.save_room(bad)
+
+
+@pytest.mark.parametrize("locked", [False, True])
+def test_idle_seats_count_as_free_in_status_and_summary(locked):
+    svc = ComputersService(CATALOG, MemoryStore())
+    svc.ingest(event("LAB-01", locked=locked, idle=900), now=NOW)
+    svc.ingest(event("LAB-02", locked=True, idle=899), now=NOW)
+    space = svc.status(NOW)["spaces"][0]
+    assert [s["state"] for s in space["seats"]] == ["available", "in_use", "out_of_service"]
+    assert space["counts"]["available"] == 1
+    assert space["counts"]["possibly_free"] == 0
+    summary = svc.summary(NOW)
+    assert summary["line"] == "1 of 3 seats free in 1 space"
+    assert summary["counts"]["available"] == 1

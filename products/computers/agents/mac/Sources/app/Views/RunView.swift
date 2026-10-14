@@ -119,7 +119,6 @@ struct RunView: View {
     private var seatWord: String {
         switch live.snapshot.seatState {
         case "in_use": "In use"
-        case "possibly_free": "Possibly free"
         default: "Free"
         }
     }
@@ -127,7 +126,6 @@ struct RunView: View {
     private var seatColor: Color {
         switch live.snapshot.seatState {
         case "in_use": .primary
-        case "possibly_free": .orange
         default: .green
         }
     }
