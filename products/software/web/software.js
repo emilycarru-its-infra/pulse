@@ -105,6 +105,7 @@ function scheduleLayout() {
     // before reading the responsive CSS column count.
     for (const card of list.children) {
       card.style.gridColumn = "";
+      card.style.gridRow = "";
     }
     const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
     const heights = Array(columns).fill(0);
