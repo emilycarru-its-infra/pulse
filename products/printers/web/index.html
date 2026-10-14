@@ -30,6 +30,13 @@
         </div>
       </div>
       <div class="toolbar-end">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="key ready"></span>Ready</li>
+        <li><span class="key printing"></span>Printing</li>
+        <li><span class="key attention"></span><span class="legend-full">Needs attention</span><span class="legend-short" aria-hidden="true">Attention</span></li>
+        <li><span class="key error"></span>Stopped</li>
+        <li><span class="key offline"></span><span class="legend-full">Not responding</span><span class="legend-short" aria-hidden="true">Offline</span></li>
+      </ul>
         <p class="total" id="total" aria-live="polite"></p>
       </div>
     </div>
@@ -59,13 +66,7 @@
     </div>
 
     <div class="map-foot">
-      <ul class="legend" aria-label="Legend">
-        <li><span class="key ready"></span>Ready</li>
-        <li><span class="key printing"></span>Printing</li>
-        <li><span class="key attention"></span>Needs attention</li>
-        <li><span class="key error"></span>Stopped</li>
-        <li><span class="key offline"></span>Not responding</li>
-      </ul>
+
       <p class="canvas-hint" id="hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a printer for its details</p>
     </div>
   </main>
