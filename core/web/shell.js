@@ -84,8 +84,11 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
   band.className = "band";
   band.setAttribute("aria-hidden", "true");
   const main = document.querySelector("main.doc");
-  if (compact) main.classList.add("product-page");
-  main.prepend(header, band);
+  if (compact) {
+    main.classList.add("product-page");
+    const heading = document.createElement("div"); heading.className = "masthead-wrap";
+    heading.append(header, band); main.prepend(heading);
+  } else main.prepend(header, band);
   return brand;
 };
 
