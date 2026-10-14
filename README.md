@@ -18,8 +18,6 @@ for the people who use it.
   <a href="core/README.md">Build with Pulse</a>
 </p>
 
-## One front door
-
 The **Pulse hub** brings product summaries, active incidents, scheduled maintenance and
 service history into one overview. See what is working, what needs attention and what is
 changing before opening a product for the details.
@@ -29,8 +27,6 @@ supplies the service catalog, incident updates and maintenance schedule.
 
 [Explore the Pulse hub →](hub/README.md)
 
-## A place to work
-
 **ComputersPulse** turns shared computers into a live view of your spaces. See what's
 free, in use or offline. Explore a floorplan or scan the list. Filter for Mac or Windows
 and find a seat before making the trip.
@@ -39,8 +35,6 @@ Small native agents report presence from managed computers. Inventory supplies t
 devices and their recorded locations; your floorplans put them on the map.
 
 [Explore ComputersPulse →](products/computers/README.md)
-
-## The software you need. The places that have it.
 
 **SoftwarePulse** starts with the application. Browse a curated icon grid, search by name,
 or narrow the collection by platform and category. Expand an app to see its locations,
@@ -52,8 +46,6 @@ where those applications have been observed. Package icons bring the catalog to 
 
 [Explore SoftwarePulse →](products/software/README.md)
 
-## A clearer path to print
-
 **PrintersPulse** puts printers on the same floorplans as shared computers. Browse the
 map or list to find a printer, then check its state, supplies, paper and queue in one place.
 
@@ -61,8 +53,6 @@ The interface and inventory catalog are implemented with sample status data. A c
 integration will connect the experience to the print-management system for real state.
 
 [Explore PrintersPulse →](products/printers/README.md)
-
-## Know what needs attention
 
 **ServersPulse** brings server and service health into a focused view for IT staff. See
 where a server runs, the services it supports, and its health, load and alerts without
