@@ -151,8 +151,11 @@ function drawFloor() {
       const seat = el("rect", { x: -size / 2, y: -size / 2, width: size, height: size, rx: size / 6,
         class: `seat ${s.state}` }, one);
       el("title", {}, seat).textContent = `${seatName(s)}: ${WORD[s.state]}${mobileHint(s)}`;
-      if (s.mobile) for (const x of [-size * 0.28, size * 0.28])
-        el("circle", { cx: x, cy: size * 0.54, r: size * 0.09, class: "wheel" }, one);
+      if (s.mobile) for (const x of [-size * 0.28, size * 0.28]) {
+        el("circle", { cx: x, cy: size * 0.54, r: size * 0.11,
+          "stroke-width": size * 0.05, class: "wheel" }, one);
+        el("circle", { cx: x, cy: size * 0.54, r: size * 0.025, class: "wheel-hub" }, one);
+      }
       const label = names.get(s.hostname);
       el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * (label.length > 2 ? 0.32 : 0.45) }, one).textContent = label;
     }
