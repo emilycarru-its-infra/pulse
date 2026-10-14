@@ -1,3 +1,12 @@
+# A campus has a pulse. Make it visible.
+
+The computer is somewhere. The software is installed somewhere. A service is down,
+maintenance is coming, and someone needs to know before they walk across campus.
+
+Pulse brings those answers together: live computer availability, a searchable software
+catalog, and a shared view of service health. One product family, with focused experiences
+for the people who use it.
+
 <p align="center">
   <strong>Find a free computer. Find the right software. Get on with your work.</strong>
 </p>
@@ -8,15 +17,6 @@
   <a href="products/software/README.md">Software</a> ·
   <a href="core/README.md">Build with Pulse</a>
 </p>
-
-# A campus has a pulse. Make it visible.
-
-The computer is somewhere. The software is installed somewhere. A service is down,
-maintenance is coming, and someone needs to know before they walk across campus.
-
-Pulse brings those answers together: live computer availability, a searchable software
-catalog, and a shared view of service health. One product family, with focused experiences
-for the people who use it.
 
 <p align="center">
   <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
