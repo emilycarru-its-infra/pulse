@@ -213,7 +213,7 @@ function renderList() {
     .map(({ r, c }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
-      card.innerHTML = `<div class="head"><div><p class="room"></p><h3></h3><p class="kicker"></p></div>
+      card.innerHTML = `<div class="head"><div><p class="room"></p><h3></h3><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${working(r.printers)}</b><span>ready of ${r.printers.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="printers"></div>`;
       card.querySelector(".room").textContent = r.room;
@@ -224,9 +224,11 @@ function renderList() {
         const go = document.createElement("button");
         go.type = "button";
         go.className = "on-map";
-        go.textContent = "Show on map";
+        go.setAttribute("aria-label", `Show ${r.name} on map`);
+        go.title = `Show ${r.name} on map`;
+        go.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z M9 3v15 M15 6v15"/></svg>';
         go.onclick = () => showOnMap(r);
-        card.querySelector(".head > div").append(go);
+        card.querySelector(".metadata").append(go);
       }
       card.querySelector(".printers").replaceChildren(...r.printers.map(printerRow));
       return card;

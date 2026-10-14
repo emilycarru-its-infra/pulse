@@ -181,8 +181,8 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 }
 
 .space-card .on-map {
-  font: inherit; font-size: 12px; font-weight: 700; margin-top: 8px; padding: 6px 10px; cursor: pointer;
-  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--rule); border-radius: 4px;
+  font: inherit; font-size: 12px; font-weight: 700; margin: 0; padding: 5px; display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; cursor: pointer;
+  background: var(--surface-1); color: var(--text-primary); border: 0; border-radius: 4px;
 }
 .space-card .on-map:hover, .space-card .on-map:focus-visible { background: var(--accent-band); color: #000; }
 
@@ -276,3 +276,6 @@ body.app main.doc.wide > .mock { margin-bottom: 12px; }
 .level b { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 
 .space-card .printers { display: flex; flex-direction: column; }
+
+.metadata { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.space-card .metadata .kicker { margin: 0; }
