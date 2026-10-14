@@ -185,7 +185,7 @@ ui.platform.addEventListener("click", (event) => {
 });
 ui.version.addEventListener("change", () => { const app = catalog.find((a) => matchesApp(a, selected)); if (app) renderLocations(app); });
 (async () => {
-  await Pulse.shell({ current: "software", title: "Software", context: "Explore campus software and find where it’s available" });
+  await Pulse.shell({ current: "software", title: "Software Catalog", context: "Explore campus software and find where it’s available" });
   selected = new URLSearchParams(location.search).get("app") || location.hash.slice(1);
   document.querySelector(".back").href = location.pathname;
   Pulse.poll(async () => {
