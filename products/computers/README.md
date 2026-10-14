@@ -132,3 +132,20 @@ cd products/computers/api && func start
 
 Events stay in memory, and the key stands in for a certificate. Set `PULSE_STORAGE_ACCOUNT`
 to use real tables through your own Azure sign-in.
+
+## Live seat editing
+
+A deploying site can enable live seat editing with `PULSE_EDIT_ROLE` (the authorized
+Static Web App role) and `PULSE_LAYOUT_TABLE` (a provisioned Table Storage table).
+The Function identity needs data access to that table. Configure the Static Web App
+write route and the Function's trusted browser routes alongside those settings.
+The API checks the platform-provided user principal as well as the route permission.
+
+Authorized administrators see **Edit seats** in map mode. Drag a seat or focus it and
+use the arrow keys; Shift moves it ten pixels. Seat positions save automatically.
+Live editing moves individual seats; room-outline editing remains in the local editor.
+
+Saved positions override the rebuilt catalog and survive deployments and inventory
+refreshes. An override stops applying if inventory moves the device to another floor.
+Saves include the layout version the editor loaded. A conflicting save is rejected,
+refreshes the map, and asks the editor to try again. Other viewers cannot save positions.

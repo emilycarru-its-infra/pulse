@@ -122,6 +122,7 @@ function drawFloor() {
   layer.replaceChildren();
   const labels = el("g", { class: "labels" });
   const font = phone.matches ? 11 : 13;
+  const roomHits = new Set();
   for (const space of floorSpaces(floor.id)) {
     const seats = seatsOf(space);
     const c = countsOf(seats);
@@ -129,7 +130,12 @@ function drawFloor() {
     const g = el("g", { class: `space${c.available ? "" : " none"}${state.picked === space.id ? " picked" : ""}`,
       role: "button", tabindex: 0, "data-id": space.id,
       "aria-label": `${space.name}, room ${space.room ?? ""}: ${c.available} of ${seats.length} free` }, layer);
-    el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, rx: 4, class: "room" }, g);
+    const roomKey = space.room || space.id;
+    // Several inventory groups can share a room. A later background must not cover
+    // the earlier group's seat targets; its own seats still select that group.
+    el("rect", { x: r.x, y: r.y, width: r.w, height: r.h, rx: 4, class: "room",
+      "pointer-events": roomHits.has(roomKey) ? "none" : "auto" }, g);
+    roomHits.add(roomKey);
     const size = space.seatSize || 20;
     const names = labelsFor(seats);
     for (const s of seats) {
@@ -269,7 +275,7 @@ function renderDrawer() {
       <button type="button" class="close" aria-label="Close details">Close</button></div>
     <p class="big">${c.available}</p><p class="of">free of ${seats.length}</p>
     <p class="counts">${countsLine(c)}</p>
-    ${edit.on && space.room ? `<p class="edit-room">Drag the room or its corners to fit the plan.
+    ${edit.on && state.status.editableRooms && space.room ? `<p class="edit-room">Drag the room or its corners to fit the plan.
       <button type="button" class="relayout">Lay the seats out again</button></p>` : ""}
     <h4>Seats</h4><ul class="rows"></ul>`;
   drawer.querySelector(".kicker").textContent = [floor?.name, space.room, KIND[space.kind]].filter(Boolean).join(" · ");
@@ -301,7 +307,13 @@ function render() {
     `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length} on campus</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
+  if (!state.status.editable && edit.on) {
+    edit.on = false;
+    document.getElementById("edit").setAttribute("aria-pressed", "false");
+    svg.classList.remove("editing");
+  }
   document.getElementById("edit-wrap").hidden = !state.status.editable;
+  document.getElementById("room-edit-hint").hidden = !state.status.editableRooms;
   document.getElementById("hint").hidden = state.mode !== "map" || edit.on;
   document.getElementById("edit-hint").hidden = state.mode !== "map" || !edit.on;
   if (state.mode === "map") drawFloor();
@@ -401,8 +413,8 @@ svg.addEventListener("keydown", (e) => {
   if (e.key === "Escape") pick(null, false);
 });
 
-// The seat editor, offered only by a server that can save positions (the local devserver run
-// with --positions). A seat dragged or nudged is saved a moment after it stops moving.
+// The seat editor is offered only when the server authorizes saving positions.
+// A seat dragged or nudged is saved a moment after it stops moving.
 const edit = { on: false, drag: null, dropped: false, pending: {}, timer: 0 };
 const seatOf = (host) => state.status.spaces.flatMap((sp) => sp.seats).find((s) => s.hostname === host);
 const note = (text) => { document.getElementById("edit-note").textContent = text; };
@@ -420,29 +432,45 @@ function place(g, s, x, y) {
   s.x = Math.round(x * 10) / 10;
   s.y = Math.round(y * 10) / 10;
   g.setAttribute("transform", `translate(${s.x},${s.y})`);
+  if (!Object.keys(edit.pending).length) edit.pendingVersion = state.status.layoutVersion;
   edit.pending[s.hostname] = [s.x, s.y];
   clearTimeout(edit.timer);
   edit.timer = setTimeout(save, 400);
 }
 
 async function save() {
+  if (edit.inFlight) return;
   const moves = edit.pending;
   const n = Object.keys(moves).length;
   if (!n) return;
+  const version = edit.pendingVersion;
   edit.pending = {};
+  edit.pendingVersion = undefined;
   edit.inFlight = moves;
   note("saving…");
+  let saved = false;
   try {
-    const r = await fetch("api/positions", { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(moves) });
-    note(r.ok ? `saved ${n} seat${n === 1 ? "" : "s"}` : `not saved: ${(await r.json()).error}`);
-  } catch {
-    note("not saved: the server did not answer");
+    const headers = { "Content-Type": "application/json" };
+    if (version !== undefined) headers["If-Match"] = version;
+    const r = await fetch("api/positions", { method: "POST", headers, body: JSON.stringify(moves) });
+    const result = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(result.error || `HTTP ${r.status}`);
+    if (result.layoutVersion !== undefined) {
+      state.status.layoutVersion = result.layoutVersion;
+      if (edit.pendingVersion === version) edit.pendingVersion = result.layoutVersion;
+    }
+    note(`saved ${n} seat${n === 1 ? "" : "s"}`);
+    saved = true;
+  } catch (error) {
+    note(`not saved: ${error.message}`);
   }
   edit.inFlight = null;
+  if (!saved) await refresh().catch(() => {});
+  if (Object.keys(edit.pending).length) edit.timer = setTimeout(save, 400);
 }
 
 document.getElementById("edit").onclick = (e) => {
+  if (!state.status.editable) return;
   edit.on = !edit.on;
   e.currentTarget.setAttribute("aria-pressed", String(edit.on));
   svg.classList.toggle("editing", edit.on);
@@ -458,7 +486,7 @@ const CORNERS = { nw: [0, 1], ne: [2, 1], sw: [0, 3], se: [2, 3] };
 const roomBox = (space) => { const r = bounds(space); return [r.x, r.y, r.x + r.w, r.y + r.h]; };
 
 function drawHandles(layer) {
-  const space = edit.on && state.status.spaces.find((s) => s.id === state.picked && s.room && s.floor === state.floor);
+  const space = edit.on && state.status.editableRooms && state.status.spaces.find((s) => s.id === state.picked && s.room && s.floor === state.floor);
   if (!space) return;
   const box = roomBox(space);
   const g = el("g", { class: "handles", "data-id": space.id }, layer);
@@ -512,7 +540,7 @@ async function saveRoom(space, box, extra = {}) {
 }
 
 content.addEventListener("pointerdown", (e) => {
-  if (!edit.on || e.button !== 0 || e.target.closest(".seat-g")) return;
+  if (!edit.on || !state.status.editableRooms || e.button !== 0 || e.target.closest(".seat-g")) return;
   const handle = e.target.closest(".handle");
   const room = e.target.classList.contains("room") && e.target.closest(".space");
   const id = handle?.parentNode.dataset.id ?? (room && room.dataset.id === state.picked ? room.dataset.id : null);
