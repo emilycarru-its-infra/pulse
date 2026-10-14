@@ -90,12 +90,17 @@ function groupedLocations(app, version = "") {
   }
   return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
+function holdLayoutHeight() {
+  const list = ui["software-list"];
+  list.style.minHeight = `${Math.max(list.getBoundingClientRect().height, parseFloat(list.style.minHeight) || 0)}px`;
+}
 let layoutFrame;
 function scheduleLayout() {
   cancelAnimationFrame(layoutFrame);
   layoutFrame = requestAnimationFrame(() => {
     const list = ui["software-list"];
     if (!list.clientWidth) return;
+    holdLayoutHeight();
     // Old explicit positions create implicit tracks after a narrower resize. Clear them
     // before reading the responsive CSS column count.
     for (const card of list.children) {
@@ -116,6 +121,7 @@ function scheduleLayout() {
       card.style.gridRow = `${heights[column] + 1} / span ${height}`;
       heights[column] += height + (view === "locations" ? 20 : 16);
     });
+    list.style.minHeight = "";
   });
 }
 const cardObserver = new ResizeObserver(scheduleLayout);
@@ -172,6 +178,7 @@ function syncLinks() {
   if (clear) { clear.href = softwareURL({ location: "", app: "", open: "" }); clear.hidden = !locationFilter; }
 }
 function renderBrowse() {
+  holdLayoutHeight();
   syncLinks();
   const query = ui.search.value.trim().toLocaleLowerCase();
   cardObserver.disconnect();
@@ -234,7 +241,7 @@ function renderBrowse() {
   scheduleLayout();
   if (focusId) {
     const card = [...ui["software-list"].children].find((a) => a.dataset.id === focusId);
-    (focusAction ? card?.querySelector(`[data-action="${focusAction}"]`) : card?.querySelector("summary"))?.focus();
+    (focusAction ? card?.querySelector(`[data-action="${focusAction}"]`) : card?.querySelector("summary"))?.focus({ preventScroll: true });
   }
 }
 function renderLocations(app) {
