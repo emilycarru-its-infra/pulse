@@ -4,7 +4,7 @@ const WORD = { available: "free", in_use: "in use", offline: "off or not reporti
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
 const ORDER = ["available", "in_use", "offline", "out_of_service"];
 
-const state = { query: "", classroom: false, floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
+const state = { query: "", classroom: false, floor: null, platform: "all", mode: "list", picked: null, hover: null, status: null, drawn: null };
 const phone = window.matchMedia("(max-width: 700px)");
 const svg = document.getElementById("map");
 const content = document.getElementById("content");
@@ -310,11 +310,61 @@ function renderDrawer() {
   if (relayout) relayout.onclick = () => saveRoom(space, roomBox(space), { relayout: true });
 }
 
+function viewState() {
+  return { mode: state.mode, floor: state.floor, picked: state.picked,
+    platform: state.platform, classroom: state.classroom, query: state.query,
+    scroll: document.getElementById("list-view").scrollTop };
+}
+function viewURL() {
+  const params = new URLSearchParams({ view: state.mode });
+  if (state.floor) params.set("floor", state.floor);
+  if (state.picked) params.set("room", state.picked);
+  if (state.platform !== "all") params.set("platform", state.platform);
+  if (state.classroom) params.set("classroom", "1");
+  if (state.query) params.set("q", state.query);
+  return `#${params}`;
+}
+function rememberView() {
+  history.replaceState({ pulse: viewState() }, "", location.href);
+}
+function recordView(push = true) {
+  const method = push && location.hash !== viewURL() ? "pushState" : "replaceState";
+  history[method]({ pulse: viewState() }, "", viewURL());
+}
+function readView() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  return { mode: params.get("view") === "map" || (!params.has("view") && (params.has("floor") || params.has("room"))) ? "map" : "list",
+    floor: params.get("floor"), picked: params.get("room"),
+    platform: ["mac", "windows"].includes(params.get("platform")) ? params.get("platform") : "all",
+    classroom: params.get("classroom") === "1", query: params.get("q") || "", scroll: 0 };
+}
+function syncControls() {
+  for (const key of ["mode", "platform"]) for (const b of document.querySelectorAll(`#${key} button`))
+    b.setAttribute("aria-pressed", String(b.dataset.v === state[key]));
+  document.getElementById("classroom").setAttribute("aria-pressed", String(state.classroom));
+  document.getElementById("filter").value = state.query;
+}
+function restoreView(view) {
+  Object.assign(state, view);
+  state.drawn = null;
+  state.hover = null;
+  syncControls();
+  render();
+  const restoreScroll = () => { document.getElementById("list-view").scrollTop = view.scroll || 0; };
+  restoreScroll();
+  requestAnimationFrame(() => requestAnimationFrame(restoreScroll));
+  if (state.status && state.mode === "map" && state.picked) pick(state.picked, true, false);
+}
+window.addEventListener("popstate", (event) => restoreView(event.state?.pulse || readView()));
+window.addEventListener("hashchange", () => {
+  if (location.hash !== viewURL()) restoreView(readView());
+});
+
 function render() {
   if (!state.status) return;
   // The map always shows one floor; the list can show every floor at once.
   const known = state.status.floors.some((f) => f.id === state.floor);
-  if (state.mode === "map" && !known) state.floor = state.status.floors[0]?.id ?? null;
+  if (state.mode === "map" && !known) state.floor = visibleSpaces().find((s) => s.floor)?.floor ?? state.status.floors[0]?.id ?? null;
   else if (state.floor && !known) state.floor = null;
   renderFloors();
   const seats = visibleSpaces().flatMap(seatsOf);
@@ -322,6 +372,7 @@ function render() {
     `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length}${state.query || state.classroom || state.platform !== "all" ? " matching" : " on campus"}</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
+  document.querySelector(".zoom").hidden = state.mode !== "map";
   if (!state.status.editable && edit.on) {
     edit.on = false;
     document.getElementById("edit").setAttribute("aria-pressed", "false");
@@ -341,16 +392,18 @@ function render() {
 }
 
 function showOnMap(space) {
+  rememberView();
   state.mode = "map";
-  for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "map"));
-  if (space.floor !== state.floor) setFloor(space.floor);
+  state.floor = space.floor;
   state.drawn = null;
-  render();
+  syncControls();
+  pick(space.id, true, false);
+  recordView();
   document.getElementById("map-view").scrollIntoView({ block: "start" });
-  requestAnimationFrame(() => pick(space.id));
 }
 
-function pick(id, zoom = true) {
+function pick(id, zoom = true, record = true) {
+  if (record) rememberView();
   state.picked = id;
   render();
   openBadges();
@@ -368,11 +421,12 @@ function pick(id, zoom = true) {
     vp.touch();
     vp.frameRect(box, true, 2.5);
   }
-  try { history.replaceState(null, "", `#floor=${state.floor}${id ? `&room=${id}` : ""}`); } catch {}
+  if (record) recordView();
 }
 
 // Picking the floor already shown clears the filter in the list, which then shows every floor.
 function setFloor(id) {
+  rememberView();
   if (id === state.floor) {
     if (state.mode !== "list") return;
     id = null;
@@ -381,10 +435,7 @@ function setFloor(id) {
   state.picked = null;
   state.drawn = null;
   render();
-  try {
-    history.replaceState(null, "", id ? `#floor=${id}` : location.pathname);
-    if (id) localStorage.setItem("pulse.floor", id); else localStorage.removeItem("pulse.floor");
-  } catch {}
+  recordView();
 }
 
 document.getElementById("floors").addEventListener("click", (e) => {
@@ -402,11 +453,13 @@ for (const [id, key] of [["platform", "platform"], ["mode", "mode"]]) {
     const b = e.target.closest("button");
     if (!b) return;
     // Mac and Windows filter; pressing the one already on shows every platform again.
+    rememberView();
     const off = key === "platform" && state.platform === b.dataset.v;
     state[key] = off ? "all" : b.dataset.v;
     for (const x of e.currentTarget.querySelectorAll("button")) x.setAttribute("aria-pressed", String(x === b && !off));
-    if (key === "mode") state.drawn = null;
+    if (key === "mode") { state.drawn = null; state.picked = null; }
     render();
+    recordView();
   });
 }
 function applyFilters() {
@@ -425,13 +478,17 @@ function applyFilters() {
   }
 }
 document.getElementById("filter").addEventListener("input", (e) => {
+  rememberView();
   state.query = e.target.value;
   applyFilters();
+  recordView(false);
 });
 document.getElementById("classroom").onclick = (e) => {
+  rememberView();
   state.classroom = !state.classroom;
   e.currentTarget.setAttribute("aria-pressed", String(state.classroom));
   applyFilters();
+  recordView();
 };
 
 document.getElementById("zoom-in").onclick = () => { vp.touch(); vp.zoomAt(1.25, undefined, undefined, true); };
@@ -658,13 +715,9 @@ content.addEventListener("keydown", (e) => {
 });
 
 (async () => {
-  const hash = new URLSearchParams(location.hash.slice(1));
-  try { state.floor = hash.get("floor") || localStorage.getItem("pulse.floor"); } catch { state.floor = hash.get("floor"); }
-  const room = hash.get("room");
-  if (phone.matches && !room) {
-    state.mode = "list";
-    for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
-  }
+  const initial = readView();
+  Object.assign(state, initial);
+  syncControls();
   await Pulse.shell({ current: "computers", title: "Computer Status", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
@@ -672,7 +725,10 @@ content.addEventListener("keydown", (e) => {
     keepMoves(status);
     state.status = status;
     if (!edit.drag && !edit.box) render();
-    if (first && room) requestAnimationFrame(() => pick(room));
+    if (first) {
+      if (state.picked) pick(state.picked, true, false);
+      recordView(false);
+    }
     first = false;
   }, 15000);
 })();

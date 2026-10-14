@@ -11,29 +11,27 @@
 <body class="app">
   <main class="doc wide">
     <div class="map-toolbar">
-      <div class="floors" role="tablist" aria-label="Floors" id="floors"></div>
-      <div class="views">
-        <span class="zoom" role="group" aria-label="Zoom">
-          <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
-          <button type="button" id="zoom-level" class="zoom-level" title="Show the whole floor">100%</button>
-          <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
-        </span>
-        <div class="segmented" role="group" aria-label="Show" id="mode">
-          <button type="button" data-v="map" aria-pressed="true">Map</button>
-          <button type="button" data-v="list" aria-pressed="false">List</button>
-        </div>
-        <div class="segmented" role="group" aria-label="Platform" id="platform">
-          <button type="button" data-v="mac" aria-pressed="false">Mac</button>
-          <button type="button" data-v="windows" aria-pressed="false">Windows</button>
-        </div>
-        <div class="segmented" role="group" aria-label="Space type">
-          <button type="button" id="classroom" aria-pressed="false">Classroom</button>
-        </div>
-        <div class="segmented" id="edit-wrap" hidden>
-          <button type="button" id="edit" aria-pressed="false">Edit seats</button>
-        </div>
+      <div class="segmented" role="group" aria-label="Show" id="mode">
+        <button type="button" data-v="map" aria-pressed="false">Map</button>
+        <button type="button" data-v="list" aria-pressed="true">List</button>
       </div>
-      <label class="search"><span>Filter</span><input type="search" id="filter" placeholder="Room, lab or computer" autocomplete="off"></label>
+      <div class="floors" role="tablist" aria-label="Floors" id="floors"></div>
+      <div class="segmented" role="group" aria-label="Platform" id="platform">
+        <button type="button" data-v="mac" aria-pressed="false">Mac</button>
+        <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+      </div>
+      <div class="segmented" role="group" aria-label="Space type">
+        <button type="button" id="classroom" aria-pressed="false">Classroom</button>
+      </div>
+      <input type="search" class="search" id="filter" aria-label="Filter rooms, labs or computers" placeholder="Filter" autocomplete="off">
+      <span class="zoom" hidden role="group" aria-label="Zoom">
+        <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+        <button type="button" id="zoom-level" class="zoom-level" title="Show the whole floor">100%</button>
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+      </span>
+      <div class="segmented" id="edit-wrap" hidden>
+        <button type="button" id="edit" aria-pressed="false">Edit seats</button>
+      </div>
       <div class="toolbar-end">
         <p class="total" id="total" aria-live="polite"></p>
       </div>
