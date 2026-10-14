@@ -150,12 +150,19 @@ def build(site: dict, devices: Iterable[Device], provider: str, now: datetime | 
             report.unmapped.append(space["id"])
         if code:
             space["room"] = code
+        classification = site.get("classification", {})
+        if space.get("kind") == "lab" and code in classification.get("classroom_rooms", []):
+            space["tags"] = list(dict.fromkeys([*space.get("tags", []), "classroom"]))
+        mobile_keywords = [word.casefold() for word in classification.get("mobile_keywords", []) if word]
         seats = []
         for i, d in enumerate(members):
             seat = {"hostname": d.hostname, "assetTag": d.asset_tag, "serial": d.serial,
                     "platform": d.platform, "room": d.location}
             if d.name and d.name.upper() != d.hostname:
                 seat["name"] = d.name
+            text = " ".join([d.hostname, d.name or "", d.group, d.location]).casefold()
+            if any(word in text for word in mobile_keywords):
+                seat["mobile"] = True
             if d.device_ids:
                 seat["deviceIds"] = list(d.device_ids)
             if d.hostname in out_of_service:

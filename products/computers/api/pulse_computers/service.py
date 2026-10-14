@@ -71,6 +71,7 @@ class ComputersService:
                 seats.append({
                     "hostname": seat["hostname"],
                     **({"name": seat["name"]} if "name" in seat else {}),
+                    **({"mobile": seat["mobile"]} if "mobile" in seat else {}),
                     "platform": seat["platform"],
                     "state": state.value,
                     "lastSeen": event["receivedAt"] if event else None,
@@ -78,7 +79,7 @@ class ComputersService:
                 })
             spaces.append({
                 **{k: space[k] for k in ("id", "name", "kind", "building", "floor", "floorplan", "room", "label",
-                                         "box", "seatSize") if k in space},
+                                         "box", "seatSize", "tags") if k in space},
                 "counts": counts,
                 "seats": seats,
             })

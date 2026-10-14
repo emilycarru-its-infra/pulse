@@ -118,6 +118,9 @@
                 },
                 "y": {
                   "type": "number"
+                },
+                "mobile": {
+                  "type": "boolean"
                 }
               }
             }
@@ -146,6 +149,13 @@
           "seatSize": {
             "type": "number",
             "description": "Seat square size in plan pixels."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
           }
         }
       }
