@@ -138,14 +138,19 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
   .drawer { width: auto; }
 }
 
-/* Tablets and narrow windows: the toolbar stays on one row, so the floor tabs and the campus
-   total drop their extra words, and a touch screen drops the zoom buttons for pinch. */
-@media (min-width: 701px) and (max-width: 1439px) {
+/* Compact laptop controls retain fixed floor widths as live counts change. */
+@media (min-width: 701px) and (max-width: 1799px) {
   .map-toolbar { flex-wrap: wrap; gap: 10px; }
   .views { flex-wrap: nowrap; gap: 6px; }
   .floors { flex-shrink: 0; grid-template-columns: repeat(4, 112px); }
   .floors .word, .total .word { display: none; }
   .segmented button { padding: 6px 10px; }
+  .toolbar-end { gap: 10px; }
+  .legend { font-size: 12px; gap: 4px 8px; }
+  .total { flex-basis: 64px; }
+}
+@media (min-width: 701px) and (max-width: 1599px) {
+  .floors { grid-template-columns: repeat(4, 96px); }
 }
 @media (min-width: 701px) and (max-width: 899px) { .zoom .zoom-level { display: none; } .floors button { padding: 6px 9px; } .floors .tight { display: none; } }
 
@@ -207,6 +212,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .tile.out_of_service { background: var(--surface-2); border-color: var(--bad); color: var(--bad); }
 
 .search { min-width: 150px; width: 210px; height: 34px; border: 1px solid var(--rule); border-radius: 4px; padding: 6px 10px; font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-1); }
+@media (min-width: 701px) and (max-width: 1799px) { .search { width: 150px; } }
 .search:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 2px; }
 .map-toolbar { justify-content: flex-start; gap: 10px; }
 .filter-result { padding: 10px 0; font-size: 14px; color: var(--text-secondary); }
