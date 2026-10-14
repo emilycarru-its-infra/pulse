@@ -118,9 +118,6 @@ function drawFloor() {
     tintPlan();
     state.drawn = floor.id;
     const home = homeFor(floor);
-    // A phone's map is as tall as the floor's rooms need at full width, so no empty bands.
-    svg.style.height = phone.matches
-      ? `${Math.round(Math.min(Math.max(svg.clientWidth * home.h / home.w + 48, 220), innerHeight * 0.62))}px` : "";
     vp.setHome(home);
   }
   const layer = document.getElementById("spaces-layer");
