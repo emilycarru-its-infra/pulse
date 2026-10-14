@@ -30,6 +30,17 @@ function New-Rule([string]$Sid, [string]$Rights, [string]$Inherit = 'ContainerIn
         (New-Object Security.Principal.SecurityIdentifier $Sid), $Rights, $Inherit, $Propagate, 'Allow')
 }
 
+# PowerShell 7 (which the package's postinstall runs in) dropped GetAccessControl and
+# SetAccessControl from DirectoryInfo; there they live on FileSystemAclExtensions.
+function Get-DirectoryAcl([IO.DirectoryInfo]$Item) {
+    if ($PSVersionTable.PSEdition -eq 'Core') { [IO.FileSystemAclExtensions]::GetAccessControl($Item) }
+    else { $Item.GetAccessControl() }
+}
+function Set-DirectoryAcl([IO.DirectoryInfo]$Item, [Security.AccessControl.DirectorySecurity]$Acl) {
+    if ($PSVersionTable.PSEdition -eq 'Core') { [IO.FileSystemAclExtensions]::SetAccessControl($Item, $Acl) }
+    else { $Item.SetAccessControl($Acl) }
+}
+
 # Uses the folder at $Path, creating it if needed, and gives it a protected ACL: owned by
 # Administrators, SYSTEM and Administrators full control, plus $Extra rules. An existing folder
 # that is a link or that anyone else owns stops the install; it is never repaired or deleted.
@@ -37,7 +48,10 @@ function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
     $item = $null
     if (Test-Path -LiteralPath $Path) {
         $item = Get-Item -LiteralPath $Path -Force
-        $owner = $item.GetAccessControl().GetOwner([Security.Principal.SecurityIdentifier]).Value
+        if (-not $item.PSIsContainer) {
+            throw "$Path already exists and is a link or is not owned by SYSTEM or Administrators. Remove it, then install again."
+        }
+        $owner = (Get-DirectoryAcl $item).GetOwner([Security.Principal.SecurityIdentifier]).Value
         if (-not $item.PSIsContainer -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or @('S-1-5-18', 'S-1-5-32-544') -notcontains $owner) {
             throw "$Path already exists and is a link or is not owned by SYSTEM or Administrators. Remove it, then install again."
         }
@@ -53,11 +67,11 @@ function Set-ProtectedDirectory([string]$Path, [object[]]$Extra = @()) {
         else { [IO.Directory]::CreateDirectory($Path, $acl) | Out-Null }
         $item = Get-Item -LiteralPath $Path -Force
     } else {
-        $item.SetAccessControl($acl)
+        Set-DirectoryAcl $item $acl
     }
     # CreateDirectory quietly returns a folder someone made in the meantime without applying the
     # ACL, so check what is actually there rather than trusting the call.
-    $actual = $item.GetAccessControl()
+    $actual = Get-DirectoryAcl $item
     $owner = $actual.GetOwner([Security.Principal.SecurityIdentifier]).Value
     if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -or -not $actual.AreAccessRulesProtected -or
             @('S-1-5-18', 'S-1-5-32-544') -notcontains $owner -or (Get-ChildItem -LiteralPath $Path -Force |
