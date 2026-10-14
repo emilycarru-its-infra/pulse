@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 from pulse_core.state import LastSeen, SeatState, seat_state
 
 NOW = datetime(2027, 1, 4, 17, 0, tzinfo=timezone.utc)
@@ -23,7 +25,14 @@ def test_available_when_nobody_signed_in():
     assert seat_state(seen(active=False), NOW) is SeatState.AVAILABLE
 
 
-def test_in_use_and_possibly_free():
-    assert seat_state(seen(idle=899), NOW) is SeatState.IN_USE
-    assert seat_state(seen(idle=900), NOW) is SeatState.POSSIBLY_FREE
-    assert seat_state(seen(locked=True), NOW) is SeatState.POSSIBLY_FREE
+@pytest.mark.parametrize("locked", [False, True])
+@pytest.mark.parametrize("idle,expected", [(0, SeatState.IN_USE), (899, SeatState.IN_USE),
+                                          (900, SeatState.AVAILABLE), (901, SeatState.AVAILABLE)])
+def test_availability_uses_inactivity_even_when_locked(locked, idle, expected):
+    assert seat_state(seen(locked=locked, idle=idle), NOW) is expected
+
+
+def test_idle_does_not_override_offline_or_out_of_service():
+    assert seat_state(seen(ago=301, idle=900), NOW) is SeatState.OFFLINE
+    assert seat_state(seen(event="shutdown", idle=900), NOW) is SeatState.OFFLINE
+    assert seat_state(seen(locked=True, idle=900), NOW, out_of_service=True) is SeatState.OUT_OF_SERVICE

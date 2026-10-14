@@ -31,8 +31,11 @@ import Testing
 @Test func seatStateMirrorsTheServer() {
     #expect(SessionSnapshot(active: false, locked: false, idleSeconds: 0).seatState == "available")
     #expect(SessionSnapshot(active: true, locked: false, idleSeconds: 10).seatState == "in_use")
-    #expect(SessionSnapshot(active: true, locked: true, idleSeconds: 10).seatState == "possibly_free")
-    #expect(SessionSnapshot(active: true, locked: false, idleSeconds: 900).seatState == "possibly_free")
+    #expect(SessionSnapshot(active: true, locked: true, idleSeconds: 10).seatState == "in_use")
+    #expect(SessionSnapshot(active: true, locked: false, idleSeconds: 899).seatState == "in_use")
+    #expect(SessionSnapshot(active: true, locked: true, idleSeconds: 899).seatState == "in_use")
+    #expect(SessionSnapshot(active: true, locked: true, idleSeconds: 900).seatState == "available")
+    #expect(SessionSnapshot(active: true, locked: false, idleSeconds: 900).seatState == "available")
 }
 
 @Test func helperAcceptsOnlyThePrefsKeysAndCommands() {

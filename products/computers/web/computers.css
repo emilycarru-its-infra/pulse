@@ -38,7 +38,6 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 
 .key { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 2px solid transparent; }
 .key.available { background: var(--ok); }
-.key.possibly_free { background: repeating-linear-gradient(135deg, var(--warn) 0 3px, color-mix(in srgb, var(--warn) 45%, var(--surface-1)) 3px 6px); }
 .key.in_use { background: var(--text-primary); }
 .key.offline { border: 2px dashed var(--idle); }
 .key.out_of_service { border-color: var(--bad); background: linear-gradient(to top right, transparent 44%, var(--bad) 44% 56%, transparent 56%); }
@@ -95,16 +94,12 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 
 .floormap .seat { stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .floormap .seat.available { fill: var(--ok); }
-.floormap .seat.possibly_free { fill: url(#hatch); }
 .floormap .seat.in_use { fill: var(--text-primary); }
 .floormap .seat.offline { fill: var(--surface-1); stroke: var(--idle); stroke-dasharray: 3 2; }
 .floormap .seat.out_of_service { fill: var(--surface-2); stroke: var(--bad); }
-.floormap .hatch-bg { fill: color-mix(in srgb, var(--warn) 45%, var(--surface-1)); }
-.floormap .hatch-fg { fill: var(--warn); }
 .floormap .num { font-family: var(--font); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .floormap .num.available, .floormap .num.in_use { fill: var(--page); }
 .floormap .num.available { fill: #fff; }
-.floormap .num.possibly_free { fill: #000; }
 .floormap .num.offline { fill: var(--text-muted); }
 .floormap .num.out_of_service { fill: var(--bad); }
 .floormap.far .num { display: none; }
@@ -131,7 +126,6 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
   border-radius: 4px; font-size: 11px; font-weight: 700; border: 2px solid transparent;
 }
 .drawer .rows .tag.available { background: var(--ok); color: #fff; }
-.drawer .rows .tag.possibly_free { background: repeating-linear-gradient(135deg, var(--warn) 0 4px, color-mix(in srgb, var(--warn) 55%, var(--surface-1)) 4px 8px); color: #000; }
 .drawer .rows .tag.in_use { background: var(--text-primary); color: var(--page); }
 .drawer .rows .tag.offline { border: 2px dashed var(--idle); color: var(--text-muted); }
 .drawer .rows .tag.out_of_service { background: var(--surface-2); border-color: var(--bad); color: var(--bad); }
@@ -207,7 +201,6 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .tiles { list-style: none; display: grid; gap: 5px; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); }
 .tile { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; border-radius: 4px; font-size: 10px; overflow: hidden; white-space: nowrap; font-weight: 700; border: 2px solid transparent; }
 .tile.available { background: var(--ok); color: #fff; }
-.tile.possibly_free { background: repeating-linear-gradient(135deg, var(--warn) 0 5px, color-mix(in srgb, var(--warn) 55%, var(--surface-1)) 5px 10px); color: #000; }
 .tile.in_use { background: var(--text-primary); color: var(--page); }
 .tile.offline { border: 2px dashed var(--idle); color: var(--text-muted); }
 .tile.out_of_service { background: var(--surface-2); border-color: var(--bad); color: var(--bad); }

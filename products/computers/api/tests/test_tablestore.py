@@ -42,7 +42,7 @@ def test_tablestore_keeps_latest_per_seat_and_every_event():
     assert {k[1] for k in state.rows} == {"LAB-01", "LAB-02"}
     assert json.loads(state.rows[("seat", "LAB-01")]["event"])["type"] == "lock"
     seats = svc.status(NOW)["spaces"][0]["seats"]
-    assert [s["state"] for s in seats] == ["possibly_free", "in_use", "out_of_service"]
+    assert [s["state"] for s in seats] == ["in_use", "in_use", "out_of_service"]
     assert [e["type"] for e in svc.export(datetime(2027, 1, 3, tzinfo=timezone.utc))] == ["login", "lock", "heartbeat"]
     assert [e["type"] for e in svc.export(NOW)] == ["heartbeat"]
 

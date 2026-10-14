@@ -69,8 +69,10 @@ public class TransitionTests
     {
         Assert.Equal("available", Transitions.SeatState(S(false)));
         Assert.Equal("in_use", Transitions.SeatState(new SessionSnapshot(true, false, 899, 1, "helper")));
-        Assert.Equal("possibly_free", Transitions.SeatState(new SessionSnapshot(true, false, 900, 1, "helper")));
-        Assert.Equal("possibly_free", Transitions.SeatState(S(true, locked: true)));
+        Assert.Equal("in_use", Transitions.SeatState(new SessionSnapshot(true, true, 899, 1, "helper")));
+        Assert.Equal("available", Transitions.SeatState(new SessionSnapshot(true, true, 900, 1, "helper")));
+        Assert.Equal("available", Transitions.SeatState(new SessionSnapshot(true, false, 900, 1, "helper")));
+        Assert.Equal("in_use", Transitions.SeatState(S(true, locked: true)));
     }
 }
 
