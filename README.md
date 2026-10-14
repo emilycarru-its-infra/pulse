@@ -7,11 +7,11 @@ Pulse brings those answers together: live computer availability, a searchable so
 catalog, and a shared view of service health. One product family, with focused experiences
 for the people who use it.
 
-<p align="center">
+<p align="left">
   <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
 </p>
 
-<p align="center">
+<p align="left">
   <a href="hub/README.md">Status hub</a> ·
   <a href="products/computers/README.md">Computers</a> ·
   <a href="products/software/README.md">Software</a> ·
