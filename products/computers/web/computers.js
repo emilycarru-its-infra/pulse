@@ -47,7 +47,7 @@ const el = (name, attrs = {}, parent) => {
   parent?.append(node);
   return node;
 };
-const seatsOf = (space) => space.seats.filter((s) => state.platform === "all" || s.platform === state.platform);
+const seatsOf = (space) => space.seats.filter((s) => state.platform === "all" || s.platform === state.platform).filter((s) => s.softwareMatch !== false);
 const matchesSpace = (space) => (!state.classroom || space.tags?.includes("classroom")) &&
   state.query.trim().toLowerCase().split(/\s+/).every((word) =>
     [space.name, space.room, KIND[space.kind], ...seatsOf(space).map((s) => `${seatName(s)} ${s.hostname}`)]
@@ -319,7 +319,7 @@ function render() {
   renderFloors();
   const seats = visibleSpaces().flatMap(seatsOf);
   document.getElementById("total").innerHTML =
-    `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length}${state.query || state.classroom || state.platform !== "all" ? " matching" : " on campus"}</span>`;
+    `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length}${state.query || state.classroom || state.platform !== "all" || state.status.selectedSoftware ? " matching" : " on campus"}</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
   if (!state.status.editable && edit.on) {
@@ -661,14 +661,14 @@ content.addEventListener("keydown", (e) => {
   const hash = new URLSearchParams(location.hash.slice(1));
   try { state.floor = hash.get("floor") || localStorage.getItem("pulse.floor"); } catch { state.floor = hash.get("floor"); }
   const room = hash.get("room");
-  if (phone.matches && !room) {
+  if ((phone.matches || Pulse.computersOptions?.defaultMode === "list") && !room) {
     state.mode = "list";
     for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
   }
-  await Pulse.shell({ current: "computers", title: "Computer Status", context: "Shared computers across campus" });
+  await Pulse.shell(Pulse.computersOptions || { current: "computers", title: "Computer Status", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
-    const status = await fetch("api/status").then((r) => r.json());
+    const status = await (Pulse.loadComputerStatus ? Pulse.loadComputerStatus() : fetch("api/status").then((r) => { if (!r.ok) throw new Error("Computer status unavailable"); return r.json(); }));
     keepMoves(status);
     state.status = status;
     if (!edit.drag && !edit.box) render();

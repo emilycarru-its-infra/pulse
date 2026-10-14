@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Find Software</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="computers.css">
+  <link rel="stylesheet" href="software.css">
+</head>
+<body class="app">
+  <main class="doc wide">
+    <section class="software-search" aria-label="Find software">
+      <label for="software">Find software</label>
+      <input type="search" id="software" list="software-options" placeholder="Search installed software" autocomplete="off">
+      <datalist id="software-options"></datalist>
+      <label for="software-version">Version</label><select id="software-version"><option value="">Any version</option></select>
+      <button type="button" id="clear-software">Clear</button>
+      <p id="software-note" role="status">Loading software and live computer availability…</p>
+      <div id="software-suggestions" class="software-suggestions" aria-label="Software suggestions"></div>
+    </section>
+    <div class="map-toolbar">
+      <div class="floors" role="tablist" aria-label="Floors" id="floors"></div>
+      <div class="views">
+        <span class="zoom" role="group" aria-label="Zoom">
+          <button type="button" id="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" id="zoom-level" class="zoom-level" title="Show the whole floor">100%</button>
+          <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        </span>
+        <div class="segmented" role="group" aria-label="Show" id="mode">
+          <button type="button" data-v="map" aria-pressed="true">Map</button>
+          <button type="button" data-v="list" aria-pressed="false">List</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Platform" id="platform">
+          <button type="button" data-v="mac" aria-pressed="false">Mac</button>
+          <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Space type">
+          <button type="button" id="classroom" aria-pressed="false">Classroom</button>
+        </div>
+        <div class="segmented" id="edit-wrap" hidden>
+          <button type="button" id="edit" aria-pressed="false">Edit seats</button>
+        </div>
+      </div>
+      <label class="search"><span>Filter</span><input type="search" id="filter" placeholder="Room, lab or computer" autocomplete="off"></label>
+      <div class="toolbar-end">
+        <p class="total" id="total" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <p id="filter-result" class="filter-result" role="status" hidden></p>
+    <div class="stage">
+      <div class="canvas-wrap" id="map-view">
+        <svg id="map" class="floormap" role="application" tabindex="0"
+             aria-label="Floor plan. Drag to pan, pinch or hold Command and scroll to zoom. Pick a room for its seats.">
+          <defs>
+            <!-- Turns the plan's dark lines light for dark mode; an SVG filter, because Safari
+                 does not apply CSS filters to an SVG image. -->
+            <filter id="plan-light" color-interpolation-filters="sRGB">
+              <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"></feColorMatrix>
+            </filter>
+          </defs>
+          <g id="content"></g>
+        </svg>
+      </div>
+      <div class="list-view" id="list-view" hidden><div class="spaces" id="spaces"></div></div>
+      <aside class="drawer" id="drawer" aria-label="Room details" hidden></aside>
+    </div>
+
+    <div class="map-foot">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="key available"></span>Free</li>
+        <li><span class="key in_use"></span>In use</li>
+        <li><span class="key offline"></span>Off</li>
+        <li><span class="key out_of_service"></span>Out of service</li>
+      </ul>
+      <p class="canvas-hint" id="hint">Drag to pan · scroll to move · pinch or ⌘-scroll to zoom · + − 0 on the keyboard · pick a room for its seats</p>
+      <p class="canvas-hint" id="edit-hint" hidden><span id="room-edit-hint">Pick a room to move or resize it · </span>drag a seat to place it · arrow keys nudge the focused seat, Shift for 10 · <span id="edit-note" aria-live="polite">saved as you go</span></p>
+    </div>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="/core/masonry.js"></script>
+  <script src="/core/viewport.js"></script>
+  <script src="software.js"></script>
+  <script src="computers.js"></script>
+</body>
+</html>
