@@ -22,6 +22,20 @@ function icon(app, size = 48) {
   }
   return text("span", app.name.slice(0, 1), "icon-fallback");
 }
+function platformBadges(platforms) {
+  const badges = document.createElement("div"); badges.className = "platform-badges";
+  const paths = {'mac': 'M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z', 'windows': 'M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z'};
+  for (const platform of [...platforms].sort()) {
+    if (!paths[platform]) continue;
+    const badge = document.createElement("span"); badge.className = "platform-badge";
+    badge.title = platformName(platform); badge.setAttribute("role", "img"); badge.setAttribute("aria-label", platformName(platform));
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "currentColor"); svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("d", paths[platform]);
+    svg.append(path); badge.append(svg); badges.append(badge);
+  }
+  return badges;
+}
 function groupedLocations(app, version = "") {
   const groups = new Map();
   for (const location of app.locations) {
@@ -40,18 +54,20 @@ function scheduleLayout() {
   cancelAnimationFrame(layoutFrame);
   layoutFrame = requestAnimationFrame(() => {
     const list = ui["software-list"];
-    if (!list.clientWidth || view !== "software") return;
+    if (!list.clientWidth) return;
     const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
     const heights = Array(columns).fill(0);
     [...list.children].forEach((card, index) => {
       const heading = card.querySelector("h2");
-      heading.style.fontSize = "16px";
-      if (heading.scrollWidth > heading.clientWidth) heading.style.fontSize = `${16 * heading.clientWidth / heading.scrollWidth}px`;
-      const column = index % columns;
+      if (view === "software") {
+        heading.style.fontSize = "16px";
+        if (heading.scrollWidth > heading.clientWidth) heading.style.fontSize = `${16 * heading.clientWidth / heading.scrollWidth}px`;
+      }
+      const column = view === "locations" ? heights.indexOf(Math.min(...heights)) : index % columns;
       const height = Math.ceil(card.getBoundingClientRect().height);
       card.style.gridColumn = String(column + 1);
       card.style.gridRow = `${heights[column] + 1} / span ${height}`;
-      heights[column] += height + 16;
+      heights[column] += height + (view === "locations" ? 20 : 16);
     });
   });
 }
@@ -82,7 +98,7 @@ function renderLocationBrowse(query) {
     const header = document.createElement("header");
     header.append(text("h2", group.room || group.name, "room-number"));
     if (group.room) header.append(text("p", group.name, "room-name"));
-    header.append(text("span", [...group.platforms].sort().map(platformName).join(" · "), "platforms"));
+    header.append(platformBadges(group.platforms));
     card.append(header);
     const apps = document.createElement("div"); apps.className = "location-software";
     for (const app of group.apps) {
@@ -96,7 +112,12 @@ function renderBrowse() {
   const query = ui.search.value.trim().toLocaleLowerCase();
   cardObserver.disconnect();
   ui["software-list"].className = view === "software" ? "software-list" : "location-catalog";
-  if (view === "locations") { renderLocationBrowse(query); return; }
+  if (view === "locations") {
+    renderLocationBrowse(query);
+    for (const card of ui["software-list"].children) cardObserver.observe(card);
+    scheduleLayout();
+    return;
+  }
   ui.empty.textContent = "No software matches your search.";
   const apps = catalog.filter((a) => a.name.toLocaleLowerCase().includes(query) && (!ui.category.value || a.category === ui.category.value) && (!platformFilter || a.platforms.includes(platformFilter)));
   ui["result-count"].textContent = `${apps.length} software titles`;

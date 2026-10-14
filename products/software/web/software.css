@@ -4,7 +4,12 @@
 .catalog-toolbar input, .catalog-toolbar select, .catalog-toolbar .segmented { height:40px; box-sizing:border-box; }
 .catalog-toolbar .segmented { flex-shrink:0; }
 .catalog-toolbar .segmented button { padding:0 16px; }
-.catalog-toolbar select { font-size:.85rem; }
+.catalog-toolbar input, .catalog-toolbar select { font-size:13px; border:1px solid var(--rule); border-radius:4px; background:var(--surface-1); padding:0 12px; }
+.catalog-toolbar input { appearance:none; -webkit-appearance:none; }
+.catalog-toolbar input::placeholder { color:inherit; opacity:.55; }
+.select-control { position:relative; flex-shrink:0; }
+.select-control select { appearance:none; -webkit-appearance:none; padding-right:34px; width:100%; }
+.select-control::after { content:""; position:absolute; right:13px; top:15px; width:6px; height:6px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg); pointer-events:none; }
 input, select { font:inherit; color:inherit; background:transparent; border:1px solid var(--line,#aaa); border-radius:5px; padding:.65rem .8rem; }
 #result-count { margin:0; font-size:.85rem; opacity:.7; }
 #notice { margin-top:1.25rem; margin-bottom:0; font-size:.9rem; }
@@ -45,9 +50,9 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 :focus-visible { outline:2px solid currentColor; outline-offset:4px; }
 @media(max-width:600px) { .software-list { grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:1rem; } .software-card summary { padding:1rem .65rem .65rem; } .location-heading { align-items:start; } .locations { grid-template-columns:1fr; } }
 
-.location-catalog { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); gap:1.25rem; align-items:start; }
+.location-catalog { display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr)); column-gap:1.25rem; grid-auto-rows:1px; align-items:start; }
 .location-card { border:1px solid var(--line,#d3d3d3); border-radius:8px; background:var(--surface-1,transparent); overflow:hidden; }
-.location-card header { padding:1.25rem; border-bottom:1px solid var(--line,#ddd); }
+.location-card header { position:relative; padding:1.25rem; padding-right:5.5rem; border-bottom:1px solid var(--line,#ddd); }
 .location-card .room-number { font-size:1.8rem; margin:0 0 .4rem; }
 .location-card .room-name { font-size:1rem; margin:0 0 .5rem; }
 .location-software { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.85rem 1rem; padding:1.25rem; }
@@ -55,3 +60,7 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 .location-software a:hover span { text-decoration:underline; }
 .location-software img { object-fit:contain; flex-shrink:0; }
 .location-software .icon-fallback { width:32px; height:32px; border-radius:6px; }
+
+.platform-badges { position:absolute; top:1.25rem; right:1.25rem; display:flex; gap:.5rem; }
+.platform-badge { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:4px; background:color-mix(in srgb,currentColor 5%,transparent); color:var(--text-primary); }
+.platform-badge svg { width:20px; height:20px; opacity:.55; }
