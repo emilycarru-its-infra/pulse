@@ -1,15 +1,11 @@
 <p align="center">
-  <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
-</p>
-
-<p align="center">
   <strong>Find a free computer. Find the right software. Get on with your work.</strong>
 </p>
 
 <p align="center">
+  <a href="hub/README.md">Status hub</a> ·
   <a href="products/computers/README.md">Computers</a> ·
   <a href="products/software/README.md">Software</a> ·
-  <a href="hub/README.md">Status hub</a> ·
   <a href="core/README.md">Build with Pulse</a>
 </p>
 
@@ -21,6 +17,10 @@ maintenance is coming, and someone needs to know before they walk across campus.
 Pulse brings those answers together: live computer availability, a searchable software
 catalog, and a shared view of service health. One product family, with focused experiences
 for the people who use it.
+
+<p align="center">
+  <img src=".github/assets/pulse-overview.svg" alt="Pulse — find your place. A visual preview of computer availability, software discovery and service status." width="1200">
+</p>
 
 ## A place to work
 
@@ -53,9 +53,9 @@ single sign-on.
 
 | Experience | What it answers | What's here today |
 |---|---|---|
+| [Hub](hub/README.md) | What's working? What's changing? | Product summaries, incidents, maintenance and service history |
 | [ComputersPulse](products/computers/README.md) | Where is a computer free? | Live presence API, Mac and Windows agents, floorplans and list view |
 | [SoftwarePulse](products/software/README.md) | Where can I use this application? | Curated software grid, location collections, shareable app links and installation snapshots |
-| [Hub](hub/README.md) | What's working? What's changing? | Product summaries, incidents, maintenance and service history |
 | [PrintersPulse](products/printers/README.md) | Where can I print? | Interface and sample data; collector integration remains |
 | [ServersPulse](products/servers/README.md) | Which services need attention? | Interface and sample health source; collector integration remains |
 
