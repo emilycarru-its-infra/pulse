@@ -18,3 +18,5 @@ pytest -q products/software/api
 ```
 
 An app link can include `&version=<reported-version>` to open its dedicated page with that version selected. Version controls belong to a selected app, rather than the global browse filters. Both browse modes recalculate their masonry columns immediately when the container width changes.
+
+Links preserve `view`, `category`, `platform`, `q` and `location` together. `app` opens a dedicated application page, `open` restores an expanded grid card, and `version` narrows the selected application. Location cards and individual room identifiers have dedicated links; app links from a location retain that location. Copy-link icons on apps, locations and the toolbar appear on hover or keyboard focus and remain visible on touch devices. Browser Back/Forward restores filter and selection state.

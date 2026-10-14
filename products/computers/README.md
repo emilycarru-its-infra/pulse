@@ -149,3 +149,5 @@ Saved positions override the rebuilt catalog and survive deployments and invento
 refreshes. An override stops applying if inventory moves the device to another floor.
 Saves include the layout version the editor loaded. A conflicting save is rejected,
 refreshes the map, and asks the editor to try again. Other viewers cannot save positions.
+
+Links preserve the list/map view, floor, platform, classroom filter and search together. Room and individual-computer links open the relevant map drawer; a `device` selection highlights its row. Copy-link icons appear on room headings, computer rows and the filter toolbar on hover or keyboard focus, and remain visible on touch devices. Browser Back/Forward restores the view and list scroll position.

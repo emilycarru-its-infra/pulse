@@ -52,3 +52,5 @@ and `PULSE_SWA_ROLES`.
 
 A collector reads the print server's API on a timer (printer status, toner, paper and queue
 lengths, jobs today) and replaces `sample()`; the response shape stays the same.
+
+Links preserve the list/map view, floor, audience, selected room and individual printer together. A printer link opens the room drawer and highlights that printer. Copy-link icons appear on room headings, printer names and the filter toolbar on hover or keyboard focus, and remain visible on touch devices. Browser Back/Forward restores the selected view.
