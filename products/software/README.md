@@ -1,6 +1,6 @@
 # SoftwarePulse
 
-Browse a curated software collection, then choose a title to see where it is installed. The product has its own software list and location detail view. Location rows show versions, platforms and aggregate computer availability.
+Browse a curated icon grid, then choose a software title to see where it is installed. The detail view groups rooms under each location name and offers a reported-version filter. The interface shows locations and platforms without computer grids or computer/free-seat counts.
 
 `pulse_software.managed.build_suite` compiles the collection from each platform's `manifests/ManagedApps.yaml` and production package metadata. Site policy owns editorial exclusions, product aliases, package variants and bundle expansions. Only manifest-referenced software is eligible. ReportMate supplies installation evidence for that collection; raw observations cannot add titles. Curated titles remain visible when they have no recent installation reports. Matching uses explicit normalized aliases; ambiguous observations are omitted.
 
