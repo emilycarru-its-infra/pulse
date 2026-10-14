@@ -4,7 +4,7 @@
 
 window.Pulse = window.Pulse || {};
 
-Pulse.shell = async function ({ current, context, title }) {
+Pulse.shell = async function ({ current, context, title, hideCurrent = false }) {
   const brand = await fetch("/theme/brand.json").then((r) => r.json()).catch(() => ({}));
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   // A site may list the products its menu offers in /nav.json, each { id, title, href, soon }.
@@ -39,6 +39,7 @@ Pulse.shell = async function ({ current, context, title }) {
   menu.setAttribute("aria-label", "Products");
   const items = Array.isArray(nav) ? nav : [{ id: "hub", title: "Overview", href: "/" }, ...products.filter((p) => !p.soon)];
   for (const p of items) {
+    if (hideCurrent && p.id === current) continue;
     if (p.soon || !p.href) {
       // Named but not linked: the product is coming and has nothing to show yet.
       const span = document.createElement("span");

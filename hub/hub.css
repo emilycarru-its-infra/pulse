@@ -1,6 +1,6 @@
 /* The hub: an overall state, incidents, product cards and the systems with 90 days of history. */
 
-main.doc { max-width: 1180px; margin: 0 auto; padding: 20px 24px 32px; }
+main.doc { max-width: 1320px; margin: 0 auto; padding: 20px 24px 32px; }
 main.doc > * { width: 100%; margin-left: 0; margin-right: 0; }
 main.doc > section { margin-bottom: 20px; }
 main.doc > .band { margin-bottom: 14px; }

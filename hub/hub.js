@@ -235,7 +235,7 @@ function render(data, products, summaries) {
 }
 
 (async () => {
-  const brand = await Pulse.shell({ current: "hub", context: "Shared university systems, right now and over the last 90 days" });
+  const brand = await Pulse.shell({ current: "hub", hideCurrent: true, context: "Shared university systems, right now and over the last 90 days" });
   if (brand.foot) document.getElementById("foot").textContent = brand.foot;
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   Pulse.poll(async () => {
