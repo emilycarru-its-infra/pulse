@@ -364,7 +364,7 @@ function render() {
   if (!state.status) return;
   // The map always shows one floor; the list can show every floor at once.
   const known = state.status.floors.some((f) => f.id === state.floor);
-  if (state.mode === "map" && !known) state.floor = visibleSpaces().find((s) => s.floor)?.floor ?? state.status.floors[0]?.id ?? null;
+  if (state.mode === "map" && !known) state.floor = state.status.floors.find((f) => visibleSpaces().some((s) => s.floor === f.id))?.id ?? state.status.floors[0]?.id ?? null;
   else if (state.floor && !known) state.floor = null;
   renderFloors();
   const seats = visibleSpaces().flatMap(seatsOf);
