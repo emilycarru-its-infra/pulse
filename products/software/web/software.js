@@ -5,10 +5,19 @@ const appSlug = (app) => app.name.normalize("NFKD").toLowerCase().replace(/[^a-z
 const matchesApp = (app, key) => app.id === key || appSlug(app) === key;
 const appUrl = (app) => { const url = new URL(location.pathname, location.origin); url.searchParams.set("app", appSlug(app)); return url.href; };
 function copyButton(app) {
-  const button = text("button", "Copy link", "copy-link"); button.type = "button"; button.dataset.action = "copy";
+  const button = document.createElement("button"); button.className = "copy-link"; button.type = "button"; button.dataset.action = "copy";
+  button.title = "Copy link"; button.setAttribute("aria-label", "Copy link");
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none"); svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "1.75"); svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round"); svg.setAttribute("aria-hidden", "true");
+  for (const d of ["M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71", "M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path"); path.setAttribute("d", d); svg.append(path);
+  }
+  button.append(svg);
   button.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(appUrl(app)); button.textContent = "Copied"; }
-    catch { button.textContent = "Use app link"; }
+    let label;
+    try { await navigator.clipboard.writeText(appUrl(app)); label = "Link copied"; }
+    catch { label = "Copy unavailable; use app link"; }
+    button.title = label; button.setAttribute("aria-label", label);
   });
   return button;
 }
