@@ -157,9 +157,6 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 /* Phones: most visits come from one. The page scrolls, the map takes the screen below the
    toolbar, pinch replaces the zoom buttons, and a room's details rise as a sheet over the map. */
 @media (max-width: 700px) {
-  body.app .masthead .context { display: none; }
-  body.app .masthead .logo { height: 34px; }
-  body.app .masthead h1 { font-size: 22px; }
   .map-toolbar { gap: 8px; }
   .floors { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
   .map-toolbar button { height: 44px; font-size: 14px; }
@@ -236,14 +233,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 @media (max-width: 700px) {
   body.app main.doc.wide { padding: 8px 12px; }
   body.app { height: 100vh; height: 100dvh; overflow: hidden; }
-  body.app .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 12px; padding-bottom: 8px; flex-shrink: 0; }
-  body.app .masthead .logo { width: 96px; height: auto; grid-row: 1 / 3; }
-  body.app .masthead-text { min-width: 0; grid-column: 2; }
-  body.app .masthead h1 { font-size: clamp(16px, 5vw, 20px); white-space: nowrap; }
-  body.app .masthead-nav { grid-column: 2; justify-self: end; gap: 6px; }
-  body.app .masthead-nav a, body.app .masthead-nav .soon, body.app .masthead-nav .unavailable { font-size: 11px; padding: 4px 8px; }
-  body.app .masthead-nav .soon { gap: 4px; }
-  body.app .masthead-nav .soon small { font-size: 10px; }
+  body.app .masthead { flex-shrink: 0; }
   body.app main.doc.wide > .band { margin-bottom: 8px; flex-shrink: 0; }
   body.app main.doc.wide > .map-toolbar { margin-bottom: 10px; flex-shrink: 0; }
   .map-toolbar { gap: 6px 8px; }

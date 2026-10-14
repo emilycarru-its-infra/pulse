@@ -1,9 +1,10 @@
 const ui = Object.fromEntries(["notice", "browse", "view", "search", "category", "platform", "result-count", "software-list", "empty", "detail", "detail-icon", "detail-category", "software-title", "detail-platforms", "location-count", "version", "locations", "no-locations"].map((id) => [id, document.getElementById(id)]));
 let catalog = [], selected = "", loaded = false, platformFilter = "", view = "software";
 const openApps = new Set();
+const appVersionFilters = new Map();
 const appSlug = (app) => app.name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const matchesApp = (app, key) => app.id === key || appSlug(app) === key;
-const appUrl = (app) => { const url = new URL(location.pathname, location.origin); url.searchParams.set("app", appSlug(app)); return url.href; };
+const appUrl = (app, version = "") => { const url = new URL(location.pathname, location.origin); url.searchParams.set("app", appSlug(app)); if (version) url.searchParams.set("version", version); return url.href; };
 function copyButton(app) {
   const button = document.createElement("button"); button.className = "copy-link"; button.type = "button"; button.dataset.action = "copy";
   button.title = "Copy link"; button.setAttribute("aria-label", "Copy link");
@@ -15,7 +16,7 @@ function copyButton(app) {
   button.append(svg);
   button.addEventListener("click", async () => {
     let label;
-    try { await navigator.clipboard.writeText(appUrl(app)); label = "Link copied"; }
+    try { await navigator.clipboard.writeText(appUrl(app, appVersionFilters.get(app.id))); label = "Link copied"; }
     catch { label = "Copy unavailable; use app link"; }
     button.title = label; button.setAttribute("aria-label", label);
   });
@@ -52,8 +53,9 @@ function groupedLocations(app, version = "") {
     const counts = version ? location.versions.find((v) => v.version === version) : location;
     if (!counts) continue;
     const key = location.name.trim().toLocaleLowerCase();
-    if (!groups.has(key)) groups.set(key, { name: location.name, rooms: new Set(), platforms: new Set() });
+    if (!groups.has(key)) groups.set(key, { name: location.name, rooms: new Set(), platforms: new Set(), versions: new Set() });
     const group = groups.get(key);
+    for (const item of location.versions || []) if (!version || item.version === version) group.versions.add(item.version);
     if (location.room) group.rooms.add(location.room);
     for (const platform of counts.platforms) group.platforms.add(platform);
   }
@@ -65,6 +67,12 @@ function scheduleLayout() {
   layoutFrame = requestAnimationFrame(() => {
     const list = ui["software-list"];
     if (!list.clientWidth) return;
+    // Old explicit positions create implicit tracks after a narrower resize. Clear them
+    // before reading the responsive CSS column count.
+    for (const card of list.children) {
+      card.style.gridColumn = "";
+      card.style.gridRow = "";
+    }
     const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
     const heights = Array(columns).fill(0);
     [...list.children].forEach((card, index) => {
@@ -155,17 +163,30 @@ function renderBrowse() {
     summary.append(text("span", locations.length ? `${locations.length} location${locations.length === 1 ? "" : "s"}` : "No recent reports", "location-total"));
     card.append(summary);
     const panel = document.createElement("div"); panel.className = "app-locations";
-    if (!locations.length) panel.append(text("p", "No recent installation reports."));
-    for (const location of locations.slice(0, 4)) {
+    const selectedVersion = appVersionFilters.get(app.id) || "";
+    const version = app.versions?.includes(selectedVersion) ? selectedVersion : "";
+    if (app.versions?.length) {
+      const label = text("label", "Version", "app-version-filter");
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", `Version for ${app.name}`); select.dataset.action = "version";
+      select.append(new Option("All versions", ""), ...app.versions.map((v) => new Option(v, v)));
+      select.value = version;
+      select.addEventListener("change", () => { appVersionFilters.set(app.id, select.value); renderBrowse(); });
+      label.append(select); panel.append(label);
+    }
+    const filteredLocations = groupedLocations(app, version);
+    if (!filteredLocations.length) panel.append(text("p", "No recent installation reports."));
+    for (const location of filteredLocations.slice(0, 4)) {
       const item = document.createElement("div"); item.className = "compact-location";
 
       const rooms = [...location.rooms].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
       if (rooms.length) item.append(text("strong", rooms.join(" · "), "room-number"));
       item.append(text("small", location.name));
+      if (location.versions.size) item.append(text("span", `Versions: ${[...location.versions].join(" · ")}`, "location-versions"));
       panel.append(item);
     }
     const link = text("a", locations.length > 4 ? `All ${locations.length} locations →` : "App link →", "app-link");
-    link.href = appUrl(app); link.dataset.action = "link";
+    link.href = appUrl(app, version); link.dataset.action = "link";
     const actions = document.createElement("div"); actions.className = "app-actions";
     actions.append(link, copyButton(app)); panel.append(actions); card.append(panel);
     return card;
@@ -199,7 +220,7 @@ function renderDetail(focus = false) {
   ui["software-title"].textContent = app.name;
   ui["detail-category"].textContent = app.category;
   ui["detail-platforms"].textContent = app.platforms.map(platformName).join(" · ");
-  const previous = ui.version.value;
+  const previous = ui.version.value || (!loaded ? new URLSearchParams(location.search).get("version") || "" : "");
   ui.version.replaceChildren(new Option("All versions", ""), ...app.versions.map((v) => new Option(v, v)));
   ui.version.value = app.versions.includes(previous) ? previous : "";
   renderLocations(app);
@@ -224,7 +245,7 @@ ui.platform.addEventListener("click", (event) => {
 });
 ui.version.addEventListener("change", () => { const app = catalog.find((a) => matchesApp(a, selected)); if (app) renderLocations(app); });
 (async () => {
-  await Pulse.shell({ current: "software", title: "Software Catalog", context: "Explore campus software and find where it’s available" });
+  await Pulse.shell({ current: "software", compact: true, title: "Software Catalog", context: "Explore campus software and find where it’s available" });
   selected = new URLSearchParams(location.search).get("app") || location.hash.slice(1);
   document.querySelector(".back").href = location.pathname;
   Pulse.poll(async () => {

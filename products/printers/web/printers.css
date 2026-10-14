@@ -3,7 +3,7 @@
 body.app { height: 100vh; overflow: hidden; }
 body.app main.doc.wide { height: 100%; display: flex; flex-direction: column; padding: 16px 24px 12px; }
 body.app main.doc.wide > * { width: auto; margin: 0; }
-@media (max-width: 700px) { body.app main.doc.wide { padding: 12px 16px; } }
+@media (max-width: 700px) { body.app main.doc.wide { padding: 8px 12px; } }
 /* The rule above zeroes every margin in the column, so the spacing between rows is set here. */
 body.app main.doc.wide > .band { margin-bottom: 16px; }
 body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
@@ -159,9 +159,6 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 /* Phones: most visits come from one. The page scrolls, the map takes the screen below the
    toolbar, pinch replaces the zoom buttons, and a room's details rise as a sheet over the map. */
 @media (max-width: 700px) {
-  body.app .masthead .context { display: none; }
-  body.app .masthead .logo { height: 34px; }
-  body.app .masthead h1 { font-size: 22px; }
   .map-toolbar { gap: 8px; }
   .floors { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
   .map-toolbar button { height: 44px; font-size: 14px; }
