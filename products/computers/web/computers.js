@@ -792,7 +792,7 @@ content.addEventListener("keydown", (e) => {
   const initial = readView();
   Object.assign(state, initial);
   syncControls();
-  await Pulse.shell({ current: "computers", hideCurrent: true, title: "Computer Status", context: "Shared computers across campus" });
+  await Pulse.shell({ current: "computers", compact: true, title: "Computers Availability", context: "Shared computers across campus" });
   let first = true;
   Pulse.poll(async () => {
     const status = await fetch("api/status").then((r) => r.json());

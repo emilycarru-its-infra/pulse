@@ -1,4 +1,4 @@
-.catalog-toolbar { display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; margin:1.75rem 0 1.25rem; }
+.catalog-toolbar { display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; margin:0 0 14px; }
 .catalog-toolbar label, .location-heading label { display:flex; flex-direction:column; gap:.4rem; font-size:.85rem; font-weight:600; }
 #search { flex:1; min-width:200px; }
 .catalog-toolbar input, .catalog-toolbar select, .catalog-toolbar .segmented { height:40px; box-sizing:border-box; }
@@ -14,7 +14,7 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 #result-count { margin:0; font-size:.85rem; opacity:.7; }
 #notice { margin-top:1.25rem; margin-bottom:0; font-size:.9rem; }
 .software-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); column-gap:1rem; grid-auto-rows:1px; align-items:start; }
-.software-card { border:1px solid var(--line,#d3d3d3); border-radius:8px; background:var(--surface-1,transparent); overflow:hidden; }
+.software-card { min-width:0; border:1px solid var(--line,#d3d3d3); border-radius:8px; background:var(--surface-1,transparent); overflow:hidden; }
 .software-card summary { display:flex; flex-direction:column; position:relative; align-items:center; text-align:center; gap:.6rem; padding:1.5rem 1rem 1rem; cursor:pointer; list-style:none; }
 .software-card summary::-webkit-details-marker { display:none; }
 .software-card summary:hover { background:color-mix(in srgb,currentColor 4%,transparent); }
@@ -67,3 +67,7 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 .platform-badge svg { width:20px; height:20px; opacity:.55; }
 
 .software-card .platform-badges { position:static; justify-content:center; }
+
+.location-versions { display: block; margin-top: .35rem; font-size: .8rem; line-height: 1.4; color: var(--text-secondary); overflow-wrap: anywhere; }
+.app-version-filter { display: flex; flex-direction: column; gap: .35rem; font-size: .8rem; margin: .5rem 0; }
+.app-version-filter select { width: 100%; min-width: 0; font-size: .85rem; }

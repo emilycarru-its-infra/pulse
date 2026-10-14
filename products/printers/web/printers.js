@@ -374,7 +374,7 @@ svg.addEventListener("keydown", (e) => {
     state.mode = "list";
     for (const b of document.querySelectorAll("#mode button")) b.setAttribute("aria-pressed", String(b.dataset.v === "list"));
   }
-  await Pulse.shell({ current: "printers", title: "Printer Status", context: "Printers across campus" });
+  await Pulse.shell({ current: "printers", compact: true, title: "Printer Status", context: "Printers across campus" });
   let first = true;
   Pulse.poll(async () => {
     state.status = await fetch("api/status").then((r) => r.json());

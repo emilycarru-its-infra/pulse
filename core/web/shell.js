@@ -1,10 +1,10 @@
 // The shared masthead: the theme's logo, the site name, a context line and the product links.
 // Pages call Pulse.shell({ current, context, title }) once and get the theme's brand back; title
-// replaces the site name in the heading, as in "Computer Status".
+// replaces the site name in the heading, as in "Computers Availability".
 
 window.Pulse = window.Pulse || {};
 
-Pulse.shell = async function ({ current, context, title, hideCurrent = false }) {
+Pulse.shell = async function ({ current, context, title, hideCurrent = false, compact = false }) {
   const brand = await fetch("/theme/brand.json").then((r) => r.json()).catch(() => ({}));
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   // A site may list the products its menu offers in /nav.json, each { id, title, href, soon }.
@@ -21,7 +21,7 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false }) 
   document.title = title ?? (current === "hub" ? site : `${products.find((p) => p.id === current)?.title ?? ""} · ${site}`);
 
   const header = document.createElement("header");
-  header.className = "masthead";
+  header.className = compact ? "masthead compact" : "masthead";
   if (brand.logo) {
     header.insertAdjacentHTML("beforeend",
       `<img class="logo logo-light${brand.logoDark ? " has-dark" : ""}" src="/theme/${brand.logo}" alt="${brand.org ?? ""}">` +
@@ -65,7 +65,9 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false }) 
   const band = document.createElement("div");
   band.className = "band";
   band.setAttribute("aria-hidden", "true");
-  document.querySelector("main.doc").prepend(header, band);
+  const main = document.querySelector("main.doc");
+  if (compact) main.classList.add("product-page");
+  main.prepend(header, band);
   return brand;
 };
 
