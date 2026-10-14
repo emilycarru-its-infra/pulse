@@ -13,9 +13,12 @@
     <p id="notice" role="status">Loading software…</p>
     <section id="browse" aria-label="Software catalog">
       <div class="catalog-toolbar">
-        <label class="search-label" for="search">Find software<input type="search" id="search" placeholder="Search software" autocomplete="off"></label>
-        <label for="category">Category<select id="category"><option value="">All categories</option></select></label>
-        <label for="platform">Platform<select id="platform"><option value="">Mac and Windows</option><option value="mac">Mac</option><option value="windows">Windows</option></select></label>
+        <div class="segmented" role="group" aria-label="Platform" id="platform">
+          <button type="button" data-v="mac" aria-pressed="false">Mac</button>
+          <button type="button" data-v="windows" aria-pressed="false">Windows</button>
+        </div>
+        <select id="category" aria-label="Category"><option value="">All categories</option></select>
+        <input type="search" id="search" aria-label="Search software" placeholder="Search software" autocomplete="off">
         <p id="result-count" aria-live="polite"></p>
       </div>
       <div id="software-list" class="software-list"></div>
