@@ -4,7 +4,7 @@ const WORD = { available: "free", in_use: "in use", offline: "off or not reporti
 const KIND = { lab: "Lab", station: "Station", kiosk: "Kiosk", podium: "Podium" };
 const ORDER = ["available", "in_use", "offline", "out_of_service"];
 
-const state = { floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
+const state = { query: "", classroom: false, floor: null, platform: "all", mode: "map", picked: null, hover: null, status: null, drawn: null };
 const phone = window.matchMedia("(max-width: 700px)");
 const svg = document.getElementById("map");
 const content = document.getElementById("content");
@@ -48,6 +48,12 @@ const el = (name, attrs = {}, parent) => {
   return node;
 };
 const seatsOf = (space) => space.seats.filter((s) => state.platform === "all" || s.platform === state.platform);
+const matchesSpace = (space) => (!state.classroom || space.tags?.includes("classroom")) &&
+  state.query.trim().toLowerCase().split(/\s+/).every((word) =>
+    [space.name, space.room, KIND[space.kind], ...seatsOf(space).map((s) => `${seatName(s)} ${s.hostname}`)]
+      .join(" ").toLowerCase().includes(word));
+const visibleSpaces = () => state.status.spaces.filter((s) => matchesSpace(s) && seatsOf(s).length);
+const mobileHint = (s) => s.mobile ? ". Mobile device; often powered off" : "";
 const countsOf = (seats) => Object.fromEntries(ORDER.map((k) => [k, seats.filter((s) => s.state === k).length]));
 // A seat is shown by the inventory's name for it ("FMSA Control Room") when it has one, else
 // by its hostname.
@@ -84,7 +90,7 @@ function bounds(space) {
 }
 
 function floorSpaces(id) {
-  return state.status.spaces.filter((s) => s.floor === id && seatsOf(s).length);
+  return visibleSpaces().filter((s) => s.floor === id);
 }
 
 function renderFloors() {
@@ -144,7 +150,9 @@ function drawFloor() {
       if (edit.on) Object.assign(one, { tabIndex: 0 }).setAttribute("aria-label", `Seat ${seatName(s)}`);
       const seat = el("rect", { x: -size / 2, y: -size / 2, width: size, height: size, rx: size / 6,
         class: `seat ${s.state}` }, one);
-      el("title", {}, seat).textContent = `${seatName(s)}: ${WORD[s.state]}`;
+      el("title", {}, seat).textContent = `${seatName(s)}: ${WORD[s.state]}${mobileHint(s)}`;
+      if (s.mobile) for (const x of [-size * 0.28, size * 0.28])
+        el("circle", { cx: x, cy: size * 0.54, r: size * 0.09, class: "wheel" }, one);
       const label = names.get(s.hostname);
       el("text", { y: 0.5, class: `num ${s.state}`, "font-size": size * (label.length > 2 ? 0.32 : 0.45) }, one).textContent = label;
     }
@@ -199,7 +207,7 @@ const roomsLine = (rooms) => rooms.length <= 3 ? rooms.join(" · ") : `${rooms[0
 
 function renderList() {
   const groups = new Map();
-  for (const space of state.status.spaces) {
+  for (const space of visibleSpaces()) {
     if ((state.floor && space.floor !== state.floor) || !seatsOf(space).length) continue;
     const key = `${space.floor}|${space.name}`;
     if (!groups.has(key)) groups.set(key, []);
@@ -215,7 +223,7 @@ function renderList() {
     .map(({ spaces, seats, c, rooms }) => {
       const card = document.createElement("article");
       card.className = "card space-card";
-      card.innerHTML = `<div class="head"><div><p class="room"></p><h3></h3><p class="kicker"></p></div>
+      card.innerHTML = `<div class="head"><div><h3></h3><p class="room"></p><div class="metadata"><p class="kicker"></p></div></div>
         <p class="free"><b>${c.available}</b><span>free of ${seats.length}</span></p></div>
         <p class="counts">${countsLine(c)}</p><div class="seats"></div>`;
       card.querySelector(".room").textContent = roomsLine(rooms);
@@ -227,9 +235,11 @@ function renderList() {
         const go = document.createElement("button");
         go.type = "button";
         go.className = "on-map";
-        go.textContent = "Show on map";
+        go.setAttribute("aria-label", `Show ${spaces[0].name} on map`);
+        go.title = `Show ${spaces[0].name} on map`;
+        go.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z M9 3v15 M15 6v15"/></svg>';
         go.onclick = () => showOnMap(mapped);
-        card.querySelector(".head > div").append(go);
+        card.querySelector(".metadata").append(go);
       }
       card.querySelector(".seats").replaceChildren(...spaces.filter((s) => seatsOf(s).length).flatMap((space) => {
         const own = seatsOf(space);
@@ -253,17 +263,17 @@ function renderList() {
 
 function tile(s, names) {
   const li = document.createElement("li");
-  li.className = `tile ${s.state}`;
+  li.className = `tile ${s.state}${s.mobile ? " mobile" : ""}`;
   li.textContent = names.get(s.hostname);
-  li.title = `${seatName(s)}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}`;
-  li.setAttribute("aria-label", `${seatName(s)}, ${WORD[s.state]}`);
+  li.title = `${seatName(s)}: ${WORD[s.state]}. Last heard ${Pulse.ago(s.lastSeen)}${mobileHint(s)}`;
+  li.setAttribute("aria-label", `${seatName(s)}, ${WORD[s.state]}${mobileHint(s)}`);
   return li;
 }
 
 function renderDrawer() {
   const drawer = document.getElementById("drawer");
   const space = state.status.spaces.find((s) => s.id === state.picked);
-  if (!space || state.mode !== "map") {
+  if (!space || !matchesSpace(space) || !seatsOf(space).length || state.mode !== "map") {
     drawer.hidden = true;
     return;
   }
@@ -286,6 +296,8 @@ function renderDrawer() {
   drawer.querySelector(".rows").replaceChildren(...seats.map((s) => {
     const li = document.createElement("li");
     li.innerHTML = `<span class="tag ${s.state}"></span><span class="host"></span><span class="state">${WORD[s.state]}</span>`;
+    li.querySelector(".tag").classList.toggle("mobile", !!s.mobile);
+    li.title = mobileHint(s).replace(/^\. /, "");
     li.querySelector(".tag").textContent = names.get(s.hostname);
     li.querySelector(".host").textContent = seatName(s);
     return li;
@@ -302,9 +314,9 @@ function render() {
   if (state.mode === "map" && !known) state.floor = state.status.floors[0]?.id ?? null;
   else if (state.floor && !known) state.floor = null;
   renderFloors();
-  const seats = state.status.spaces.flatMap(seatsOf);
+  const seats = visibleSpaces().flatMap(seatsOf);
   document.getElementById("total").innerHTML =
-    `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length} on campus</span>`;
+    `<b>${seats.filter((s) => s.state === "available").length}</b> free<span class="word"> of ${seats.length}${state.query || state.classroom || state.platform !== "all" ? " matching" : " on campus"}</span>`;
   document.getElementById("map-view").hidden = state.mode !== "map";
   document.getElementById("list-view").hidden = state.mode !== "list";
   if (!state.status.editable && edit.on) {
@@ -319,6 +331,10 @@ function render() {
   if (state.mode === "map") drawFloor();
   else renderList();
   renderDrawer();
+  const result = document.getElementById("filter-result");
+  const spaces = state.mode === "map" || state.floor ? visibleSpaces().filter((s) => s.floor === state.floor) : visibleSpaces();
+  result.hidden = !!spaces.length;
+  result.textContent = "No matching spaces. Clear the filter or choose another floor.";
 }
 
 function showOnMap(space) {
@@ -390,6 +406,31 @@ for (const [id, key] of [["platform", "platform"], ["mode", "mode"]]) {
     render();
   });
 }
+function applyFilters() {
+  state.picked = null;
+  state.hover = null;
+  render();
+  if (state.mode === "map") {
+    const spaces = floorSpaces(state.floor);
+    if (spaces.length && (state.query.trim() || state.classroom)) {
+      const rs = spaces.map(bounds), pad = 40;
+      const x = Math.min(...rs.map((r) => r.x)), y = Math.min(...rs.map((r) => r.y));
+      vp.frameRect({ x: x - pad, y: y - pad,
+        w: Math.max(...rs.map((r) => r.x + r.w)) - x + pad * 2,
+        h: Math.max(...rs.map((r) => r.y + r.h)) - y + pad * 2 }, false, 2.5);
+    } else vp.home();
+  }
+}
+document.getElementById("filter").addEventListener("input", (e) => {
+  state.query = e.target.value;
+  applyFilters();
+});
+document.getElementById("classroom").onclick = (e) => {
+  state.classroom = !state.classroom;
+  e.currentTarget.setAttribute("aria-pressed", String(state.classroom));
+  applyFilters();
+};
+
 document.getElementById("zoom-in").onclick = () => { vp.touch(); vp.zoomAt(1.25, undefined, undefined, true); };
 document.getElementById("zoom-out").onclick = () => { vp.touch(); vp.zoomAt(0.8, undefined, undefined, true); };
 document.getElementById("zoom-level").onclick = () => vp.home();

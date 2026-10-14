@@ -10,6 +10,13 @@ Pulse.shell = async function ({ current, context, title }) {
   // A site may list the products its menu offers in /nav.json, each { id, title, href, soon }.
   // Without one the menu is the hub's Overview plus every product the hub lists as live.
   const nav = await fetch("/nav.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (!document.querySelector('link[rel="icon"]')) {
+    const icon = document.createElement("link");
+    icon.rel = "icon";
+    icon.type = "image/svg+xml";
+    icon.href = brand.favicon ? `/theme/${brand.favicon}` : "/core/favicon.svg";
+    document.head.append(icon);
+  }
   const site = brand.site || "Status";
   document.title = title ?? (current === "hub" ? site : `${products.find((p) => p.id === current)?.title ?? ""} · ${site}`);
 

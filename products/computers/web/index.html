@@ -26,15 +26,20 @@
           <button type="button" data-v="mac" aria-pressed="false">Mac</button>
           <button type="button" data-v="windows" aria-pressed="false">Windows</button>
         </div>
+        <div class="segmented" role="group" aria-label="Space type">
+          <button type="button" id="classroom" aria-pressed="false">Classroom</button>
+        </div>
         <div class="segmented" id="edit-wrap" hidden>
           <button type="button" id="edit" aria-pressed="false">Edit seats</button>
         </div>
       </div>
+      <label class="search"><span>Filter</span><input type="search" id="filter" placeholder="Room, lab or computer" autocomplete="off"></label>
       <div class="toolbar-end">
         <p class="total" id="total" aria-live="polite"></p>
       </div>
     </div>
 
+    <p id="filter-result" class="filter-result" role="status" hidden></p>
     <div class="stage">
       <div class="canvas-wrap" id="map-view">
         <svg id="map" class="floormap" role="application" tabindex="0"

@@ -163,3 +163,16 @@ def test_editor_rooms_replace_plan_boxes(tmp_path):
     a = next(s for s in catalog["spaces"] if s["room"] == "A1100")
     assert a["box"] == [400, 100, 600, 300]
     assert all(400 < s["x"] < 600 for s in a["seats"])
+
+
+def test_classification_keeps_mobile_devices_separate_from_classrooms():
+    site = {"auto": {"groups": {"Open Mac Lab": "lab", "Mobile Stations": "station"}},
+            "classification": {"classroom_rooms": ["A1100"], "mobile_keywords": ["cart", "mobile"]}}
+    rows = [asset("A1", "LAB-MAC-01"), asset("A2", "CART-01", group="Mobile Stations")]
+    catalog, _ = build(site, provider(rows).devices(), "snipeit")
+    jsonschema.validate(catalog, json.loads((CONTRACT / "catalog.schema.json").read_text()))
+    lab = next(s for s in catalog["spaces"] if s["kind"] == "lab")
+    mobile = next(s for s in catalog["spaces"] if s["kind"] == "station")
+    assert lab["tags"] == ["classroom"]
+    assert "tags" not in mobile and mobile["seats"][0]["mobile"] is True
+    assert "mobile" not in lab["seats"][0]
