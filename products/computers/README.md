@@ -151,3 +151,13 @@ Saves include the layout version the editor loaded. A conflicting save is reject
 refreshes the map, and asks the editor to try again. Other viewers cannot save positions.
 
 Links preserve the list/map view, floor, platform, classroom filter and search together. Room and individual-computer links open the relevant map drawer; a `device` selection highlights its row. Copy-link icons appear on room headings, computer rows and the filter toolbar on hover or keyboard focus, and remain visible on touch devices. Browser Back/Forward restores the view and list scroll position.
+
+The API keeps warning/error traces and failed request telemetry, rather than logging every
+successful heartbeat and Azure SDK storage exchange. Successful invocation counts and
+durations remain available through host aggregates and platform metrics; individual
+successful requests are absent from Application Insights request searches. Override
+`logging.logLevel` in `host.json` when detailed diagnostics are temporarily needed.
+
+The Terraform product module accepts `http_concurrency` for storage-bound HTTP workloads.
+Its default is null, preserving the platform default. Tune it against measured throughput,
+latency, memory and execution units before changing the deployed instance size.
