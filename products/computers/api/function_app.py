@@ -237,6 +237,7 @@ if os.environ.get("PULSE_ALERTS_ENABLED", "false").lower() == "true":
             digest_minute=int(os.environ.get("PULSE_ALERTS_DIGEST_MINUTE", "30")),
             site_url=os.environ.get("PULSE_ALERTS_SITE_URL", ""),
             dry_run=os.environ.get("PULSE_ALERTS_DRY_RUN", "true").lower() != "false",
+            announce=os.environ.get("PULSE_ALERTS_SETUP_NOTICE", "false").lower() == "true",
         )
         relay = Relay(os.environ["PULSE_ALERTS_RELAY_URL"], os.environ["PULSE_ALERTS_RELAY_AUDIENCE"],
                       os.environ["PULSE_ALERTS_CHANNEL"], os.environ.get("PULSE_ALERTS_TEAM", ""))

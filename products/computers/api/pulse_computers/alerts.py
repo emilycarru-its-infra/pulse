@@ -23,6 +23,7 @@ class Policy:
     site_url: str = ""
     title: str = "Computer beacon coverage"
     dry_run: bool = True
+    announce: bool = False
 
     def __post_init__(self):
         if self.silence_hours < 1 or not 0 <= self.digest_hour <= 23 or not 0 <= self.digest_minute <= 59:
@@ -99,6 +100,19 @@ class Monitor:
             if not self.policy.dry_run and not self.state.get(key):
                 self.state.put(key, previous)
         planned = []
+        if self.policy.announce and not self.state.get("setup"):
+            setup = {"type": "AdaptiveCard", "version": "1.4", "body": [
+                {"type": "TextBlock", "text": "Computer beacon monitoring enabled", "weight": "Bolder",
+                 "color": "Good", "wrap": True},
+                {"type": "TextBlock", "text": (
+                    f"Missing-beacon digest daily at {self.policy.digest_hour:02}:{self.policy.digest_minute:02} "
+                    f"({self.policy.timezone}) after {self.policy.silence_hours} hours without a report. "
+                    "Mobile and out-of-service seats are excluded. Newly observed devices receive "
+                    "the same grace period; recovery is checked every five minutes."), "wrap": True}]}
+            planned.append(setup)
+            if not self.policy.dry_run:
+                self.send(setup)
+                self.state.put("setup", {"at": stamp(now)})
         for kind, seats in [("missing", missing), ("recovered", recovered)]:
             seats.sort(key=lambda s: (s["room"], s["hostname"]))
             for start in range(0, len(seats), 10):

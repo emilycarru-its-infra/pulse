@@ -123,3 +123,13 @@ def test_partial_delivery_retries_only_unacknowledged_devices():
         Monitor(state, partial, Policy(dry_run=False)).run(catalog, latest, NOW)
     retry = Monitor(state, sent.append, Policy(dry_run=False)).run(catalog, latest, NOW)
     assert retry["missing"] == 1 and len(retry["cards"]) == 1
+
+
+def test_setup_notice_is_previewed_in_dry_run_and_delivered_only_once():
+    state, sent = State(), []
+    preview = Monitor(state, sent.append, Policy(announce=True)).run(CATALOG, {}, NOW)
+    assert len(preview["cards"]) == 1 and not sent and not state
+    monitor = Monitor(state, sent.append, Policy(announce=True, dry_run=False))
+    monitor.run(CATALOG, {}, NOW)
+    monitor.run(CATALOG, {}, NOW + timedelta(minutes=5))
+    assert len(sent) == 1 and state["setup"]["at"] == stamp(NOW)

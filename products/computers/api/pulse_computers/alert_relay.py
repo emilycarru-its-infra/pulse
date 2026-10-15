@@ -1,6 +1,7 @@
 """Adaptive Card delivery through an Entra-authenticated relay. No shared keys."""
 
 import json
+import logging
 import urllib.request
 
 from azure.identity import DefaultAzureCredential
@@ -24,3 +25,5 @@ class Relay:
             result = json.load(response)
         if not result.get("ok") or result.get("channel", "").lower() != self.channel.lower():
             raise RuntimeError("relay did not confirm delivery to the requested channel")
+
+        logging.warning("Beacon alert delivered to %s via %s", self.channel, result.get("via", "unknown"))
