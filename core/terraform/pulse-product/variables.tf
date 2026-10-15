@@ -76,6 +76,17 @@ variable "instance_memory_in_mb" {
   default     = 2048
 }
 
+variable "http_concurrency" {
+  description = "Optional concurrent HTTP requests per instance. Null keeps the platform default (one for Python). Tune storage-bound workloads using measured latency and execution units."
+  type        = number
+  default     = null
+
+  validation {
+    condition     = var.http_concurrency == null ? true : var.http_concurrency >= 1 && var.http_concurrency <= 1000 && floor(var.http_concurrency) == var.http_concurrency
+    error_message = "http_concurrency must be null or an integer from 1 to 1000."
+  }
+}
+
 variable "maximum_instance_count" {
   description = "Flex Consumption scale-out ceiling."
   type        = number

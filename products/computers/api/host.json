@@ -2,11 +2,22 @@
   "version": "2.0",
   "logging": {
     "applicationInsights": {
-      "samplingSettings": { "isEnabled": true, "excludedTypes": "Request" }
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request;Exception"
+      }
+    },
+    "logLevel": {
+      "default": "Warning",
+      "Host.Results": "Warning",
+      "Host.Aggregator": "Information",
+      "Function": "Warning"
     }
   },
   "extensions": {
-    "http": { "routePrefix": "api" }
+    "http": {
+      "routePrefix": "api"
+    }
   },
   "extensionBundle": {
     "id": "Microsoft.Azure.Functions.ExtensionBundle",
