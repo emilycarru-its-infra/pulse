@@ -105,17 +105,16 @@ Register-ScheduledTask -TaskName "$($names.product) Idle" -Force `
 
 # Windows logs event 1074 (User32) when a shutdown or restart starts.
 $shutdownTask = "$($names.product) Shutdown"
-Register-ScheduledTask -TaskName $shutdownTask -Force `
-    -Description 'Sends one shutdown event so the status page shows this computer off at once.' `
-    -Action (New-ScheduledTaskAction -Execute "`"$cli`"" -Argument 'send --type shutdown' -WorkingDirectory $here) `
-    -Principal $system -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 1)) | Out-Null
-$task = Get-ScheduledTask -TaskName $shutdownTask
-$task.Triggers = @(Get-CimClass -Namespace Root/Microsoft/Windows/TaskScheduler -ClassName MSFT_TaskEventTrigger |
+$shutdownTrigger = Get-CimClass -Namespace Root/Microsoft/Windows/TaskScheduler -ClassName MSFT_TaskEventTrigger |
     New-CimInstance -ClientOnly -Property @{
         Enabled = $true
         Subscription = '<QueryList><Query Id="0" Path="System"><Select Path="System">*[System[Provider[@Name=''User32''] and EventID=1074]]</Select></Query></QueryList>'
-    })
-$task | Set-ScheduledTask | Out-Null
+    }
+Register-ScheduledTask -TaskName $shutdownTask -Force `
+    -Description 'Sends one shutdown event so the status page shows this computer off at once.' `
+    -Action (New-ScheduledTaskAction -Execute "`"$cli`"" -Argument 'send --type shutdown' -WorkingDirectory $here) `
+    -Trigger $shutdownTrigger -Principal $system `
+    -Settings (New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 1)) | Out-Null
 
 Stop-ScheduledTask -TaskName $names.product -ErrorAction SilentlyContinue
 Start-ScheduledTask -TaskName $names.product
