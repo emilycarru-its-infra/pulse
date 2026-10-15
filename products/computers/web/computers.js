@@ -218,6 +218,21 @@ function captureGroupOrder() {
     if (!groupOrder.has(key)) groupOrder.set(key, groupOrder.size);
 }
 
+let titleFrame;
+function fitCardTitles() {
+  cancelAnimationFrame(titleFrame);
+  titleFrame = requestAnimationFrame(() => {
+    for (const title of document.querySelectorAll(".space-card h3")) {
+      if (!title.clientWidth) continue;
+      title.style.fontSize = "16px";
+      if (title.scrollWidth > title.clientWidth)
+        title.style.fontSize = `${16 * title.clientWidth / title.scrollWidth}px`;
+    }
+  });
+}
+new ResizeObserver(fitCardTitles).observe(document.getElementById("spaces"));
+document.fonts.ready.then(fitCardTitles);
+
 const mappedSpace = (spaces) => spaces.some((s) => s.floor && s.label);
 function renderList() {
   const groups = new Map();
@@ -278,6 +293,7 @@ function renderList() {
       return card;
     });
   document.getElementById("spaces").replaceChildren(...cards);
+  fitCardTitles();
 }
 
 function tile(s, names) {

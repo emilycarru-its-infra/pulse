@@ -187,6 +187,9 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .list-view { flex: 1; min-height: 0; overflow-y: auto; }
 .spaces { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); }
 .space-card { display: flex; flex-direction: column; gap: 10px; }
+.space-card .head > :first-child { flex: 1; min-width: 0; }
+.space-card .share-heading h3 { flex: 1; white-space: nowrap; }
+.space-card .free { flex-shrink: 0; }
 .space-card .head { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
 .space-card .room { font-size: 18px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .space-card h3 { font-size: 16px; line-height: 1.25; margin-top: 2px; }
@@ -217,7 +220,7 @@ body.app main.doc.wide > .map-toolbar { margin-bottom: 14px; }
 .space-card .metadata .kicker { margin: 0; }
 .mobile { position: relative; }
 .mobile::before, .mobile::after { content: ""; position: absolute; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--text-primary); background: radial-gradient(circle, var(--text-primary) 0 1px, var(--surface-1) 1px); bottom: -6px; }
-.mobile::before { left: 18%; } .mobile::after { right: 18%; }
+.mobile::before { left: 0; } .mobile::after { right: 0; }
 .floormap .wheel { fill: var(--surface-1); stroke: var(--text-primary); pointer-events: none; }
 .floormap .wheel-hub { fill: var(--text-primary); pointer-events: none; }
 .tile.mobile { margin-bottom: 6px; }
