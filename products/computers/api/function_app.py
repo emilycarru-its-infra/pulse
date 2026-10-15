@@ -219,49 +219,50 @@ app.route(route="summary", methods=["GET"])(summary)
 app.route(route="export/events", methods=["GET"])(export_events)
 
 
-# Disabled unless a deployment explicitly configures the optional coverage monitor.
-if os.environ.get("PULSE_ALERTS_ENABLED", "false").lower() == "true":
-    @app.function_name(name="PulseBeaconAlerts")
-    @app.schedule(schedule="0 */5 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
-    def beacon_alerts(timer: func.TimerRequest) -> None:
-        from datetime import timedelta, timezone
-        from pulse_computers.alert_store import AlertState
-        from pulse_computers.alert_relay import Relay
-        from pulse_computers.alerts import Monitor, Policy, parse, stamp
+# Register consistently during Azure indexing; opt in to work at invocation time.
+@app.function_name(name="PulseBeaconAlerts")
+@app.schedule(schedule="0 */5 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
+def beacon_alerts(timer: func.TimerRequest) -> None:
+    if os.environ.get("PULSE_ALERTS_ENABLED", "false").lower() != "true":
+        return
+    from datetime import timedelta, timezone
+    from pulse_computers.alert_store import AlertState
+    from pulse_computers.alert_relay import Relay
+    from pulse_computers.alerts import Monitor, Policy, parse, stamp
 
-        state = AlertState.from_account(os.environ["PULSE_STORAGE_ACCOUNT"], os.environ["PULSE_ALERTS_TABLE"])
-        policy = Policy(
-            silence_hours=int(os.environ.get("PULSE_ALERTS_SILENCE_HOURS", "24")),
-            timezone=os.environ.get("PULSE_ALERTS_TIMEZONE", "UTC"),
-            digest_hour=int(os.environ.get("PULSE_ALERTS_DIGEST_HOUR", "8")),
-            digest_minute=int(os.environ.get("PULSE_ALERTS_DIGEST_MINUTE", "30")),
-            site_url=os.environ.get("PULSE_ALERTS_SITE_URL", ""),
-            dry_run=os.environ.get("PULSE_ALERTS_DRY_RUN", "true").lower() != "false",
-            announce=os.environ.get("PULSE_ALERTS_SETUP_NOTICE", "false").lower() == "true",
-        )
-        relay = Relay(os.environ["PULSE_ALERTS_RELAY_URL"], os.environ["PULSE_ALERTS_RELAY_AUDIENCE"],
-                      os.environ["PULSE_ALERTS_CHANNEL"], os.environ.get("PULSE_ALERTS_TEAM", ""))
-        now = datetime.now(timezone.utc)
-        with state.lease() as acquired:
-            if not acquired:
-                logging.info("Beacon alert monitor already running")
-                return
-            try:
-                p = pulse()
-                result = Monitor(state, relay, policy).run(p.service.catalog, p.service.store.latest(), now)
-                logging.warning("Beacon alert check: missing=%d recovered=%d dryRun=%s cards=%d",
-                                result["missing"], result["recovered"], policy.dry_run, len(result["cards"]))
-                if policy.dry_run:
-                    logging.warning("Beacon alert dry-run cards: %s", json.dumps(result["cards"]))
-            except Exception as error:
-                logging.exception("Beacon alert check failed")
-                if not policy.dry_run:
-                    previous = state.get("failure") or {}
-                    if not previous.get("at") or parse(previous["at"]) <= now - timedelta(days=1):
-                        relay({"type": "AdaptiveCard", "version": "1.4", "body": [
-                            {"type": "TextBlock", "text": "Computer beacon coverage check failed",
-                             "weight": "Bolder", "color": "Attention", "wrap": True},
-                            {"type": "TextBlock", "text": f"{type(error).__name__}: check Function telemetry. "
-                             "Coverage has not been confirmed.", "wrap": True}]})
-                        state.put("failure", {"at": stamp(now)})
-                raise
+    state = AlertState.from_account(os.environ["PULSE_STORAGE_ACCOUNT"], os.environ["PULSE_ALERTS_TABLE"])
+    policy = Policy(
+        silence_hours=int(os.environ.get("PULSE_ALERTS_SILENCE_HOURS", "24")),
+        timezone=os.environ.get("PULSE_ALERTS_TIMEZONE", "UTC"),
+        digest_hour=int(os.environ.get("PULSE_ALERTS_DIGEST_HOUR", "8")),
+        digest_minute=int(os.environ.get("PULSE_ALERTS_DIGEST_MINUTE", "30")),
+        site_url=os.environ.get("PULSE_ALERTS_SITE_URL", ""),
+        dry_run=os.environ.get("PULSE_ALERTS_DRY_RUN", "true").lower() != "false",
+        announce=os.environ.get("PULSE_ALERTS_SETUP_NOTICE", "false").lower() == "true",
+    )
+    relay = Relay(os.environ["PULSE_ALERTS_RELAY_URL"], os.environ["PULSE_ALERTS_RELAY_AUDIENCE"],
+                  os.environ["PULSE_ALERTS_CHANNEL"], os.environ.get("PULSE_ALERTS_TEAM", ""))
+    now = datetime.now(timezone.utc)
+    with state.lease() as acquired:
+        if not acquired:
+            logging.info("Beacon alert monitor already running")
+            return
+        try:
+            p = pulse()
+            result = Monitor(state, relay, policy).run(p.service.catalog, p.service.store.latest(), now)
+            logging.warning("Beacon alert check: missing=%d recovered=%d dryRun=%s cards=%d",
+                            result["missing"], result["recovered"], policy.dry_run, len(result["cards"]))
+            if policy.dry_run:
+                logging.warning("Beacon alert dry-run cards: %s", json.dumps(result["cards"]))
+        except Exception as error:
+            logging.exception("Beacon alert check failed")
+            if not policy.dry_run:
+                previous = state.get("failure") or {}
+                if not previous.get("at") or parse(previous["at"]) <= now - timedelta(days=1):
+                    relay({"type": "AdaptiveCard", "version": "1.4", "body": [
+                        {"type": "TextBlock", "text": "Computer beacon coverage check failed",
+                         "weight": "Bolder", "color": "Attention", "wrap": True},
+                        {"type": "TextBlock", "text": f"{type(error).__name__}: check Function telemetry. "
+                         "Coverage has not been confirmed.", "wrap": True}]})
+                    state.put("failure", {"at": stamp(now)})
+            raise

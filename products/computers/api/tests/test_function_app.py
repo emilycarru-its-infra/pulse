@@ -60,8 +60,14 @@ def test_ingest_key_when_set(pulse):
     assert function_app.ingest(post(event("LAB-02"), {"X-Pulse-Key": "pilot"})).status_code == 202
 
 
-def test_routes_are_registered():
-    routes = {f.get_trigger().route for f in function_app.app.get_functions()}
+def test_routes_are_registered(monkeypatch):
+    monkeypatch.delenv("PULSE_ALERTS_ENABLED", raising=False)
+    functions = function_app.app.get_functions()
+    timer = next(f for f in functions if f.get_function_name() == "PulseBeaconAlerts")
+    assert timer.get_trigger().type == "timerTrigger"
+    timer.get_user_function()(None)
+    routes = {f.get_trigger().route for f in functions
+              if f.get_trigger().type == "httpTrigger"}
     assert routes == {"ingest", "status", "summary", "export/events", "GetRoles", "positions"}
 
 
