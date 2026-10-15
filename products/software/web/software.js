@@ -298,7 +298,7 @@ ui.version.addEventListener("change", () => { const app = catalog.find((a) => ma
   const toolbar = document.querySelector(".catalog-toolbar"); toolbar.classList.add("share-scope"); toolbar.append(Pulse.copyLink(() => location.href, "this view"));
   const clear = text("a", "All locations", "clear-location"); clear.href = softwareURL({ location: "", app: "", open: "" }); clear.hidden = !locationFilter; toolbar.append(clear);
   document.querySelector(".back").href = softwareURL({ app: "", open: "", version: "" });
-  Pulse.poll(async () => {
+  await (async () => {
     try {
       const response = await fetch("api/status");
       if (!response.ok) throw new Error("Software locations are temporarily unavailable. Please try again shortly.");
@@ -318,7 +318,7 @@ ui.version.addEventListener("change", () => { const app = catalog.find((a) => ma
       ui.notice.textContent = error.message;
       ui.browse.hidden = true; ui.detail.hidden = true;
     }
-  }, 30000);
+  })();
 })();
 
 window.addEventListener("popstate", () => { readView(); ui.category.value = ui.category.dataset.requested; delete ui.category.dataset.requested; if (selected) renderDetail(); else { ui.detail.hidden = true; ui.browse.hidden = false; renderBrowse(); } });
