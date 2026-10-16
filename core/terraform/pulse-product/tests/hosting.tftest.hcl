@@ -19,6 +19,10 @@ run "existing_flex_default" {
     condition     = azurerm_service_plan.this[0].sku_name == "FC1"
     error_message = "The existing Flex plan must remain FC1."
   }
+  assert {
+    condition     = azurerm_function_app_flex_consumption.this[0].app_settings.AzureWebJobsStorage == "" && azurerm_function_app_flex_consumption.this[0].app_settings.AzureWebJobsStorage__accountName == azurerm_storage_account.this.name
+    error_message = "Flex must keep its explicit identity-based host storage settings."
+  }
 }
 
 run "fixed_capacity_preserves_security_and_timers" {
@@ -42,6 +46,10 @@ run "fixed_capacity_preserves_security_and_timers" {
   assert {
     condition     = azurerm_linux_function_app.dedicated[0].storage_uses_managed_identity && !azurerm_storage_account.this.shared_access_key_enabled && !azurerm_linux_function_app.dedicated[0].webdeploy_publish_basic_authentication_enabled
     error_message = "Dedicated hosting must retain identity-based storage and disabled publish credentials."
+  }
+  assert {
+    condition     = !contains(keys(azurerm_linux_function_app.dedicated[0].app_settings), "AzureWebJobsStorage") && !contains(keys(azurerm_linux_function_app.dedicated[0].app_settings), "AzureWebJobsStorage__accountName")
+    error_message = "The dedicated provider must own host storage settings without duplicate app_settings entries."
   }
   assert {
     condition     = azapi_update_resource.auth_exclusions.body.properties.globalValidation.requireAuthentication && azapi_update_resource.auth_exclusions.body.properties.globalValidation.excludedPaths == var.unauthenticated_paths
