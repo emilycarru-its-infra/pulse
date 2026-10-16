@@ -15,5 +15,6 @@ jobs:
         working-directory: products/computers/agents/mac
     steps:
       - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s packaging/tests -v
       - run: swift build
       - run: swift test
