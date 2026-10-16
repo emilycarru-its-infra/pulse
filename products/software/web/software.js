@@ -1,4 +1,4 @@
-const ui = Object.fromEntries(["notice", "browse", "view", "search", "category", "platform", "result-count", "software-list", "empty", "detail", "detail-icon", "detail-share", "detail-category", "software-title", "detail-platforms", "location-count", "version", "locations", "no-locations"].map((id) => [id, document.getElementById(id)]));
+const ui = Object.fromEntries(["notice", "browse", "view", "search", "category", "location", "location-filter-control", "platform", "result-count", "software-list", "empty", "detail", "detail-icon", "detail-share", "detail-category", "software-title", "detail-platforms", "location-count", "version", "locations", "no-locations"].map((id) => [id, document.getElementById(id)]));
 let catalog = [], selected = "", loaded = false, platformFilter = "", view = "software";
 const openApps = new Set();
 const appVersionFilters = new Map();
@@ -22,6 +22,7 @@ function readView() {
   view = params.get("view") === "locations" ? "locations" : "software";
   platformFilter = ["mac", "windows"].includes(params.get("platform")) ? params.get("platform") : "";
   locationFilter = params.get("location") || "";
+  syncLocationControl();
   ui.search.value = params.get("q") || "";
   ui.category.dataset.requested = params.get("category") || "";
   ui.version.value = "";
@@ -32,6 +33,43 @@ function readView() {
   for (const option of ui.platform.querySelectorAll("button")) option.setAttribute("aria-pressed", String(option.dataset.v === platformFilter));
   ui.search.placeholder = view === "software" ? "Search software" : "Search rooms or software";
   ui.search.setAttribute("aria-label", ui.search.placeholder);
+}
+function syncLocationControl() {
+  ui["location-filter-control"].hidden = view !== "locations";
+  ui.location.value = locationFilter;
+}
+function populateLocations() {
+  const locations = new Map();
+  for (const app of catalog) for (const location of app.locations) locations.set(location.id, location);
+  const options = [...locations.values()].sort((a, b) => (a.room || a.name).localeCompare(b.room || b.name, undefined, { numeric: true }))
+    .map((location) => new Option(location.room ? `${location.room} — ${location.name}` : location.name, location.id));
+  ui.location.replaceChildren(new Option("All locations", ""), ...options);
+  if (locationFilter && !locations.has(locationFilter)) {
+    const missing = new Option("Location unavailable", locationFilter); missing.disabled = true; ui.location.append(missing);
+  }
+  syncLocationControl();
+}
+function renderSkeleton() {
+  ui.notice.classList.add("visually-hidden");
+  ui.browse.setAttribute("aria-busy", "true");
+  ui.empty.hidden = true;
+  ui["software-list"].className = view === "locations" ? "location-catalog" : "software-list";
+  ui["software-list"].replaceChildren(...Array.from({ length: 12 }, (_, index) => {
+    const card = text("article", "", `${view === "locations" ? "location-card" : "software-card"} skeleton-card`);
+    card.setAttribute("aria-hidden", "true");
+    if (view === "software") card.append(text("div", "", "skeleton-block skeleton-icon"));
+    card.append(text("h2", "", "skeleton-block skeleton-title"), text("div", "", "skeleton-block skeleton-subtitle"));
+    if (view === "locations") {
+      const rows = text("div", "", "skeleton-apps");
+      for (let i = 0; i < 6 + (index % 2) * 2; i++) {
+        const row = text("div", "", "skeleton-row");
+        row.append(text("span", "", "skeleton-block skeleton-mini-icon"), text("span", "", "skeleton-block skeleton-app-name")); rows.append(row);
+      }
+      card.append(rows);
+    } else card.append(text("div", "", "skeleton-block skeleton-caption"));
+    return card;
+  }));
+  scheduleLayout();
 }
 const copyButton = (app) => Pulse.copyLink(() => appUrl(app, appVersionFilters.get(app.id)), app.name);
 function locationLink(location, app = null, version = "") {
@@ -178,6 +216,8 @@ function syncLinks() {
   if (clear) { clear.href = softwareURL({ location: "", app: "", open: "" }); clear.hidden = !locationFilter; }
 }
 function renderBrowse() {
+  syncLocationControl();
+  if (!loaded) { renderSkeleton(); return; }
   holdLayoutHeight();
   syncLinks();
   const query = ui.search.value.trim().toLocaleLowerCase();
@@ -275,6 +315,10 @@ function renderDetail(focus = false) {
   if (focus) ui["software-title"].focus();
 }
 for (const name of ["search", "category"]) ui[name].addEventListener(name === "search" ? "input" : "change", () => { renderBrowse(); recordView(name !== "search"); });
+ui.location.addEventListener("change", () => {
+  locationFilter = ui.location.value;
+  renderBrowse(); recordView(true);
+});
 ui.view.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-v]");
   if (!button) return;
@@ -293,6 +337,8 @@ ui.platform.addEventListener("click", (event) => {
 });
 ui.version.addEventListener("change", () => { const app = catalog.find((a) => matchesApp(a, selected)); if (app) { renderLocations(app); recordView(); } });
 (async () => {
+  readView();
+  renderSkeleton();
   await Pulse.shell({ current: "software", compact: true, title: "Software Catalog", context: "Explore campus software and find where it’s available" });
   readView();
   const toolbar = document.querySelector(".catalog-toolbar"); toolbar.classList.add("share-scope"); toolbar.append(Pulse.copyLink(() => location.href, "this view"));
@@ -304,16 +350,21 @@ ui.version.addEventListener("change", () => { const app = catalog.find((a) => ma
       if (!response.ok) throw new Error("Software locations are temporarily unavailable. Please try again shortly.");
       const data = await response.json();
       catalog = data.software;
+      populateLocations();
       const category = ui.category.dataset.requested ?? ui.category.value;
       ui.category.replaceChildren(new Option("All categories", ""), ...[...new Set(catalog.map((a) => a.category))].sort().map((c) => new Option(c, c)));
       ui.category.value = category; delete ui.category.dataset.requested;
       if (!loaded) { const open = new URLSearchParams(location.search).get("open"); const app = catalog.find((a) => matchesApp(a, open)); if (app) { openApps.add(app.id); appVersionFilters.set(app.id, new URLSearchParams(location.search).get("version") || ""); } }
       ui.notice.textContent = "";
       ui.notice.hidden = true;
-      ui.browse.hidden = !!selected; ui.detail.hidden = !selected;
-      if (selected) renderDetail(!loaded); else renderBrowse();
+      const firstLoad = !loaded;
       loaded = true;
+      ui.browse.setAttribute("aria-busy", "false");
+      ui.browse.hidden = !!selected; ui.detail.hidden = !selected;
+      if (selected) renderDetail(firstLoad); else renderBrowse();
     } catch (error) {
+      ui.browse.setAttribute("aria-busy", "false");
+      ui.notice.classList.remove("visually-hidden");
       ui.notice.hidden = false;
       ui.notice.textContent = error.message;
       ui.browse.hidden = true; ui.detail.hidden = true;
