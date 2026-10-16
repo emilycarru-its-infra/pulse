@@ -19,6 +19,39 @@ launchctl_run() {
     /bin/launchctl "$@"
 }
 
+
+# bootout returns before a terminating job necessarily disappears. Wait for removal
+# before bootstrapping, then tolerate transient launchd registration failures.
+reload_job() {
+    local label="$1" plist="$2" attempt
+    if [[ -n "${ROOT}" ]]; then
+        log "(test root) skipped: reload ${label}"
+        return 0
+    fi
+    launchctl_run bootout "system/${label}" 2>/dev/null || true
+    for attempt in {1..15}; do
+        if ! launchctl_run print "system/${label}" >/dev/null 2>&1; then
+            break
+        fi
+        /bin/sleep 1
+    done
+    if launchctl_run print "system/${label}" >/dev/null 2>&1; then
+        log "ERROR: ${label} did not finish unloading"
+        return 1
+    fi
+    for attempt in {1..15}; do
+        if launchctl_run bootstrap system "${plist}"; then
+            if launchctl_run print "system/${label}" >/dev/null 2>&1; then
+                log "loaded ${label}"
+                return 0
+            fi
+        fi
+        /bin/sleep 1
+    done
+    log "ERROR: ${label} was not loaded after bounded retries"
+    return 1
+}
+
 # The agent runs as root and writes here; nobody else may.
 mkdir -p "${DATA}/logs"
 chown -R root:wheel "${DATA}" 2>/dev/null || [[ -n "${ROOT}" ]]
@@ -38,8 +71,7 @@ chmod 644 "${AGENT_PLIST}"
 chown root:wheel "${AGENT_PLIST}" 2>/dev/null || [[ -n "${ROOT}" ]]
 # launchctl load is a no-op for a label already loaded, so boot out first; the
 # agent's SIGTERM handler reports the seat off and the new one reports it back.
-launchctl_run bootout system/com.github.computerpulse 2>/dev/null || true
-launchctl_run bootstrap system "${AGENT_PLIST}" || log "agent bootstrap returned non-zero"
+reload_job com.github.computerpulse "${AGENT_PLIST}" || exit 1
 
 # The helper's plist ships inside the app for SMAppService; launchd needs a plain
 # copy with ProgramArguments.
@@ -50,8 +82,7 @@ if [[ -f "${HELPER_SRC}" ]]; then
     /usr/libexec/PlistBuddy -c "Add :ProgramArguments:0 string ${APP#${ROOT}}/Contents/MacOS/ManagedPresenceBeaconHelper" "${HELPER_PLIST}"
     chmod 644 "${HELPER_PLIST}"
     chown root:wheel "${HELPER_PLIST}" 2>/dev/null || [[ -n "${ROOT}" ]]
-    launchctl_run bootout system/com.github.computerpulse.helper 2>/dev/null || true
-    launchctl_run bootstrap system "${HELPER_PLIST}" || log "helper bootstrap returned non-zero"
+    reload_job com.github.computerpulse.helper "${HELPER_PLIST}" || exit 1
 fi
 
 log "installed $("${CLI}" --version 2>/dev/null)"
