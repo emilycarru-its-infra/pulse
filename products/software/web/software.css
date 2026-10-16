@@ -78,3 +78,20 @@ input, select { font:inherit; color:inherit; background:transparent; border:1px 
 .room-links a:hover, .location-card h2 a:hover { text-decoration: underline; }
 .location-card header .share-heading { padding-right: 30px; }
 .room-links .room-number { font-weight: 700; }
+
+#location-filter-control { max-width:min(340px,100%); }
+.skeleton-card { box-sizing:border-box; padding:1.5rem 1rem; display:flex; flex-direction:column; align-items:center; gap:1rem; }
+.skeleton-block { background:color-mix(in srgb,currentColor 9%,transparent); border-radius:4px; animation:skeleton-pulse 1.6s ease-in-out infinite; }
+.skeleton-icon { width:64px; height:64px; border-radius:12px; }
+.skeleton-card .skeleton-title { width:75%; height:18px; margin:.25rem 0; }
+.skeleton-subtitle { width:55%; height:12px; }
+.skeleton-caption { width:40%; height:12px; margin:.35rem 0; }
+.location-card.skeleton-card { align-items:stretch; padding:1.25rem; gap:.8rem; }
+.location-card.skeleton-card .skeleton-title { width:38%; height:30px; }
+.location-card.skeleton-card .skeleton-subtitle { width:72%; height:16px; }
+.skeleton-apps { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1rem; }
+.skeleton-row { display:flex; gap:.6rem; align-items:center; }
+.skeleton-mini-icon { width:32px; height:32px; flex-shrink:0; border-radius:6px; }
+.skeleton-app-name { width:70%; height:12px; }
+@keyframes skeleton-pulse { 50% { opacity:.45; } }
+@media(prefers-reduced-motion:reduce) { .skeleton-block { animation:none; } }
