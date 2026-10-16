@@ -76,3 +76,16 @@ jobs:
       - run: dotnet build src/PulseAgent.Cli --configuration Release
       - run: dotnet build src/PulseAgent.Idle --configuration Release
       - run: dotnet build src/PulseAgent.App --configuration Release --runtime win-x64
+
+  terraform-module:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: core/terraform/pulse-product
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform init -backend=false -input=false
+      - run: terraform fmt -check
+      - run: terraform validate
+      - run: terraform test -no-color

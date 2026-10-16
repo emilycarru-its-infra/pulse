@@ -5,9 +5,20 @@
 # Service forwards to the code in X-ARR-ClientCert.
 
 locals {
-  custom_domain     = var.custom_domain == null ? null : lower(trimsuffix(var.custom_domain, "."))
-  dns_zone_rg       = coalesce(var.dns_zone_resource_group_name, var.resource_group_name)
-  workspace_id      = var.log_analytics_workspace_id != null ? var.log_analytics_workspace_id : azurerm_log_analytics_workspace.this[0].id
+  custom_domain = var.custom_domain == null ? null : lower(trimsuffix(var.custom_domain, "."))
+  dns_zone_rg   = coalesce(var.dns_zone_resource_group_name, var.resource_group_name)
+  workspace_id  = var.log_analytics_workspace_id != null ? var.log_analytics_workspace_id : azurerm_log_analytics_workspace.this[0].id
+  function_app = var.hosting_mode == "flex" ? {
+    id               = azurerm_function_app_flex_consumption.this[0].id
+    name             = azurerm_function_app_flex_consumption.this[0].name
+    default_hostname = azurerm_function_app_flex_consumption.this[0].default_hostname
+    principal_id     = azurerm_function_app_flex_consumption.this[0].identity[0].principal_id
+    } : {
+    id               = azurerm_linux_function_app.dedicated[0].id
+    name             = azurerm_linux_function_app.dedicated[0].name
+    default_hostname = azurerm_linux_function_app.dedicated[0].default_hostname
+    principal_id     = azurerm_linux_function_app.dedicated[0].identity[0].principal_id
+  }
   deployment_bucket = "${azurerm_storage_account.this.primary_blob_endpoint}${azurerm_storage_container.deployments.name}"
 
   app_settings = merge({
@@ -81,6 +92,7 @@ resource "azurerm_application_insights" "this" {
 # The API.
 
 resource "azurerm_service_plan" "this" {
+  count               = var.hosting_mode == "flex" ? 1 : 0
   name                = "${var.function_app_name}-plan"
   resource_group_name = var.resource_group_name
   location            = var.location
@@ -90,10 +102,11 @@ resource "azurerm_service_plan" "this" {
 }
 
 resource "azurerm_function_app_flex_consumption" "this" {
+  count               = var.hosting_mode == "flex" ? 1 : 0
   name                = var.function_app_name
   resource_group_name = var.resource_group_name
   location            = var.location
-  service_plan_id     = azurerm_service_plan.this.id
+  service_plan_id     = azurerm_service_plan.this[0].id
 
   runtime_name           = "python"
   runtime_version        = var.python_version
@@ -136,16 +149,82 @@ resource "azurerm_function_app_flex_consumption" "this" {
   }
 }
 
+resource "azurerm_service_plan" "dedicated" {
+  count               = var.hosting_mode == "dedicated" ? 1 : 0
+  name                = "${var.function_app_name}-dedicated-plan"
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  os_type             = "Linux"
+  sku_name            = var.dedicated_sku
+  worker_count        = 1
+  tags                = var.tags
+}
+
+resource "azurerm_linux_function_app" "dedicated" {
+  count               = var.hosting_mode == "dedicated" ? 1 : 0
+  name                = var.function_app_name
+  resource_group_name = var.resource_group_name
+  location            = var.location
+  service_plan_id     = azurerm_service_plan.dedicated[0].id
+
+  storage_account_name          = azurerm_storage_account.this.name
+  storage_uses_managed_identity = true
+  functions_extension_version   = "~4"
+  https_only                    = true
+
+  client_certificate_enabled                     = true
+  client_certificate_mode                        = "Required"
+  client_certificate_exclusion_paths             = join(";", var.browser_paths)
+  ftp_publish_basic_authentication_enabled       = false
+  webdeploy_publish_basic_authentication_enabled = false
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  site_config {
+    always_on                              = true
+    minimum_tls_version                    = "1.2"
+    ftps_state                             = "Disabled"
+    application_insights_connection_string = azurerm_application_insights.this.connection_string
+    application_stack {
+      python_version = var.python_version
+    }
+  }
+
+  app_settings = merge(local.app_settings, {
+    FUNCTIONS_WORKER_RUNTIME = "python"
+    # Dependencies are installed into the package in the deploying pipeline.
+    SCM_DO_BUILD_DURING_DEPLOYMENT = "false"
+  })
+  tags = var.tags
+
+  lifecycle {
+    ignore_changes = [auth_settings_v2]
+  }
+}
+
+# Existing Flex consumers keep their state addresses through the optional count.
+moved {
+  from = azurerm_service_plan.this
+  to   = azurerm_service_plan.this[0]
+}
+
+moved {
+  from = azurerm_function_app_flex_consumption.this
+  to   = azurerm_function_app_flex_consumption.this[0]
+}
+
 resource "azurerm_role_assignment" "tables" {
   scope                = azurerm_storage_account.this.id
   role_definition_name = "Storage Table Data Contributor"
-  principal_id         = azurerm_function_app_flex_consumption.this.identity[0].principal_id
+  principal_id         = local.function_app.principal_id
 }
 
 resource "azurerm_role_assignment" "blobs" {
   scope                = azurerm_storage_account.this.id
   role_definition_name = "Storage Blob Data Owner"
-  principal_id         = azurerm_function_app_flex_consumption.this.identity[0].principal_id
+  principal_id         = local.function_app.principal_id
 }
 
 # The page.
@@ -167,14 +246,14 @@ resource "azurerm_static_web_app" "this" {
 # answer only through the Static Web App and its sign-in.
 resource "azurerm_static_web_app_function_app_registration" "this" {
   static_web_app_id = azurerm_static_web_app.this.id
-  function_app_id   = azurerm_function_app_flex_consumption.this.id
+  function_app_id   = local.function_app.id
 }
 
 # ...except the agents' paths, which must reach the code directly. This merges into the
 # settings the link wrote rather than replacing them, which azurerm's auth_settings_v2 would.
 resource "azapi_update_resource" "auth_exclusions" {
   type        = "Microsoft.Web/sites/config@2024-04-01"
-  resource_id = "${azurerm_function_app_flex_consumption.this.id}/config/authsettingsV2"
+  resource_id = "${local.function_app.id}/config/authsettingsV2"
 
   body = {
     properties = {

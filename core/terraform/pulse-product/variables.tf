@@ -4,7 +4,7 @@ variable "resource_group_name" {
 }
 
 variable "location" {
-  description = "Region for the storage, monitoring and Function App. It must offer Flex Consumption."
+  description = "Region for the storage, monitoring and Function App. It must offer the selected hosting plan."
   type        = string
 }
 
@@ -146,4 +146,24 @@ variable "tags" {
   description = "Tags for every resource."
   type        = map(string)
   default     = {}
+}
+
+variable "hosting_mode" {
+  description = "API hosting: flex (existing default) or dedicated. Changing modes requires replacing the Function App; stage and review the cutover before applying."
+  type        = string
+  default     = "flex"
+  validation {
+    condition     = contains(["flex", "dedicated"], var.hosting_mode)
+    error_message = "hosting_mode must be flex or dedicated."
+  }
+}
+
+variable "dedicated_sku" {
+  description = "Fixed Linux App Service SKU when hosting_mode is dedicated. One worker with Always On; no automatic scale-out."
+  type        = string
+  default     = "B2"
+  validation {
+    condition     = contains(["B1", "B2", "B3"], var.dedicated_sku)
+    error_message = "dedicated_sku must be B1, B2 or B3."
+  }
 }
