@@ -17,21 +17,21 @@ output "static_web_app_api_key" {
 }
 
 output "function_app_name" {
-  value = azurerm_function_app_flex_consumption.this.name
+  value = local.function_app.name
 }
 
 output "function_app_id" {
-  value = azurerm_function_app_flex_consumption.this.id
+  value = local.function_app.id
 }
 
 output "function_app_default_hostname" {
   description = "The host agents post to: https://<this>/api/ingest."
-  value       = azurerm_function_app_flex_consumption.this.default_hostname
+  value       = local.function_app.default_hostname
 }
 
 output "function_principal_id" {
   description = "The Function App's managed identity, for further role assignments."
-  value       = azurerm_function_app_flex_consumption.this.identity[0].principal_id
+  value       = local.function_app.principal_id
 }
 
 output "storage_account_name" {
