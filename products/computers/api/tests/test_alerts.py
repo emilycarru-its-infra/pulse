@@ -133,3 +133,67 @@ def test_setup_notice_is_previewed_in_dry_run_and_delivered_only_once():
     monitor.run(CATALOG, {}, NOW)
     monitor.run(CATALOG, {}, NOW + timedelta(minutes=5))
     assert len(sent) == 1 and state["setup"]["at"] == stamp(NOW)
+
+
+DROP = {"spaces": [{"id": "lab", "name": "Lab", "room": "Room B", "seats": [
+    {"hostname": f"LAB-{n:02}", "serial": f"DROP{n:03}"} for n in range(12)]}]}
+
+
+def heard(at, kind="heartbeat", active=True, idle=0, seats=range(12)):
+    return {f"LAB-{n:02}": {"receivedAt": stamp(at), "type": kind,
+                            "session": {"active": active, "locked": False, "idleSeconds": idle}}
+            for n in seats}
+
+
+def drop_run(state, latest, now=NOW, **policy):
+    sent = []
+    result = Monitor(state, sent.append, Policy(dry_run=False, **policy)).run(DROP, latest, now)
+    return result, sent
+
+
+def test_in_use_seats_going_silent_together_alert_once_then_recover():
+    state = State()
+    stopped = heard(NOW - timedelta(minutes=20))
+    result, sent = drop_run(state, stopped)
+    assert result["dropped"] == 12 and len(sent) == 1 and "stopped together" in str(sent[0])
+    assert len(sent[0]["body"]) == 14 and "And 2 more." in str(sent[0])
+    assert drop_run(state, stopped, now=NOW + timedelta(minutes=5))[1] == []
+    back = {**stopped, **heard(NOW + timedelta(minutes=9), seats=range(6))}
+    result, sent = drop_run(state, back, now=NOW + timedelta(minutes=10))
+    assert len(sent) == 1 and "reporting again" in str(sent[0]) and not state["drop"]["active"]
+
+
+def test_shutdown_idle_empty_or_recent_seats_are_not_a_drop():
+    quiet = NOW - timedelta(minutes=20)
+    for latest in [heard(quiet, kind="shutdown"), heard(quiet, idle=1800), heard(quiet, active=False),
+                   heard(NOW - timedelta(minutes=5))]:
+        assert drop_run(State(), latest)[0]["dropped"] == 0
+
+
+def test_seats_stopping_hours_apart_are_not_a_drop_and_threshold_holds():
+    spread = {}
+    for n in range(12):
+        spread.update(heard(NOW - timedelta(minutes=20 + 15 * n), seats=[n]))
+    assert drop_run(State(), spread)[0]["dropped"] == 0
+    assert drop_run(State(), heard(NOW - timedelta(minutes=20), seats=range(9)))[0]["dropped"] == 0
+    assert drop_run(State(), heard(NOW - timedelta(minutes=20)), drop_count=0)[0]["dropped"] == 0
+
+
+def test_drop_is_previewed_in_dry_run_and_failed_delivery_retries():
+    state = State()
+    preview = Monitor(state, lambda c: None, Policy()).run(DROP, heard(NOW - timedelta(minutes=20)), NOW)
+    assert preview["dropped"] == 12 and preview["cards"] and "drop" not in state
+    def fail(card):
+        raise OSError("relay unavailable")
+    with pytest.raises(OSError):
+        Monitor(state, fail, Policy(dry_run=False)).run(DROP, heard(NOW - timedelta(minutes=20)), NOW)
+    assert "drop" not in state
+    assert len(drop_run(state, heard(NOW - timedelta(minutes=20)))[1]) == 1
+
+
+def test_unrecovered_drop_expires_quietly_into_the_digest():
+    state = State()
+    drop_run(state, heard(NOW - timedelta(minutes=20)))
+    later = NOW + timedelta(hours=25)
+    result, sent = drop_run(state, heard(NOW - timedelta(minutes=20)), now=later)
+    assert not state["drop"]["active"] and not any("reporting again" in str(c) for c in sent)
