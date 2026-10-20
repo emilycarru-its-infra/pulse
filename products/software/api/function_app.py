@@ -16,6 +16,10 @@ from pulse_software.managed import identity
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
+# The snapshot refreshes hourly. Browsers keep reading it for two and a half hours, so one
+# failed refresh leaves the last good snapshot in place instead of an error page.
+SNAPSHOT_MAX_AGE = int(os.environ.get("PULSE_SNAPSHOT_MAX_AGE_SECONDS", "9000"))
+
 
 @lru_cache(maxsize=1)
 def runtime():
@@ -40,7 +44,7 @@ def status(req):
         service, products, _, snapshot = runtime()
         state = service.status()
         saved = snapshot.read()
-        if not recent(saved.get("fetchedAt"), datetime.now(timezone.utc), 900):
+        if not recent(saved.get("fetchedAt"), datetime.now(timezone.utc), SNAPSHOT_MAX_AGE):
             raise ValueError("application snapshot is stale")
         result = discovery(state, saved["rows"], products,
                            max_age=int(os.environ.get("PULSE_INSTALL_MAX_AGE_HOURS", "48")) * 3600)
@@ -67,7 +71,7 @@ app.route(route="status", methods=["GET"])(status)
 app.route(route="GetRoles", methods=["POST"])(get_roles)
 
 
-@app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
+@app.timer_trigger(schedule="0 0 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
 def refresh_installations(timer):
     _, products, inventory, snapshot = runtime()
     rows = inventory.rows()
