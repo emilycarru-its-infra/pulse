@@ -92,3 +92,30 @@ def test_snapshot_publication_is_atomic_and_concurrent_reads_share_one_download(
     assert snapshot.read() == snapshot.read() and blob.downloads == 1
     snapshot.publish([row()])
     assert snapshot.read()["rows"] == [row()] and blob.downloads == 1
+
+
+def test_transient_source_failures_are_retried_and_other_failures_are_not():
+    from urllib.error import HTTPError
+    calls, sleeps = [], []
+    def flaky(params):
+        calls.append(params)
+        if len(calls) < 3:
+            raise HTTPError("https://reports.example.org", 503, "busy", None, None)
+        return []
+    source = ReportMate("https://reports.example.org", "api://example/.default", ["SHARED-01"], None,
+                        fetch=flaky, sleep=sleeps.append)
+    assert source.rows() == [] and len(calls) == 3 and sleeps == [2.0, 4.0]
+
+    def denied(params):
+        raise HTTPError("https://reports.example.org", 403, "denied", None, None)
+    source = ReportMate("https://reports.example.org", "api://example/.default", ["SHARED-01"], None,
+                        fetch=denied, sleep=sleeps.append)
+    with pytest.raises(HTTPError):
+        source.rows()
+
+    def down(params):
+        raise HTTPError("https://reports.example.org", 503, "down", None, None)
+    source = ReportMate("https://reports.example.org", "api://example/.default", ["SHARED-01"], None,
+                        fetch=down, sleep=lambda s: None)
+    with pytest.raises(HTTPError):
+        source.rows()

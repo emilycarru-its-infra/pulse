@@ -4,8 +4,13 @@ import json
 import threading
 import time
 from datetime import datetime, timezone
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+# ReportMate answers 503 or 429 while it scales or is busy. Retry those and timeouts a few
+# times with backoff; any other failure, or running out of attempts, fails the refresh.
+TRANSIENT_STATUS = {429, 502, 503, 504}
 
 
 def app_id(name):
@@ -21,7 +26,7 @@ def recent(stamp, now, max_age):
 
 
 class ReportMate:
-    def __init__(self, url, scope, devices, credential, fetch=None, ttl=300):
+    def __init__(self, url, scope, devices, credential, fetch=None, ttl=300, attempts=4, backoff=2.0, sleep=time.sleep):
         if not url.startswith("https://"):
             raise ValueError("ReportMate requires HTTPS")
         self.url, self.scope = url.rstrip("/"), scope
@@ -33,6 +38,7 @@ class ReportMate:
         self.credential = credential
         self.fetch = fetch or self._fetch
         self.ttl = ttl
+        self.attempts, self.backoff, self.sleep = attempts, backoff, sleep
         self._lock = threading.Lock()
         self._rows, self._expires = [], 0
 
@@ -43,6 +49,18 @@ class ReportMate:
         with urlopen(req, timeout=30) as response:
             return json.load(response)
 
+    def _fetch_retrying(self, params):
+        for attempt in range(1, self.attempts + 1):
+            try:
+                return self.fetch(params)
+            except HTTPError as error:
+                if error.code not in TRANSIENT_STATUS or attempt == self.attempts:
+                    raise
+            except (URLError, TimeoutError):
+                if attempt == self.attempts:
+                    raise
+            self.sleep(self.backoff * 2 ** (attempt - 1))
+
     def rows(self):
         with self._lock:
             if time.monotonic() < self._expires:
@@ -52,7 +70,7 @@ class ReportMate:
             for start in range(0, len(self.identifiers), 25):
                 offset = 0
                 while True:
-                    page = self.fetch({"deviceNames": ",".join(self.identifiers[start:start + 25]),
+                    page = self._fetch_retrying({"deviceNames": ",".join(self.identifiers[start:start + 25]),
                                        "limit": 5000, "offset": offset, "deviceLimit": 5000})
                     if not isinstance(page, list):
                         raise ValueError("ReportMate returned an invalid applications page")

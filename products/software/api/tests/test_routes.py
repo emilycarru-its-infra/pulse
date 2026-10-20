@@ -8,10 +8,12 @@ import pytest
 spec = importlib.util.spec_from_file_location("software_function_app", Path(__file__).parents[1] / "function_app.py")
 api = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(api)
+# get_functions() can be built only once per app, so every test shares this list.
+FUNCTIONS = api.app.get_functions()
 
 
 def test_routes_are_read_only_and_source_failure_is_explicit(monkeypatch):
-    routes = {f.get_trigger().route for f in api.app.get_functions() if f.get_trigger().type == "httpTrigger"}
+    routes = {f.get_trigger().route for f in FUNCTIONS if f.get_trigger().type == "httpTrigger"}
     assert routes == {"status", "GetRoles"}
     monkeypatch.setattr(api, "runtime", lambda: (_ for _ in ()).throw(RuntimeError("private source error")))
     response = api.status(func.HttpRequest("GET", "/api/status", body=b""))
@@ -36,6 +38,24 @@ def test_refresh_failure_cannot_publish_a_successful_empty_snapshot(monkeypatch)
     monkeypatch.setattr(api, "runtime", lambda: (None, None, Source(), Snapshot()))
     with pytest.raises(RuntimeError):
         api.refresh_installations(None)
+
+
+def test_refresh_runs_hourly():
+    timers = [f.get_trigger() for f in FUNCTIONS if f.get_trigger().type == "timerTrigger"]
+    assert [t.schedule for t in timers] == ["0 0 * * * *"]
+
+
+def test_a_snapshot_from_the_previous_refresh_is_still_served(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    class Service:
+        def status(self): return {"spaces": []}
+    class Snapshot:
+        def read(self):
+            stamp = (datetime.now(timezone.utc) - timedelta(minutes=110)).isoformat()
+            return {"fetchedAt": stamp, "rows": []}
+    monkeypatch.setattr(api, "runtime", lambda: (Service(), [], None, Snapshot()))
+    monkeypatch.setattr(api, "discovery", lambda *a, **k: {"software": []})
+    assert api.status(func.HttpRequest("GET", "/api/status", body=b"")).status_code == 200
 
 
 @pytest.mark.parametrize("stamp,expected", [("2000-01-01T00:00:00Z", 503), (None, 503)])
