@@ -239,6 +239,7 @@ def beacon_alerts(timer: func.TimerRequest) -> None:
         site_url=os.environ.get("PULSE_ALERTS_SITE_URL", ""),
         dry_run=os.environ.get("PULSE_ALERTS_DRY_RUN", "true").lower() != "false",
         announce=os.environ.get("PULSE_ALERTS_SETUP_NOTICE", "false").lower() == "true",
+        drop_count=int(os.environ.get("PULSE_ALERTS_DROP_COUNT", "10")),
     )
     relay = Relay(os.environ["PULSE_ALERTS_RELAY_URL"], os.environ["PULSE_ALERTS_RELAY_AUDIENCE"],
                   os.environ["PULSE_ALERTS_CHANNEL"], os.environ.get("PULSE_ALERTS_TEAM", ""))
@@ -250,8 +251,9 @@ def beacon_alerts(timer: func.TimerRequest) -> None:
         try:
             p = pulse()
             result = Monitor(state, relay, policy).run(p.service.catalog, p.service.store.latest(), now)
-            logging.warning("Beacon alert check: missing=%d recovered=%d dryRun=%s cards=%d",
-                            result["missing"], result["recovered"], policy.dry_run, len(result["cards"]))
+            logging.warning("Beacon alert check: missing=%d recovered=%d dropped=%d dryRun=%s cards=%d",
+                            result["missing"], result["recovered"], result["dropped"], policy.dry_run,
+                            len(result["cards"]))
             if policy.dry_run:
                 logging.warning("Beacon alert dry-run cards: %s", json.dumps(result["cards"]))
         except Exception as error:
