@@ -62,11 +62,19 @@ function matches(s) {
 
 function renderPicture() {
   const wrap = document.getElementById("picture");
-  wrap.replaceChildren(...data.locations.filter((l) => l.servers).map((l) => {
-    const b = el("button", "place");
-    b.type = "button";
-    b.setAttribute("aria-pressed", String(ui.place === l.id));
-    b.title = ui.place === l.id ? "Show every location" : `Show only ${l.name}`;
+  const byLocation = ui.view === "location";
+  wrap.classList.toggle("by-location", byLocation);
+  if (byLocation && ui.picked) {
+    const selected = data.servers.find((s) => s.id === ui.picked);
+    ui.pickedGroup = selected ? `location:${selected.location}` : null;
+  }
+  wrap.replaceChildren(...data.locations.filter((l) => l.servers).map((l, locationIndex) => {
+    const b = el(byLocation ? "div" : "button", "place");
+    if (!byLocation) {
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(ui.place === l.id));
+      b.title = ui.place === l.id ? "Show every location" : `Show only ${l.name}`;
+    }
     b.innerHTML = `<div class="head"><div><h3></h3><p class="detail"></p></div></div>
       <p class="big"></p><p class="counts"></p><p class="sources"></p>`;
     b.querySelector("h3").textContent = l.name;
@@ -79,8 +87,20 @@ function renderPicture() {
     const src = b.querySelector(".sources");
     src.append("Monitored by ");
     (l.sources || []).forEach((s, i) => { if (i) src.append(" + "); src.append(el("b", null, s)); });
-    b.addEventListener("click", () => { ui.place = ui.place === l.id ? null : l.id; render(); });
-    return b;
+    if (!byLocation) {
+      b.addEventListener("click", () => { ui.place = ui.place === l.id ? null : l.id; render(); });
+      return b;
+    }
+    const card = el("section", "location-card");
+    card.append(b);
+    const members = data.servers.filter((s) => s.location === l.id && matches(s))
+      .sort((a, b) => RANK[a.state] - RANK[b.state] || a.name.localeCompare(b.name));
+    if (members.length) {
+      const list = el("ul", "rows location-rows");
+      list.append(...members.map((s, index) => row(s, `location:${l.id}`, `location-details-${locationIndex}-${index}`)));
+      card.append(list);
+    } else card.append(el("p", "location-empty", "No servers match the current filters."));
+    return card;
   }));
 }
 
@@ -156,6 +176,8 @@ function worst(list) {
 
 function renderGroups() {
   const wrap = document.getElementById("groups");
+  wrap.parentElement.hidden = ui.view === "location";
+  if (ui.view === "location") { wrap.replaceChildren(); return; }
   const list = groups();
   if (!list.length) {
     wrap.replaceChildren(el("p", "card empty-state", ui.filter === "all" ? "No server matches." : `No servers with ${WORD[ui.filter].toLowerCase()}.`));
@@ -239,7 +261,7 @@ function pick(id, groupKey = ui.pickedGroup, trigger = null) {
   ui.picked = close ? null : id;
   ui.pickedGroup = ui.picked ? groupKey : null;
   history.replaceState(null, "", ui.picked ? `#server=${encodeURIComponent(ui.picked)}` : location.pathname);
-  renderGroups();
+  if (ui.view === "location") renderPicture(); else renderGroups();
   if (trigger) document.querySelectorAll(".row").forEach((button) => {
     if (button.dataset.id === trigger.dataset.id && button.getAttribute("aria-controls") === trigger.getAttribute("aria-controls")) button.focus({ preventScroll: true });
   });
@@ -267,12 +289,12 @@ for (const g of ["view", "filter"]) {
   document.getElementById(g).addEventListener("click", (e) => {
     const b = e.target.closest("button");
     if (!b) return;
-    ui[g] = b.dataset.v;
-    if (g === "view") remember();
+    ui[g] = g === "filter" && ui.filter === b.dataset.v ? "all" : b.dataset.v;
+    if (g === "view") { ui.place = null; remember(); }
     render();
   });
 }
-document.getElementById("search").addEventListener("input", (e) => { ui.query = e.target.value.trim().toLowerCase(); renderGroups(); });
+document.getElementById("search").addEventListener("input", (e) => { ui.query = e.target.value.trim().toLowerCase(); if (ui.view === "location") renderPicture(); else renderGroups(); });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.picked) pick(null);
   if (e.key === "/" && document.activeElement?.tagName !== "INPUT") { e.preventDefault(); document.getElementById("search").focus(); }
