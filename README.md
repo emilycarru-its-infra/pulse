@@ -90,6 +90,13 @@ The shared foundation includes a plain HTML/CSS/JavaScript web shell, Python API
 inventory providers and a reusable Azure Terraform module. Site-specific configuration
 and credentials stay in a separate deployment repository.
 
+Every shared masthead includes a lock button explaining page access on hover, focus or
+click. Deployments supply `/access.json` with a `summary` and `groups`: each group has a
+`name`, optional `description`, and optional `members` array of display names for an
+expandable list. An optional `generated_at` timestamp dates those lists. Keep this file
+behind the page's access rules when it contains member names. It describes the audience;
+the site's authentication and role assignments enforce access.
+
 | Start here | What you'll find |
 |---|---|
 | [Core](core/README.md) | Catalogs, inventory providers, event contracts and shared states |

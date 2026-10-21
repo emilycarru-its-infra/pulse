@@ -4,7 +4,7 @@
 
 window.Pulse = window.Pulse || {};
 
-Pulse.shell = async function ({ current, context, title, hideCurrent = false, compact = false }) {
+Pulse.shell = async function ({ current, context, title, hideCurrent = false, hideOverview = false, compact = false }) {
   const brand = await fetch("/theme/brand.json").then((r) => r.json()).catch(() => ({}));
   const products = await fetch("/hub/products.json").then((r) => r.json()).catch(() => []);
   // A site may list the products its menu offers in /nav.json, each { id, title, href, soon }.
@@ -57,6 +57,7 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
     node.classList.add("has-icon"); node.setAttribute("aria-label", product.title); node.title = product.title;
   };
   for (const p of items) {
+    if (hideOverview && p.id === "hub") continue;
     if (hideCurrent && p.id === current) continue;
     if (p.soon || !p.href) {
       // Named but not linked: the product is coming and has nothing to show yet.
@@ -79,6 +80,7 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
     menu.append(a);
   }
   if (menu.childElementCount) header.append(menu);
+  header.append(Pulse.accessControl());
 
   const band = document.createElement("div");
   band.className = "band";
@@ -90,6 +92,109 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, co
     heading.append(header, band); main.prepend(heading);
   } else main.prepend(header, band);
   return brand;
+};
+
+// Audience descriptions are deployment data, not an authorization decision.
+Pulse.accessControl = function () {
+  const control = document.createElement("div");
+  control.className = "page-access";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "access-trigger";
+  button.setAttribute("aria-label", "Who has access to this page?");
+  button.setAttribute("aria-expanded", "false");
+  button.setAttribute("aria-controls", "page-access-panel");
+  button.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>';
+  const panel = document.createElement("section");
+  panel.id = "page-access-panel";
+  panel.className = "access-panel";
+  panel.hidden = true;
+  panel.setAttribute("aria-labelledby", "page-access-heading");
+  const heading = document.createElement("h2");
+  heading.id = "page-access-heading";
+  heading.textContent = "Who has access to this page?";
+  const content = document.createElement("div");
+  content.className = "access-content";
+  panel.append(heading, content);
+  control.append(button, panel);
+  let loaded = false, pinned = false, suppressed = false;
+  const paragraph = (text, parent = content) => {
+    const p = document.createElement("p"); p.textContent = text; parent.append(p);
+  };
+  const load = async () => {
+    if (loaded) return;
+    loaded = true;
+    content.setAttribute("aria-busy", "true");
+    paragraph("Loading access information…");
+    try {
+      const response = await fetch("/access.json", { cache: "no-cache" });
+      if (!response.ok) throw new Error("Access information unavailable");
+      const access = await response.json();
+      if (!access.summary || !Array.isArray(access.groups)) throw new Error("Invalid audience");
+      content.replaceChildren();
+      paragraph(access.summary);
+      for (const group of access.groups) {
+        if (!group.name) continue;
+        const members = Array.isArray(group.members) ? group.members : [];
+        const row = document.createElement(members.length ? "details" : "div");
+        row.className = "access-group";
+        const label = document.createElement(members.length ? "summary" : "h3");
+        label.textContent = group.name;
+        row.append(label);
+        if (group.description) paragraph(group.description, row);
+        if (members.length) {
+          const list = document.createElement("ul");
+          for (const name of members) {
+            const li = document.createElement("li"); li.textContent = name; list.append(li);
+          }
+          row.append(list);
+        }
+        content.append(row);
+      }
+      if (access.generated_at && access.groups.some((g) => g.members?.length)) {
+        const date = new Date(access.generated_at);
+        if (!Number.isNaN(date.getTime())) {
+          paragraph(`Member lists updated ${date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}.`);
+          content.lastElementChild.className = "access-updated";
+        }
+      }
+    } catch {
+      content.replaceChildren();
+      paragraph("Access information is unavailable. Sign-in requirements are set by this site's administrator.");
+      loaded = false;
+    } finally { content.removeAttribute("aria-busy"); }
+  };
+  const show = () => {
+    panel.hidden = false; button.setAttribute("aria-expanded", "true"); load();
+  };
+  const close = () => {
+    panel.hidden = true; pinned = false; button.setAttribute("aria-expanded", "false");
+  };
+  control.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse" && !suppressed) show();
+  });
+  control.addEventListener("pointerleave", () => {
+    suppressed = false;
+    if (!pinned && !control.contains(document.activeElement)) close();
+  });
+  control.addEventListener("focusin", () => { if (!suppressed) show(); });
+  control.addEventListener("focusout", (event) => {
+    if (!control.contains(event.relatedTarget)) { close(); suppressed = false; }
+  });
+  button.addEventListener("click", () => {
+    if (pinned) { close(); suppressed = true; }
+    else { pinned = true; suppressed = false; show(); }
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!control.contains(event.target)) close();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || panel.hidden) return;
+    const restoreFocus = control.contains(document.activeElement);
+    close(); suppressed = true;
+    if (restoreFocus) { event.preventDefault(); button.focus(); }
+  });
+  return control;
 };
 
 Pulse.ago = function (iso) {

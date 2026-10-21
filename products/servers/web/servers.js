@@ -264,7 +264,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 (async () => {
-  await Pulse.shell({ current: "servers", title: "Server Status", context: "Servers and services, on premises and in the cloud" });
+  await Pulse.shell({ current: "servers", title: "Server Status", context: "Servers and services, on premises and in the cloud", hideOverview: true });
   Pulse.poll(async () => {
     const r = await fetch("api/status", { cache: "no-store" });
     if (!r.ok) throw new Error(`status ${r.status}`);
