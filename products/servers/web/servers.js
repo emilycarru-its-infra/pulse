@@ -136,14 +136,14 @@ function groups() {
   if (ui.view === "service") {
     for (const svc of data.services) {
       const members = servers.filter((s) => (s.services || []).includes(svc.id));
-      if (members.length) out.push({ title: svc.name, kicker: `${svc.servers} server${svc.servers > 1 ? "s" : ""}`, level: svc.level, servers: sort(members) });
+      if (members.length) out.push({ key: `service:${svc.id}`, title: svc.name, kicker: `${svc.servers} server${svc.servers > 1 ? "s" : ""}`, level: svc.level, servers: sort(members) });
     }
     const loose = servers.filter((s) => !(s.services || []).length);
-    if (loose.length) out.push({ title: "No service recorded", kicker: "Not yet linked to a service in the inventory", level: worst(loose), servers: sort(loose) });
+    if (loose.length) out.push({ key: "unassigned", title: "No service recorded", kicker: "Not yet linked to a service in the inventory", level: worst(loose), servers: sort(loose) });
   } else {
     for (const l of data.locations) {
       const members = servers.filter((s) => s.location === l.id);
-      if (members.length) out.push({ title: l.name, kicker: l.detail || "", level: l.level, servers: sort(members) });
+      if (members.length) out.push({ key: `location:${l.id}`, title: l.name, kicker: l.detail || "", level: l.level, servers: sort(members) });
     }
   }
   return out.sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level] || a.title.localeCompare(b.title));
@@ -161,8 +161,8 @@ function renderGroups() {
     wrap.replaceChildren(el("p", "card empty-state", ui.filter === "all" ? "No server matches." : `No servers with ${WORD[ui.filter].toLowerCase()}.`));
     return;
   }
-  if (ui.picked && !list.some((g) => g.title === ui.pickedGroup && g.servers.some((s) => s.id === ui.picked))) {
-    ui.pickedGroup = list.find((g) => g.servers.some((s) => s.id === ui.picked))?.title || null;
+  if (ui.picked && !list.some((g) => g.key === ui.pickedGroup && g.servers.some((s) => s.id === ui.picked))) {
+    ui.pickedGroup = list.find((g) => g.servers.some((s) => s.id === ui.picked))?.key || null;
   }
   wrap.replaceChildren(...list.map((g, groupIndex) => {
     const card = el("section", "card group");
@@ -171,7 +171,7 @@ function renderGroups() {
     card.querySelector(".kicker").textContent = g.kicker;
     card.querySelector(".head").append(chip(g.level));
     const ul = el("ul", "rows");
-    ul.append(...g.servers.map((s, rowIndex) => row(s, g.title, `server-details-${groupIndex}-${rowIndex}`)));
+    ul.append(...g.servers.map((s, rowIndex) => row(s, g.key, `server-details-${groupIndex}-${rowIndex}`)));
     card.append(ul);
     return card;
   }));
