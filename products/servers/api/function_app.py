@@ -143,7 +143,7 @@ def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
     try:
-        servers = live.parse_push(_body(req))
+        servers = live.parse_push(_body(req), datetime.now(timezone.utc))
     except live.ContractError as e:
         return _json(400, {"error": str(e)})
     return _json(202, live.record_push(store(), matcher(), servers))

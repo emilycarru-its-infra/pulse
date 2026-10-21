@@ -117,3 +117,23 @@ def test_site24x7_webhooks_parse_and_tolerate_missing_fields():
     assert live.parse_site24x7({"STATUS": "UP", "MONITORNAME": "app-01"}, NOW).hostname == "app-01"
     assert live.parse_site24x7({"MONITORNAME": "app-01"}, NOW) is None
     assert live.parse_site24x7([], NOW) is None
+
+
+def test_future_dated_inputs_are_pulled_back_to_their_arrival():
+    later = NOW + timedelta(days=30)
+    (s,) = live.parse_push(push([entry({"hostname": "x"}, at=later)], generated=later), NOW)
+    assert s["last_check"] == iso(NOW + live.SKEW) and s["checks"][0]["at"] == iso(NOW + live.SKEW)
+    a = live.parse_site24x7({"STATUS": "DOWN", "INCIDENT_TIME_ISO": iso(later)}, NOW)
+    assert a.at == iso(NOW + live.SKEW)
+    c = live.parse_cloudwatch(cloudwatch("ALARM", "x-StatusCheckFailed", later), NOW)
+    assert c.at == iso(NOW + live.SKEW)
+
+
+def test_a_future_dated_alert_does_not_stay_fresh():
+    cat = catalog()
+    store = live.MemoryStore()
+    sid = cat["servers"][1]["id"]
+    alert = live.parse_cloudwatch(cloudwatch("ALARM", "x-StatusCheckFailed", NOW + timedelta(days=30)), NOW)
+    live.record_alert(store, live.Matcher(cat), alert)
+    assert status_of(cat, store, sid, NOW + timedelta(minutes=1))["state"] == "down"
+    assert status_of(cat, store, sid, NOW + live.STALE + timedelta(minutes=5))["state"] == "unknown"

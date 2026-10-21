@@ -45,6 +45,19 @@ def _parse_time(value: Any) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+# A sender's clock may run a little ahead; anything later than this is pulled back to the time
+# it arrived, so a future-dated input can never stay fresh past STALE.
+SKEW = timedelta(minutes=2)
+
+
+def _received(value: Any, now: datetime) -> datetime | None:
+    """A sender-supplied time, no later than `now` plus SKEW."""
+    dt = _parse_time(value)
+    if dt is None:
+        return None
+    return min(dt, now + SKEW)
+
+
 def _iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -101,8 +114,10 @@ class Matcher:
 # --- Inputs -------------------------------------------------------------------------------
 
 
-def parse_push(body: Any) -> list[dict]:
-    """The servers of a health push, each validated and normalized. Raises ContractError."""
+def parse_push(body: Any, now: datetime | None = None) -> list[dict]:
+    """The servers of a health push, each validated and normalized, with every time no later
+    than its arrival. Raises ContractError."""
+    now = now or datetime.now(timezone.utc)
     if not isinstance(body, dict):
         raise ContractError("body must be a JSON object")
     if body.get("contract") != CONTRACT:
@@ -110,7 +125,7 @@ def parse_push(body: Any) -> list[dict]:
     servers = body.get("servers")
     if not isinstance(servers, list):
         raise ContractError("servers must be a list")
-    generated = _parse_time(body.get("generated_at"))
+    generated = _received(body.get("generated_at"), now)
     if generated is None:
         raise ContractError("generated_at must be an ISO 8601 time")
     out = []
@@ -125,7 +140,7 @@ def parse_push(body: Any) -> list[dict]:
         for c in s.get("checks") or []:
             if not isinstance(c, dict) or c.get("state") not in CHECK_STATES:
                 continue
-            at = _parse_time(c.get("at"))
+            at = _received(c.get("at"), now)
             checks.append(
                 {
                     "source": str(c.get("source") or "monitor")[:40],
@@ -133,7 +148,7 @@ def parse_push(body: Any) -> list[dict]:
                     "at": _iso(at) if at else None,
                 }
             )
-        last = _parse_time(s.get("last_check")) or generated
+        last = _received(s.get("last_check"), now) or generated
         out.append(
             {
                 "key": s["key"],
@@ -188,7 +203,7 @@ def parse_site24x7(body: Any, now: datetime) -> Alert | None:
     state = SITE24X7_STATES.get(status)
     if state is None:
         return None
-    at = _parse_time(_first(body, "INCIDENT_TIME_ISO", "OUTAGE_TIME_ISO")) or now
+    at = _received(_first(body, "INCIDENT_TIME_ISO", "OUTAGE_TIME_ISO"), now) or now
     reason = _first(body, "INCIDENT_REASON", "REASON", "INCIDENT_DETAILS")
     name = _first(body, "MONITORNAME", "MONITOR_NAME", "DISPLAYNAME")
     text = str(reason or f"Monitor {status}")[:200]
@@ -237,8 +252,8 @@ def parse_cloudwatch(body: Any, now: datetime) -> Alert | None:
     else:
         state = "down" if _alarm_is_down(alarm, metric_names) else "warn"
     at = (
-        _parse_time((detail.get("state") or {}).get("timestamp"))
-        or _parse_time(body.get("time"))
+        _received((detail.get("state") or {}).get("timestamp"), now)
+        or _received(body.get("time"), now)
         or now
     )
     reason = (detail.get("state") or {}).get("reason")
