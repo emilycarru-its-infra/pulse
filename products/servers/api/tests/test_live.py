@@ -107,6 +107,11 @@ def test_cloudwatch_events_map_to_alert_states():
     assert live.parse_cloudwatch(cloudwatch("OK", "x-mem-high", NOW, metric="mem_used_percent"), NOW).state == "ok"
     assert live.parse_cloudwatch(cloudwatch("INSUFFICIENT_DATA", "x", NOW), NOW) is None
     assert live.parse_cloudwatch({"detail-type": "Something else"}, NOW) is None
+    event = cloudwatch("ALARM", "x-StatusCheckFailed", NOW)
+    assert live.parse_cloudwatch({"detail": event["detail"]}, NOW).state == "down"
+    assert live.parse_cloudwatch(event["detail"], NOW).state == "down"
+    assert live.parse_cloudwatch({"detail-type": "Something else", "detail": event["detail"]}, NOW) is None
+    assert live.parse_cloudwatch({"anything": 1}, NOW) is None
 
 
 def test_site24x7_webhooks_parse_and_tolerate_missing_fields():

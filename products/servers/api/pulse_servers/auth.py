@@ -1,10 +1,11 @@
 """Who may post health and alerts.
 
-- The health push carries an Entra ID app-only access token for this API's application. The
-  token's signature is checked against the tenant's published keys, and so are its issuer,
-  audience and expiry, and it must hold the ingest app role. A header naming a caller proves
-  nothing, so nothing else is trusted.
-- Webhooks from monitoring systems, which cannot obtain such a token, present a shared key in
+- The health push and the cloud alarm route carry an Entra ID app-only access token for this
+  API's application. The token's signature is checked against the tenant's published keys, and
+  so are its issuer, audience and expiry, and it must hold the route's own app role: Pulse.Ingest
+  for the push, Pulse.Alerts for alarms. A header naming a caller proves nothing, so nothing else
+  is trusted.
+- Webhooks from monitoring systems that cannot obtain such a token present a shared key in
   X-Pulse-Key, compared in constant time. Each sender has its own key.
 """
 
@@ -14,6 +15,7 @@ import hmac
 from functools import lru_cache
 
 INGEST_ROLE = "Pulse.Ingest"
+ALERTS_ROLE = "Pulse.Alerts"
 
 
 class Unauthorized(Exception):

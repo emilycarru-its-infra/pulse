@@ -7,12 +7,13 @@ Routes, under the default /api prefix:
     POST /api/GetRoles           the Static Web App's sign-in (auth.rolesSource)
     POST /api/ingest/health      the hourly health push (contract pulse.server-health/1)
     POST /api/alerts/site24x7    an uptime service's alert webhook
-    POST /api/alerts/cloudwatch  cloud alarm state changes (an EventBridge API destination)
+    POST /api/alerts/cloudwatch  cloud alarm state changes, posted by a federated sender
 
 Every route is anonymous at the Functions level. The read routes answer only through the Static
 Web App and its sign-in. The ingest and alert routes are reached directly and authenticate
 their callers themselves (pulse_servers.auth): an Entra app-only token holding Pulse.Ingest for
-the push, a shared key per sender for the webhooks.
+the push and Pulse.Alerts for cloud alarms, and a shared key for the uptime webhook, which cannot
+obtain a token.
 
 App settings:
 
@@ -24,9 +25,8 @@ App settings:
     PULSE_STATE_TABLE        the table of latest health per server (default state)
     PULSE_EVENTS_TABLE       the append-only table of alerts (default events)
     PULSE_TENANT_ID          the Entra tenant the push token comes from
-    PULSE_INGEST_AUDIENCES   comma-separated audiences the push token may carry
+    PULSE_INGEST_AUDIENCES   comma-separated audiences the push and alarm tokens may carry
     PULSE_SITE24X7_KEY       the shared key of the uptime service's webhook
-    PULSE_CLOUDWATCH_KEY     the shared key of the alarm API destination
 """
 
 import json
@@ -134,12 +134,16 @@ def _body(req: func.HttpRequest):
         return None
 
 
+def _check_token(req: func.HttpRequest, role: str) -> None:
+    audiences = [a.strip() for a in os.environ.get("PULSE_INGEST_AUDIENCES", "").split(",") if a.strip()]
+    auth.check_ingest_token(
+        auth.bearer(req.headers.get("Authorization")), os.environ.get("PULSE_TENANT_ID", ""), audiences, role=role
+    )
+
+
 def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        audiences = [a.strip() for a in os.environ.get("PULSE_INGEST_AUDIENCES", "").split(",") if a.strip()]
-        auth.check_ingest_token(
-            auth.bearer(req.headers.get("Authorization")), os.environ.get("PULSE_TENANT_ID", ""), audiences
-        )
+        _check_token(req, auth.INGEST_ROLE)
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
     try:
@@ -149,9 +153,9 @@ def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
     return _json(202, live.record_push(store(), matcher(), servers))
 
 
-def _alert(req: func.HttpRequest, setting: str, parse) -> func.HttpResponse:
+def _alert(req: func.HttpRequest, check, parse) -> func.HttpResponse:
     try:
-        auth.check_key(req.headers.get("X-Pulse-Key"), os.environ.get(setting))
+        check(req)
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
     alert = parse(_body(req), datetime.now(timezone.utc))
@@ -162,11 +166,15 @@ def _alert(req: func.HttpRequest, setting: str, parse) -> func.HttpResponse:
 
 
 def alerts_site24x7(req: func.HttpRequest) -> func.HttpResponse:
-    return _alert(req, "PULSE_SITE24X7_KEY", live.parse_site24x7)
+    return _alert(
+        req,
+        lambda r: auth.check_key(r.headers.get("X-Pulse-Key"), os.environ.get("PULSE_SITE24X7_KEY")),
+        live.parse_site24x7,
+    )
 
 
 def alerts_cloudwatch(req: func.HttpRequest) -> func.HttpResponse:
-    return _alert(req, "PULSE_CLOUDWATCH_KEY", live.parse_cloudwatch)
+    return _alert(req, lambda r: _check_token(r, auth.ALERTS_ROLE), live.parse_cloudwatch)
 
 
 # Registered without rebinding the names, so tests call the plain functions.

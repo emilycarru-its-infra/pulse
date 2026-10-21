@@ -225,11 +225,20 @@ def _alarm_is_down(alarm: str, metrics: Iterable[str]) -> bool:
 
 def parse_cloudwatch(body: Any, now: datetime) -> Alert | None:
     """An EventBridge "CloudWatch Alarm State Change" event. ALARM on a status check is down,
-    any other ALARM is warn, OK clears; INSUFFICIENT_DATA is ignored."""
-    if (
-        not isinstance(body, dict)
-        or body.get("detail-type") != "CloudWatch Alarm State Change"
-    ):
+    any other ALARM is warn, OK clears; INSUFFICIENT_DATA is ignored.
+
+    A forwarder may send the whole event, only {"detail": ...}, or the bare detail; all three
+    are read the same way. Any other detail-type is not an alarm."""
+    if not isinstance(body, dict):
+        return None
+    if "detail-type" in body:
+        if body.get("detail-type") != "CloudWatch Alarm State Change":
+            return None
+    elif isinstance(body.get("detail"), dict):
+        pass
+    elif "alarmName" in body and isinstance(body.get("state"), dict):
+        body = {"detail": body}
+    else:
         return None
     detail = body.get("detail") if isinstance(body.get("detail"), dict) else {}
     value = ((detail.get("state") or {}).get("value") or "").upper()
