@@ -181,10 +181,10 @@ function renderDetails(s) {
   const panel = el("section", "server-details");
   const place = data.locations.find((l) => l.id === s.location) || {};
   panel.innerHTML = `<div class="head"><p class="kicker"></p></div>
-    <p class="state-line"><span class="tag ${s.state}"></span><span></span></p><dl></dl>`;
+    <p class="state-line"></p><dl></dl>`;
   panel.querySelector(".kicker").textContent = `${place.name || ""} · ${s.env || ""}`;
-  panel.querySelector(".state-line span:last-child").textContent =
-    s.state === "stopped" ? "Stopped on purpose" : `${WORD[s.state]}${s.uptimeDays ? ` · up ${s.uptimeDays} days` : ""}`;
+  panel.querySelector(".state-line").textContent =
+    s.state === "stopped" ? "Stopped on purpose" : `${WORD[s.state]}${s.uptimeDays ? ` · ${s.uptimeDays} days uptime` : ""}`;
   const dl = panel.querySelector("dl");
   const facts = [["Hostname", s.id], ["Role", s.role], ["OS", s.os], ["Runs on", [place.name, s.site].filter(Boolean).join(" · ")],
     ["Host", s.host], ["Services", (s.services || []).map((id) => data.serviceNames[id] || id).join(", ")]];
@@ -224,9 +224,9 @@ function renderDetails(s) {
       const li = el("li");
       const level = c.state === "ok" ? "ok" : c.state === "warn" ? "warn" : c.state === "down" ? "bad" : "idle";
       const name = el("span", "source-name", c.source);
-      const status = el("span", "source-status");
-      status.append(el("span", `source-severity ${level}`, { ok: "OK", warn: "Warning", bad: "Error", idle: "No data" }[level]), el("span", "source-age", Pulse.ago(c.at)));
-      li.append(name, status);
+      const status = el("span", `source-severity ${level}`, { ok: "OK", warn: "Warning", bad: "Error", idle: "No data" }[level]);
+      li.className = "source-check";
+      li.append(status, name, el("span", "source-age", Pulse.ago(c.at)));
       ul.append(li);
     }
     panel.append(ul);

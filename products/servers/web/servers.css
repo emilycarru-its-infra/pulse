@@ -157,7 +157,8 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 
 }
 
-.source-status { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 5px 8px; }
+.server-details ul.list .source-check { display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.source-name { overflow-wrap: anywhere; }
 .source-age { color: var(--text-secondary); white-space: nowrap; font-size: 12px; }
 .source-severity { display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; padding: 3px 7px; font-weight: 700; font-size: 12px; white-space: nowrap; }
 .source-severity.warn { background: var(--warn); color: #111; }
