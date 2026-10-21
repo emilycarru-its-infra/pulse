@@ -65,11 +65,11 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, hi
       span.className = p.soon ? "soon" : "unavailable";
       span.setAttribute("aria-disabled", "true");
       productLabel(span, p);
-      if (p.soon) {
-        const note = document.createElement("small");
-        note.textContent = "Coming soon";
-        span.append(note);
-      }
+      const note = document.createElement("small");
+      note.textContent = p.soon ? "Coming soon" : "Not available";
+      span.append(note);
+      span.title = `${p.title} · ${note.textContent}`;
+      span.setAttribute("aria-label", span.title);
       menu.append(span);
       continue;
     }
