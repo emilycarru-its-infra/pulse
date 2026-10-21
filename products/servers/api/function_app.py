@@ -2,50 +2,85 @@
 
 Routes, under the default /api prefix:
 
-    GET  /api/status     the page, through the Static Web App
-    GET  /api/summary    the hub, through the Static Web App
-    POST /api/GetRoles   the Static Web App's sign-in (auth.rolesSource)
+    GET  /api/status             the page, through the Static Web App
+    GET  /api/summary            the hub, through the Static Web App
+    POST /api/GetRoles           the Static Web App's sign-in (auth.rolesSource)
+    POST /api/ingest/health      the hourly health push (contract pulse.server-health/1)
+    POST /api/alerts/site24x7    an uptime service's alert webhook
+    POST /api/alerts/cloudwatch  cloud alarm state changes (an EventBridge API destination)
 
-Every route is anonymous at the Functions level. Sign-in is the Static Web App's: it is the only
-caller App Service authentication lets through. Servers report nothing themselves; collectors
-read the monitoring systems, so there is no ingest route.
+Every route is anonymous at the Functions level. The read routes answer only through the Static
+Web App and its sign-in. The ingest and alert routes are reached directly and authenticate
+their callers themselves (pulse_servers.auth): an Entra app-only token holding Pulse.Ingest for
+the push, a shared key per sender for the webhooks.
 
 App settings:
 
-    PULSE_CATALOG_PATH   catalog JSON deployed with the app (default catalog.json beside this file)
-    PULSE_SOURCE         where health comes from; only "sample" (pulse_servers.simulate) for now
-    PULSE_TITLE          the product title the summary shows (default Servers)
-    PULSE_SWA_ROLES      Entra app roles to Static Web App roles, e.g. "Pulse.ITS=its"
+    PULSE_CATALOG_PATH       catalog JSON deployed with the app (default catalog.json beside this file)
+    PULSE_SOURCE             where health comes from: "sample" (made up) or "live" (what was posted)
+    PULSE_TITLE              the product title the summary shows (default Servers)
+    PULSE_SWA_ROLES          Entra app roles to Static Web App roles, e.g. "Pulse.ITS=its"
+    PULSE_STORAGE_ACCOUNT    the storage account holding posted health (set by the module)
+    PULSE_STATE_TABLE        the table of latest health per server (default state)
+    PULSE_EVENTS_TABLE       the append-only table of alerts (default events)
+    PULSE_TENANT_ID          the Entra tenant the push token comes from
+    PULSE_INGEST_AUDIENCES   comma-separated audiences the push token may carry
+    PULSE_SITE24X7_KEY       the shared key of the uptime service's webhook
+    PULSE_CLOUDWATCH_KEY     the shared key of the alarm API destination
 """
 
 import json
 import os
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
 import azure.functions as func
 
+from pulse_servers import auth, live
 from pulse_servers.service import ServersService
 from pulse_servers.simulate import health
 
 HERE = Path(__file__).resolve().parent
-SOURCES = {"sample": health}
+SOURCES = ("sample", "live")
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 @lru_cache(maxsize=1)
+def catalog() -> dict:
+    return json.loads(
+        (HERE / os.environ.get("PULSE_CATALOG_PATH", "catalog.json")).read_text()
+    )
+
+
+@lru_cache(maxsize=1)
+def store() -> live.Store:
+    account = os.environ.get("PULSE_STORAGE_ACCOUNT")
+    if not account:
+        return live.MemoryStore()
+    return live.TableStore.from_account(
+        account,
+        health_table=os.environ.get("PULSE_STATE_TABLE", "state"),
+        history_table=os.environ.get("PULSE_EVENTS_TABLE", "events"),
+    )
+
+
+@lru_cache(maxsize=1)
+def matcher() -> live.Matcher:
+    return live.Matcher(catalog())
+
+
+@lru_cache(maxsize=1)
 def service(env=None) -> ServersService:
     env = env or os.environ
-    catalog = json.loads(
-        (HERE / env.get("PULSE_CATALOG_PATH", "catalog.json")).read_text()
-    )
     kind = env.get("PULSE_SOURCE", "sample")
     if kind not in SOURCES:
         raise ValueError(f"PULSE_SOURCE must be one of {', '.join(SOURCES)}")
+    title = env.get("PULSE_TITLE", "Servers")
     if kind == "sample":
-        catalog = {**catalog, "sample": True}
-    return ServersService(catalog, SOURCES[kind], env.get("PULSE_TITLE", "Servers"))
+        return ServersService({**catalog(), "sample": True}, health, title)
+    return ServersService(catalog(), live.LiveSource(store()), title)
 
 
 def _json(code: int, obj) -> func.HttpResponse:
@@ -92,7 +127,52 @@ def get_roles(req: func.HttpRequest) -> func.HttpResponse:
     )
 
 
+def _body(req: func.HttpRequest):
+    try:
+        return json.loads(req.get_body() or b"null")
+    except ValueError:
+        return None
+
+
+def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        audiences = [a.strip() for a in os.environ.get("PULSE_INGEST_AUDIENCES", "").split(",") if a.strip()]
+        auth.check_ingest_token(
+            auth.bearer(req.headers.get("Authorization")), os.environ.get("PULSE_TENANT_ID", ""), audiences
+        )
+    except auth.Unauthorized:
+        return _json(401, {"error": "unauthorized"})
+    try:
+        servers = live.parse_push(_body(req), datetime.now(timezone.utc))
+    except live.ContractError as e:
+        return _json(400, {"error": str(e)})
+    return _json(202, live.record_push(store(), matcher(), servers))
+
+
+def _alert(req: func.HttpRequest, setting: str, parse) -> func.HttpResponse:
+    try:
+        auth.check_key(req.headers.get("X-Pulse-Key"), os.environ.get(setting))
+    except auth.Unauthorized:
+        return _json(401, {"error": "unauthorized"})
+    alert = parse(_body(req), datetime.now(timezone.utc))
+    if alert is None:
+        return _json(202, {"recorded": False, "reason": "not an alert this route understands"})
+    sid = live.record_alert(store(), matcher(), alert)
+    return _json(202, {"recorded": sid is not None, "matched": sid is not None})
+
+
+def alerts_site24x7(req: func.HttpRequest) -> func.HttpResponse:
+    return _alert(req, "PULSE_SITE24X7_KEY", live.parse_site24x7)
+
+
+def alerts_cloudwatch(req: func.HttpRequest) -> func.HttpResponse:
+    return _alert(req, "PULSE_CLOUDWATCH_KEY", live.parse_cloudwatch)
+
+
 # Registered without rebinding the names, so tests call the plain functions.
 app.route(route="GetRoles", methods=["POST"])(get_roles)
 app.route(route="status", methods=["GET"])(status)
 app.route(route="summary", methods=["GET"])(summary)
+app.route(route="ingest/health", methods=["POST"])(ingest_health)
+app.route(route="alerts/site24x7", methods=["POST"])(alerts_site24x7)
+app.route(route="alerts/cloudwatch", methods=["POST"])(alerts_cloudwatch)

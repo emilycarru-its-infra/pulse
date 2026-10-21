@@ -188,6 +188,7 @@ function renderDrawer() {
     drawer.append(el("h4", null, "Now"));
     for (const [k, label] of [["cpu", "CPU"], ["mem", "Memory"], ["disk", "Disk"]]) {
       const v = s.metrics[k];
+      if (v == null) continue;
       const m = el("div", `metric${v >= HOT ? " hot" : ""}`);
       m.innerHTML = `<span>${label}</span><i><b style="width:${v}%"></b></i><span>${Math.round(v)}%</span>`;
       drawer.append(m);

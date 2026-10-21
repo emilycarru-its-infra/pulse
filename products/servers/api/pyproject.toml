@@ -7,8 +7,8 @@ license = "MIT"
 dependencies = []
 
 [project.optional-dependencies]
-azure = ["azure-functions"]
-test = ["pytest", "azure-functions"]
+azure = ["azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "PyJWT[crypto]>=2.8"]
+test = ["pytest", "azure-functions", "PyJWT[crypto]>=2.8"]
 
 [tool.setuptools.packages.find]
 include = ["pulse_servers*"]

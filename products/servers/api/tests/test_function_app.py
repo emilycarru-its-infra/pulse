@@ -12,7 +12,8 @@ EXAMPLE = Path(__file__).resolve().parents[2] / "examples" / "catalog.json"
 
 @pytest.fixture(autouse=True)
 def catalog(monkeypatch):
-    function_app.service.cache_clear()
+    for cached in (function_app.service, function_app.catalog, function_app.matcher, function_app.store):
+        cached.cache_clear()
     monkeypatch.setenv("PULSE_CATALOG_PATH", str(EXAMPLE))
     monkeypatch.setenv("PULSE_SWA_ROLES", "Pulse.ITS=its")
     yield
@@ -40,3 +41,32 @@ def test_an_unknown_source_is_refused(monkeypatch):
     monkeypatch.setenv("PULSE_SOURCE", "nope")
     with pytest.raises(ValueError):
         function_app.service()
+
+
+def post(url, body, headers=None):
+    return func.HttpRequest("POST", url, body=json.dumps(body).encode(), headers=headers or {})
+
+
+def test_ingest_without_a_token_is_refused(monkeypatch):
+    monkeypatch.setenv("PULSE_TENANT_ID", "t")
+    monkeypatch.setenv("PULSE_INGEST_AUDIENCES", "a")
+    r = function_app.ingest_health(post("/api/ingest/health", {"contract": "pulse.server-health/1"}))
+    assert r.status_code == 401
+
+
+def test_alerts_need_their_own_key(monkeypatch):
+    monkeypatch.setenv("PULSE_SITE24X7_KEY", "s" * 32)
+    monkeypatch.setenv("PULSE_CLOUDWATCH_KEY", "c" * 32)
+    body = {"STATUS": "DOWN", "MONITORNAME": "nobody"}
+    assert function_app.alerts_site24x7(post("/api/alerts/site24x7", body, {"X-Pulse-Key": "c" * 32})).status_code == 401
+    ok = function_app.alerts_site24x7(post("/api/alerts/site24x7", body, {"X-Pulse-Key": "s" * 32}))
+    assert ok.status_code == 202 and json.loads(ok.get_body())["matched"] is False
+
+
+def test_the_live_source_is_accepted(monkeypatch):
+    monkeypatch.setenv("PULSE_SOURCE", "live")
+    monkeypatch.delenv("PULSE_STORAGE_ACCOUNT", raising=False)
+    function_app.store.cache_clear()
+    status = json.loads(function_app.status(get("/api/status")).get_body())
+    assert status["sample"] is False
+    assert {s["state"] for s in status["servers"]} <= {"unknown", "stopped"}
