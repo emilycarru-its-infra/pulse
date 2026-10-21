@@ -160,3 +160,10 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .source-severity.bad::before { content: "×"; }
 .source-severity.ok { color: var(--ok); border: 1px solid currentColor; }
 .source-severity.idle { background: var(--surface-2); color: var(--text-secondary); }
+
+.picture.by-location { align-items: start; }
+.location-card { min-width: 0; border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); }
+.location-card > .place { border: 0; border-radius: 0; cursor: default; }
+.location-rows { padding: 0 16px 12px; }
+.location-empty { margin: 0; padding: 12px 18px 18px; color: var(--text-secondary); font-size: 13px; }
+.stage[hidden] { display: none; }
