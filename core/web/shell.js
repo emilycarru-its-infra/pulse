@@ -165,6 +165,7 @@ Pulse.accessControl = function () {
     } finally { content.removeAttribute("aria-busy"); }
   };
   const show = () => {
+    if (panel.hidden) panel.querySelectorAll("details").forEach((group) => { group.open = false; });
     panel.hidden = false; button.setAttribute("aria-expanded", "true"); load();
   };
   const close = () => {
