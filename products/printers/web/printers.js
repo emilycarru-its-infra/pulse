@@ -1,7 +1,9 @@
 const NS = "http://www.w3.org/2000/svg";
 const WORD = { ready: "Ready", printing: "Printing", attention: "Needs attention", error: "Stopped",
-  offline: "Not responding" };
-const ORDER = ["ready", "printing", "attention", "error", "offline"];
+  offline: "Not responding", unknown: "No recent report" };
+const ORDER = ["ready", "printing", "attention", "error", "offline", "unknown"];
+// States that are a problem worth sorting first: a printer stopped, gone, or not heard from.
+const TROUBLE = ["error", "offline", "unknown"];
 const WORKING = new Set(["ready", "printing"]);
 const SIZE = 44; // a printer's square on the plan, in plan pixels
 
@@ -52,7 +54,7 @@ function rooms() {
 }
 const working = (ps) => ps.filter((p) => WORKING.has(p.state)).length;
 const countsOf = (ps) => Object.fromEntries(ORDER.map((k) => [k, ps.filter((p) => p.state === k).length]));
-const countsLine = (c) => ["printing", "attention", "error", "offline"]
+const countsLine = (c) => ["printing", "attention", "error", "offline", "unknown"]
   .filter((k) => c[k]).map((k) => `<b>${c[k]}</b> ${WORD[k].toLowerCase()}`).join(" · ") || "Every printer is ready";
 
 function printerURL(extra = {}) {
@@ -207,10 +209,16 @@ function printerRow(p) {
   row.querySelector(".meta").textContent = `${p.model} · ${kindWord(p)} · ${p.audience === "students" ? "Students" : "Staff"}`;
   const what = row.querySelector(".what");
   what.textContent = p.detail && p.detail !== WORD[p.state] ? `${WORD[p.state]}: ${p.detail}` : WORD[p.state];
-  if (p.state === "offline") what.textContent += `, last heard ${Pulse.ago(p.lastSeen)}`;
-  row.querySelector(".levels").replaceChildren(...[...p.supplies, ...p.trays.map((t) => ({ ...t, paper: true }))].map(level));
-  row.querySelector(".stats").innerHTML = `<b>${p.queue}</b> waiting · <b>${p.jobsToday}</b> jobs today`;
-  row.querySelector(".queues").textContent = p.queues.join(" · ");
+  if ((p.state === "offline" || p.state === "unknown") && p.lastSeen) what.textContent += `, last heard ${Pulse.ago(p.lastSeen)}`;
+  // The live source may not know supplies, paper or counts; leave out what is missing.
+  const levels = [...(p.supplies ?? []), ...(p.trays ?? []).map((t) => ({ ...t, paper: true }))];
+  row.querySelector(".levels").replaceChildren(...levels.map(level));
+  row.querySelector(".levels").hidden = !levels.length;
+  const stats = [[p.queue, "waiting"], [p.jobsToday, "jobs today"], [p.pagesToday, "pages today"]]
+    .filter(([n]) => n != null).map(([n, words]) => `<b>${n}</b> ${words}`);
+  row.querySelector(".stats").innerHTML = stats.join(" · ");
+  row.querySelector(".stats").hidden = !stats.length;
+  row.querySelector(".queues").textContent = (p.queues ?? []).join(" · ");
   return row;
 }
 
@@ -229,7 +237,7 @@ function renderList() {
   const cards = rooms()
     .filter((r) => !state.floor || r.floor === state.floor)
     .map((r) => ({ r, c: countsOf(r.printers) }))
-    .sort((a, b) => (b.c.error + b.c.offline) - (a.c.error + a.c.offline)
+    .sort((a, b) => TROUBLE.reduce((n, k) => n + b.c[k] - a.c[k], 0)
       || (a.r.floor ?? "~").localeCompare(b.r.floor ?? "~") || a.r.room.localeCompare(b.r.room))
     .map(({ r, c }) => {
       const card = document.createElement("article");

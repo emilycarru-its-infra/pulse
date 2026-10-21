@@ -1,9 +1,10 @@
 """The PrintersPulse API as plain functions, so any host (Functions, dev server) can call them.
 
-Until a collector reads the print server, every printer's state is SAMPLE DATA: made up from
-the printer's id and the clock, so it is the same on every worker and every poll within a
-few minutes, drifts through the day like a real fleet, and needs no storage. Every response
-says so with "sample": true, and the page shows it.
+A printer's state comes from a source. The `sample` source makes it up from the printer's id
+and the clock, so it is the same on every worker and every poll within a few minutes, drifts
+through the day like a real fleet, and needs no storage; every response then says so with
+"sample": true, and the page shows it. The `live` source (pulse_printers.live) answers from
+what the print server posted, and a printer with no fresh report is `unknown`.
 """
 
 import hashlib
@@ -11,7 +12,9 @@ import random
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-STATES = ["ready", "printing", "attention", "error", "offline"]
+STATES = ["ready", "printing", "attention", "error", "offline", "unknown"]
+CATALOG_FIELDS = ("id", "name", "model", "room", "location", "audience", "colour", "inkjet", "queues",
+                  "floor", "x", "y")
 BUCKET = 300  # seconds a sampled state holds before it can change
 
 PROBLEMS = {
@@ -155,20 +158,28 @@ def sample(printer: dict, now: datetime, tz: ZoneInfo) -> dict:
 
 
 class PrintersService:
-    def __init__(self, catalog: dict, title: str = "Printers", tz: str = "UTC"):
+    def __init__(self, catalog: dict, title: str = "Printers", tz: str = "UTC", source=None):
+        """source(printer, now) returns a printer's state, detail, supplies, trays, queue, jobs
+        today and last seen, as pulse_printers.live.LiveSource does. Without one, the state is
+        sample data and every response says so."""
         self.catalog = catalog
         self.title = title
         self.tz = ZoneInfo(tz)
+        self.sample = source is None
+        self.source = source or (lambda printer, now: sample(printer, now, self.tz))
 
     def status(self, now: datetime | None = None) -> dict:
         now = now or datetime.now(timezone.utc)
-        printers = [sample(p, now, self.tz) for p in self.catalog["printers"]]
+        printers = [
+            {**{k: p[k] for k in CATALOG_FIELDS if k in p}, **self.source(p, now)}
+            for p in self.catalog["printers"]
+        ]
         counts = dict.fromkeys(STATES, 0)
         for p in printers:
             counts[p["state"]] += 1
         return {
             "generatedAt": _iso(now),
-            "sample": True,
+            "sample": self.sample,
             "floors": self.catalog.get("floors", []),
             "counts": counts,
             "printers": printers,
@@ -179,22 +190,26 @@ class PrintersService:
         c = status["counts"]
         total = sum(c.values())
         working = c["ready"] + c["printing"]
+        problems = c["error"] + c["offline"]
         if total == 0:
             level, line = "idle", "No printers in the catalog"
+        elif c["unknown"] == total:
+            level, line = "warn", "No recent report from the print server"
         elif working == 0:
             level, line = "bad", "No printers available"
         else:
-            level = "warn" if c["error"] + c["offline"] > total * 0.15 else "ok"
-            problems = c["error"] + c["offline"]
-            line = f"{working} of {total} printers available" + (
-                f", {problems} need help" if problems else ""
+            level = "warn" if problems + c["unknown"] > total * 0.15 else "ok"
+            line = (
+                f"{working} of {total} printers available"
+                + (f", {problems} need help" if problems else "")
+                + (f", {c['unknown']} not reporting" if c["unknown"] else "")
             )
         return {
             "product": "printers",
             "title": self.title,
             "level": level,
             "line": line,
-            "sample": True,
+            "sample": status["sample"],
             "counts": c,
             "total": total,
             "generatedAt": status["generatedAt"],
