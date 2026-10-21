@@ -19,7 +19,9 @@
       </div>
       <div class="segmented" role="group" aria-label="Show" id="filter">
         <button type="button" data-v="all" aria-pressed="true">All</button>
-        <button type="button" data-v="attention" aria-pressed="false">Needs attention</button>
+        <button type="button" data-v="degraded" aria-pressed="false">Warning</button>
+        <button type="button" data-v="down" aria-pressed="false">Error</button>
+        <button type="button" data-v="unknown" aria-pressed="false">No data</button>
       </div>
       <label class="search"><span class="visually-hidden">Find a server</span>
         <input type="search" id="search" placeholder="Find a server, role or service" autocomplete="off" spellcheck="false">
@@ -33,14 +35,13 @@
 
     <div class="stage">
       <div class="groups" id="groups"></div>
-      <aside class="drawer" id="drawer" aria-label="Server details" hidden></aside>
     </div>
 
     <div class="page-foot">
       <ul class="legend" aria-label="Legend">
         <li><span class="tag up"></span>Up</li>
-        <li><span class="tag degraded"></span>Degraded</li>
-        <li><span class="tag down"></span>Down</li>
+        <li><span class="tag degraded"></span>Warning</li>
+        <li><span class="tag down"></span>Error</li>
         <li><span class="tag stopped"></span>Stopped on purpose</li>
         <li><span class="tag unknown"></span>No data</li>
       </ul>
