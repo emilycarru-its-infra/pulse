@@ -56,7 +56,6 @@ def test_ingest_without_a_token_is_refused(monkeypatch):
 
 def test_alerts_need_their_own_key(monkeypatch):
     monkeypatch.setenv("PULSE_SITE24X7_KEY", "s" * 32)
-    monkeypatch.setenv("PULSE_CLOUDWATCH_KEY", "c" * 32)
     body = {"STATUS": "DOWN", "MONITORNAME": "nobody"}
     assert function_app.alerts_site24x7(post("/api/alerts/site24x7", body, {"X-Pulse-Key": "c" * 32})).status_code == 401
     ok = function_app.alerts_site24x7(post("/api/alerts/site24x7", body, {"X-Pulse-Key": "s" * 32}))
@@ -70,3 +69,69 @@ def test_the_live_source_is_accepted(monkeypatch):
     status = json.loads(function_app.status(get("/api/status")).get_body())
     assert status["sample"] is False
     assert {s["state"] for s in status["servers"]} <= {"unknown", "stopped"}
+
+
+# The cloud alarm route takes only an Entra app-only token holding Pulse.Alerts.
+jwt = pytest.importorskip("jwt")
+
+import time  # noqa: E402
+
+from cryptography.hazmat.primitives.asymmetric import rsa  # noqa: E402
+
+from pulse_servers import auth  # noqa: E402
+
+TENANT = "00000000-0000-0000-0000-000000000001"
+AUD = "11111111-1111-1111-1111-111111111111"
+SIGNER = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+ALARM = {"detail-type": "CloudWatch Alarm State Change",
+         "detail": {"alarmName": "x-StatusCheckFailed", "state": {"value": "ALARM"},
+                    "configuration": {"metrics": [{"metricStat": {"metric": {
+                        "name": "StatusCheckFailed", "dimensions": {"InstanceId": "i-0none"}}}}]}}}
+
+
+class _Keys:
+    def get_signing_key_from_jwt(self, _token):
+        return type("K", (), {"key": SIGNER.public_key()})()
+
+
+@pytest.fixture
+def entra(monkeypatch):
+    monkeypatch.setenv("PULSE_TENANT_ID", TENANT)
+    monkeypatch.setenv("PULSE_INGEST_AUDIENCES", AUD)
+    monkeypatch.setattr(auth, "_jwks", lambda tenant: _Keys())
+
+
+def bearer(*roles):
+    now = int(time.time())
+    tok = jwt.encode({"iss": f"https://login.microsoftonline.com/{TENANT}/v2.0", "aud": AUD, "tid": TENANT,
+                      "iat": now, "exp": now + 600, "roles": list(roles), "idtyp": "app"}, SIGNER, algorithm="RS256")
+    return {"Authorization": f"Bearer {tok}"}
+
+
+def alarm(headers, body=ALARM):
+    return function_app.alerts_cloudwatch(post("/api/alerts/cloudwatch", body, headers))
+
+
+@pytest.mark.parametrize("headers", [
+    {},
+    {"X-Pulse-Key": "c" * 32},
+    bearer("Pulse.ITS"),
+    bearer(auth.INGEST_ROLE),
+])
+def test_cloudwatch_alerts_refuse_anything_but_an_alerts_token(entra, headers):
+    assert alarm(headers).status_code == 401
+
+
+@pytest.mark.parametrize("body", [ALARM, {"detail": ALARM["detail"]}, ALARM["detail"]])
+def test_cloudwatch_alerts_take_an_alerts_token_and_any_event_shape(entra, monkeypatch, body):
+    monkeypatch.setenv("PULSE_SOURCE", "live")
+    monkeypatch.delenv("PULSE_STORAGE_ACCOUNT", raising=False)
+    function_app.store.cache_clear()
+    r = alarm(bearer(auth.ALERTS_ROLE), body)
+    assert r.status_code == 202
+    assert json.loads(r.get_body())["matched"] is False
+
+
+def test_an_alerts_token_cannot_push_health(entra):
+    r = function_app.ingest_health(post("/api/ingest/health", {"contract": "pulse.server-health/1"}, bearer(auth.ALERTS_ROLE)))
+    assert r.status_code == 401

@@ -10,10 +10,13 @@ service such as Site24x7 for every server and CloudWatch for cloud instances, in
 - an hourly push of every server's state, load and latest checks from the site's data platform
   to `POST /api/ingest/health`, with an Entra ID app-only token holding the `Pulse.Ingest` role
   (contract `pulse.server-health/1`, below);
-- alerts in seconds, straight from the monitoring systems: the uptime service's webhook to
-  `POST /api/alerts/site24x7` and cloud alarm state changes, through an EventBridge API
-  destination, to `POST /api/alerts/cloudwatch`. Each sender has its own shared key in
-  `X-Pulse-Key`.
+- alerts in seconds, straight from the monitoring systems:
+  - cloud alarm state changes to `POST /api/alerts/cloudwatch`, from a federated sender (for
+    example a function on the alarm rule) holding an Entra ID app-only token with the
+    `Pulse.Alerts` role. The body is the EventBridge "CloudWatch Alarm State Change" event,
+    `{"detail": ...}`, or the bare detail. No shared key is accepted on this route;
+  - the uptime service's webhook to `POST /api/alerts/site24x7`, which cannot obtain a token,
+    with its own shared key in `X-Pulse-Key`.
 
 With `PULSE_SOURCE=live` the page shows what was posted. An alert newer than the push decides a
 server's state, and a server nothing has been heard from for two hours is `unknown`. With
