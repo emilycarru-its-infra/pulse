@@ -10,8 +10,11 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   background: var(--surface-1); padding: 10px 14px; margin-bottom: 14px; font-size: 14px;
 }
 
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 8px; margin-bottom: 14px; }
-.toolbar button { height: 34px; line-height: 1; font-size: 13px; }
+.toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.toolbar button { height: 38px; line-height: 1; font-size: 13px; white-space: nowrap; }
+.toolbar .segmented { flex: 0 0 auto; }
+.toolbar .segmented button { width: 108px; flex: 0 0 108px; }
+.toolbar .search { flex: 0 0 260px; }
 .toolbar-end { margin-left: auto; }
 .total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
 .total b { font-size: 20px; color: var(--text-primary); }
@@ -134,25 +137,15 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   .groups { grid-template-columns: 1fr; }
 }
 
-/* Tablets: the toolbar stays on one row. */
-@media (min-width: 701px) and (max-width: 1100px) {
-  .toolbar { flex-wrap: wrap; gap: 6px; }
-  .segmented button { padding: 6px 10px; }
-  .search input { width: 100%; min-width: 120px; }
-  .search { flex: 1; }
-}
-
 /* Phones keep the same inline accordion. */
 @media (max-width: 700px) {
   .masthead .context { display: none; }
   .masthead .logo { height: 34px; }
   .masthead h1 { font-size: 22px; }
   .toolbar button { height: 44px; font-size: 14px; }
-  .toolbar .segmented { flex: 1; }
-  .toolbar .segmented button { flex: 1; padding: 0 10px; }
-  .search, .search input { width: 100%; }
+  .toolbar .segmented button { padding: 0 10px; }
   .search input { height: 44px; font-size: 16px; }
-  .toolbar-end { margin-left: 0; }
+  .toolbar-end { flex: 0 0 auto; }
   .bars { display: none; }
 
 }
