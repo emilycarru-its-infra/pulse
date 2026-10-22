@@ -184,3 +184,13 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .stale { color: var(--warn); }
 
 .runtime-tags { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+.runtime-tabs { display: flex; flex-wrap: nowrap; gap: 0; margin: 12px 0; }
+.runtime-tabs button { font: inherit; font-weight: 700; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--text-primary); padding: 8px 14px; cursor: pointer; }
+.runtime-tabs button:first-child { border-radius: 4px 0 0 4px; }
+.runtime-tabs button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+.runtime-tabs button[aria-selected="true"] { background: var(--text-primary); color: var(--surface-1); }
+.runtime-tabs button:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 2px; }
+.runtime-state { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 700; }
+.runtime-state.running { color: var(--ok); }
+.runtime-state.inactive { color: var(--text-secondary); }

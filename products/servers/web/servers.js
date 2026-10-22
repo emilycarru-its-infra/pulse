@@ -11,7 +11,7 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const ui = { view: "service", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null };
+const ui = { view: "service", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, runtimeTabs: {} };
 let data = null;
 
 function remember() {
@@ -64,13 +64,28 @@ function runtimeLabel(component) {
   return `${component.name} ${runtimeVersion(component)}`;
 }
 
+function groupedRuntimes(components) {
+  const groups = new Map();
+  for (const c of components || []) {
+    const key = JSON.stringify([c.name, c.version, c.executable, c.scope, c.container_id,
+      c.container_name, c.running, c.evidence_kind, c.package_name, c.package_version]);
+    if (!groups.has(key)) groups.set(key, { ...c, services: new Set(), records: new Set(), process_count: 0 });
+    const row = groups.get(key);
+    if (c.service) row.services.add(c.service);
+    const signature = JSON.stringify(c);
+    if (!row.records.has(signature)) row.process_count += c.process_count || 0;
+    row.records.add(signature);
+  }
+  return [...groups.values()].map(({ services, records, ...c }) => ({ ...c, service: [...services].sort().join(", ") }));
+}
+
 function matches(s) {
   if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => c.name === ui.runtime))) return false;
   if (ui.place && s.location !== ui.place) return false;
   if (ui.filter !== "all" && s.state !== ui.filter) return false;
   if (!ui.query) return true;
   const services = (s.services || []).map((id) => data.serviceNames[id] || id).join(" ");
-  const runtimeText = (s.runtimeInventory?.components || []).map((c) => `${c.name} ${c.version || ""} ${c.service || ""} ${c.container_name || ""}`).join(" ");
+  const runtimeText = (s.runtimeInventory?.components || []).map((c) => `${c.name} ${c.version || ""} ${c.package_name || ""} ${c.package_version || ""} ${c.service || ""} ${c.container_name || ""}`).join(" ");
   const hay = `${runtimeText} ${s.name} ${s.id} ${s.alias || ""} ${s.role || ""} ${s.os || ""} ${services}`.toLowerCase();
   return ui.query.split(/\s+/).every((w) => hay.includes(w));
 }
@@ -150,7 +165,7 @@ function row(s, groupKey, regionId) {
   if (s.role) who.append(el("span", "server-role", s.role));
   const inventory = s.runtimeInventory;
   if (inventory?.components?.length) {
-    const labels = [...new Set(inventory.components.filter((c) => !ui.runtime || c.name === ui.runtime).map((c) => runtimeLabel(c)))];
+    const labels = [...new Set(inventory.components.filter((c) => !ui.runtime || c.name === ui.runtime).map((c) => `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`))];
     who.append(el("span", `runtime-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`, `${inventory.freshness !== "fresh" ? "Last observed: " : ""}${labels.join(" · ")}`));
   }
   const side = el("span", "side");
@@ -237,7 +252,7 @@ function renderDetails(s) {
     if (k === "Hostname") dd.append(el("code", null, v)); else dd.textContent = v;
     dl.append(dd);
   }
-  panel.append(runtimeDetails(s.runtimeInventory));
+  panel.append(runtimeDetails(s.runtimeInventory, s.id));
   if (s.metrics) {
     panel.append(el("h4", null, "Resource usage"));
     for (const [k, label] of [["cpu", "CPU"], ["mem", "Memory"], ["disk", "Disk"]]) {
@@ -277,33 +292,85 @@ function renderDetails(s) {
   return panel;
 }
 
-function runtimeDetails(inventory) {
+function runtimeDetails(inventory, serverId) {
   const section = el("section", "runtime-detail");
-  section.append(el("h4", null, "Running binaries"));
+  section.append(el("h4", null, "Binaries and versions"));
   if (!inventory?.observed_at) {
-    section.append(el("p", "muted", "Not assessed — no active runtime observation is available."));
+    section.append(el("p", "muted", "Not assessed — no binary observation is available."));
     if (inventory?.failure_reason) section.append(el("p", "muted", inventory.failure_reason));
     return section;
   }
   const current = inventory.freshness === "fresh";
   section.append(el("p", `runtime-freshness ${current ? "" : "stale"}`,
     `${current ? "Observed" : "Last observed · stale"} ${Pulse.ago(inventory.observed_at)}${inventory.last_attempt === "collection_failed" ? " · latest collection failed" : ""}`));
-  const list = el("ul", "runtime-list");
-  for (const c of inventory.components || []) {
-    const li = el("li");
-    const title = el("p", "runtime-title");
-    title.append(el("b", null, c.name), el("code", null, c.version ? runtimeVersion(c) : "Version unknown"));
-    li.append(title);
-    if (c.version && runtimeVersion(c) !== c.version) li.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
-    li.append(el("p", "runtime-context", [c.service, c.container_name ? `Container: ${c.container_name}` : c.scope].filter(Boolean).join(" · ")));
-    if (c.executable) li.append(el("code", "runtime-path", c.executable));
-    const evidence = c.evidence_kind === "running_binary_file_metadata" ? "Version from executable file metadata" :
-      c.evidence_kind === "executable_self_report" ? "Version reported by active executable image" : "Version could not be verified";
-    li.append(el("p", "runtime-evidence", `${evidence}${c.process_count ? ` · ${c.process_count} process${c.process_count === 1 ? "" : "es"}` : ""}`));
-    list.append(li);
+  const components = groupedRuntimes(inventory.components);
+  const tabs = el("div", "runtime-tabs");
+  tabs.setAttribute("role", "tablist");
+  tabs.setAttribute("aria-label", "Binary execution state");
+  const content = el("div", "runtime-tab-panel");
+  content.setAttribute("role", "tabpanel");
+  const id = `runtime-${encodeURIComponent(serverId)}`;
+  content.id = `${id}-panel`;
+  const selectedFamily = components.filter((c) => !ui.runtime || c.name === ui.runtime);
+  let selected = ui.runtimeTabs[serverId] || (selectedFamily.length && !selectedFamily.some((c) => c.running) ? "inactive" : "running");
+  const buttons = [];
+  function show(state, focus = false) {
+    selected = state;
+    ui.runtimeTabs[serverId] = state;
+    for (const button of buttons) {
+      const active = button.dataset.state === state;
+      button.setAttribute("aria-selected", String(active));
+      button.tabIndex = active ? 0 : -1;
+      if (active && focus) button.focus({ preventScroll: true });
+    }
+    content.setAttribute("aria-labelledby", `${id}-${state}`);
+    content.replaceChildren();
+    if (state === "inactive") content.append(el("p", "runtime-context", "Installed, but not observed running at this check. Short-lived or scheduled jobs may run between checks."));
+    const list = el("ul", "runtime-list");
+    for (const c of components.filter((c) => (c.running ? "running" : "inactive") === state)) {
+      const li = el("li");
+      const title = el("p", "runtime-title");
+      title.append(el("b", null, c.name), el("code", null, c.version ? runtimeVersion(c) : "Version unknown"));
+      li.append(title);
+      const label = c.running ? "Running" : "Inactive · installed";
+      li.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${label}`));
+      if (c.version && runtimeVersion(c) !== c.version) li.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
+      li.append(el("p", "runtime-context", [c.service, c.container_name ? `Container: ${c.container_name}` : c.scope].filter(Boolean).join(" · ")));
+      if (c.executable) li.append(el("code", "runtime-path", c.executable));
+      const evidence = {
+        running_binary_file_metadata: "Version from executable file metadata",
+        executable_self_report: "Version reported by active executable image",
+        installed_executable_self_report: "Version reported by installed executable",
+        installed_binary_file_metadata: "Version from installed file metadata",
+        installed_executable_unverified: "Installed executable · version could not be verified",
+      }[c.evidence_kind] || "Version could not be verified";
+      li.append(el("p", "runtime-evidence", `${evidence}${c.process_count ? ` · ${c.process_count} process${c.process_count === 1 ? "" : "es"}` : ""}`));
+      if (c.package_version) li.append(el("p", "runtime-evidence", `Package: ${c.package_name} ${c.package_version}${c.package_arch ? ` · ${c.package_arch}` : ""}`));
+      list.append(li);
+    }
+    content.append(list);
+    if (!list.children.length) content.append(el("p", "muted", state === "running" ? "No allowlisted active binaries observed." : "No inactive binaries recorded. Installed coverage may be incomplete."));
   }
-  section.append(list);
-  if (!(inventory.components || []).length) section.append(el("p", "muted", "No allowlisted runtime processes observed. This is not a complete software inventory."));
+  for (const state of ["running", "inactive"]) {
+    const count = components.filter((c) => (c.running ? "running" : "inactive") === state).length;
+    const button = el("button", null, `${state === "running" ? "Running" : "Inactive"} (${count})`);
+    button.type = "button";
+    button.id = `${id}-${state}`;
+    button.dataset.state = state;
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-controls", content.id);
+    button.addEventListener("click", () => show(state));
+    button.addEventListener("keydown", (event) => {
+      if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        event.preventDefault();
+        show(event.key === "Home" ? "running" : event.key === "End" ? "inactive" : selected === "running" ? "inactive" : "running", true);
+      }
+    });
+    buttons.push(button);
+    tabs.append(button);
+  }
+  section.append(tabs, content);
+  show(selected);
   if (inventory.collection_state === "partial" || inventory.components_omitted) section.append(el("p", "stale", "Partial collection — additional components may be missing."));
   for (const gap of inventory.gaps || []) section.append(el("p", "runtime-evidence", gap));
   return section;
@@ -312,7 +379,7 @@ function runtimeDetails(inventory) {
 function renderRuntimes() {
   const section = document.getElementById("runtime-overview");
   const fresh = data.servers.filter((s) => s.runtimeInventory?.freshness === "fresh");
-  section.replaceChildren(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent runtime observations.`));
+  section.replaceChildren(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent binary observations. Filter a binary to review running and inactive versions.`));
   const counts = new Map();
   for (const server of fresh) {
     const names = new Set((server.runtimeInventory.components || []).map((c) => c.name));
