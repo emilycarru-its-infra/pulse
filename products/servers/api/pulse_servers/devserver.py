@@ -14,13 +14,25 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .service import ServersService
-from .simulate import health
+from datetime import UTC, datetime
+
+from .simulate import health, runtimes
 
 ROOT = Path(__file__).resolve().parents[4]
 STATIC = {
     "/core/": ROOT / "core" / "web",
     "/": ROOT / "products" / "servers" / "web",
 }
+
+
+class SampleRuntimes:
+    """Made-up binary observations, so the binary views have something to show."""
+
+    def __init__(self, catalog: dict):
+        self.catalog = catalog
+
+    def rows(self) -> dict:
+        return runtimes(self.catalog, datetime.now(UTC))
 
 
 def make_handler(service: ServersService, theme: Path):
@@ -75,7 +87,10 @@ def main() -> None:
     catalog = {**json.loads(Path(args.catalog).read_text()), "sample": True}
     server = ThreadingHTTPServer(
         ("127.0.0.1", args.port),
-        make_handler(ServersService(catalog, health), Path(args.theme)),
+        make_handler(
+            ServersService(catalog, health, runtime_store=SampleRuntimes(catalog)),
+            Path(args.theme),
+        ),
     )
     print(f"ServersPulse on http://localhost:{args.port}/")
     server.serve_forever()
