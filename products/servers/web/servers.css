@@ -172,8 +172,8 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .runtime-overview h2 { font-size: 18px; margin: 0 0 4px; }
 .runtime-coverage, .runtime-context, .runtime-evidence { color: var(--text-secondary); font-size: 13px; margin: 5px 0; }
 .runtime-versions { display: flex; flex-wrap: wrap; gap: 7px; }
-.runtime-version { border: 1px solid var(--hair); background: var(--surface-1); color: var(--text); border-radius: 4px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-.runtime-version[aria-pressed="true"] { background: var(--text); color: var(--surface-1); }
+.runtime-version { border: 1px solid var(--hair); background: var(--surface-1); color: var(--text-primary); border-radius: 4px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+.runtime-version[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
 .runtime-tags { display: block; font-size: 12px; margin-top: 5px; color: var(--text-secondary); overflow-wrap: anywhere; }
 .runtime-list { list-style: none; padding: 0; margin: 0; }
 .runtime-list li { padding: 10px 0; border-bottom: 1px solid var(--hair); }
@@ -182,3 +182,5 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .runtime-path { display: block; overflow-wrap: anywhere; font-size: 12px; }
 .runtime-freshness { font-size: 13px; }
 .stale { color: var(--warn); }
+
+.runtime-tags { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

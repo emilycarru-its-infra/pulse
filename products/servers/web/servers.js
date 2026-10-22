@@ -310,7 +310,10 @@ function renderRuntimes() {
     const button = el("button", "runtime-version", `${label} · ${count}`);
     button.type = "button";
     button.setAttribute("aria-pressed", String(ui.runtime === label));
-    button.addEventListener("click", () => { ui.runtime = ui.runtime === label ? null : label; render(); });
+    button.addEventListener("click", () => {
+      ui.runtime = ui.runtime === label ? null : label; render();
+      [...document.querySelectorAll(".runtime-version")].find((b) => b.textContent === `${label} · ${count}`)?.focus({ preventScroll: true });
+    });
     buttons.append(button);
   }
   if (ui.runtime && !counts.has(ui.runtime)) {
