@@ -15,8 +15,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .toolbar .segmented { flex: 0 0 auto; }
 .toolbar .segmented button { width: 108px; flex: 0 0 108px; }
 .toolbar .search { flex: 0 0 260px; }
-.toolbar .runtime-filter { flex: 0 0 180px; }
-.runtime-filter select { width: 100%; }
+.toolbar .runtime-filter { flex: 0 0 180px; position: relative; }
+.runtime-filter select { width: 100%; appearance: none; -webkit-appearance: none; padding-right: 32px; }
+.runtime-filter::after { content: ""; position: absolute; pointer-events: none; right: 14px; top: calc(50% - 5px); width: 7px; height: 7px; border-right: 2px solid var(--text-primary); border-bottom: 2px solid var(--text-primary); transform: rotate(45deg); }
 .toolbar-end { margin-left: auto; }
 .total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
 .total b { font-size: 20px; color: var(--text-primary); }
@@ -24,8 +25,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   font: inherit; font-size: 13px; height: var(--control-height); padding: 0 10px; color: var(--text-primary);
   background: var(--surface-1); border: 1px solid var(--rule); border-radius: 4px;
 }
+.runtime-filter select { padding-right: 32px; }
 .search input { width: 260px; }
-.search input:focus-visible, .runtime-filter select:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 1px; }
+.search input:focus-visible, .runtime-filter select:focus-visible { outline: 2px solid var(--accent-band); outline-offset: -4px; }
 
 /* --- The full picture: one card per place servers run ------------------------- */
 
@@ -185,12 +187,26 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 
 .runtime-tags { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-.runtime-tabs { display: flex; flex-wrap: nowrap; gap: 0; margin: 12px 0; }
-.runtime-tabs button { font: inherit; font-weight: 700; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--text-primary); padding: 8px 14px; cursor: pointer; }
-.runtime-tabs button:first-child { border-radius: 4px 0 0 4px; }
-.runtime-tabs button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
-.runtime-tabs button[aria-selected="true"] { background: var(--text-primary); color: var(--surface-1); }
-.runtime-tabs button:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 2px; }
 .runtime-state { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; font-size: 12px; font-weight: 700; }
 .runtime-state.running { color: var(--ok); }
 .runtime-state.inactive { color: var(--text-secondary); }
+
+.runtime-list { border-top: 1px solid var(--hair); }
+.binary-accordion { border-bottom: 1px solid var(--hair); }
+.binary-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; cursor: pointer; list-style: none; }
+.binary-summary::-webkit-details-marker { display: none; }
+ .binary-summary::after, .row .disclosure::after { content: ""; display: block; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); }
+.binary-summary::after { margin-left: auto; margin-right: 4px; color: var(--text-secondary); }
+.row .disclosure { display: flex; align-items: center; justify-content: center; }
+.binary-accordion[open] > .binary-summary::after, .row[aria-expanded="true"] .disclosure::after { transform: rotate(45deg); }
+.binary-summary:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 2px; }
+.binary-version { font-weight: 700; overflow-wrap: anywhere; }
+.binary-content { padding: 0 0 12px; }
+.binary-summary .runtime-state { white-space: nowrap; }
+
+.server-focus-veil { position: fixed; inset: 0; z-index: 50; background: color-mix(in srgb, var(--page) 22%, transparent);  }
+.server-focus-veil[hidden] { display: none; }
+.rows > .server-focus { position: relative; z-index: 51; background: var(--surface-1); border-radius: 4px; box-shadow: 0 0 0 1px var(--hair), 0 12px 36px rgb(0 0 0 / 18%); }
+
+.binary-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--text-secondary); text-underline-offset: 3px; }
+.binary-version-filter { font: inherit; font-size: 12px; color: var(--text-primary); border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); padding: 4px 8px; margin-top: 4px; cursor: pointer; }
