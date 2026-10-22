@@ -110,8 +110,9 @@ server health. The latest successful component list remains visible as last obse
 failed collection, and ages stale after one hour even when delivery is recent. A failed runtime
 store read leaves health available and labels runtime collection unavailable.
 
-The page shows active component/version counts, exclusive version filter buttons, searchable
-versions, and inline executable/service/container evidence. Multiple versions remain separate.
+The page filters running binaries by family with a dropdown, alongside searchable versions and
+inline executable/service/container evidence. Selecting a family shows every matching server
+and its reported versions; multiple versions on one server remain visible.
 Installed packages do not prove a process is running. Windows executable file metadata is
 labelled separately from a version command against an active executable image. Missing access,
 embedded runtimes, linked libraries and unassessed containers must remain explicit gaps.

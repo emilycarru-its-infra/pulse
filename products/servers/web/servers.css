@@ -10,19 +10,22 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   background: var(--surface-1); padding: 10px 14px; margin-bottom: 14px; font-size: 14px;
 }
 
-.toolbar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
-.toolbar button { height: 38px; line-height: 1; font-size: 13px; white-space: nowrap; }
+.toolbar { --control-height: 40px; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.toolbar button { height: calc(var(--control-height) - 2px); line-height: 1; font-size: 13px; white-space: nowrap; }
 .toolbar .segmented { flex: 0 0 auto; }
 .toolbar .segmented button { width: 108px; flex: 0 0 108px; }
 .toolbar .search { flex: 0 0 260px; }
+.toolbar .runtime-filter { flex: 0 0 180px; }
+.runtime-filter select { width: 100%; }
 .toolbar-end { margin-left: auto; }
 .total { font-size: 13px; color: var(--text-secondary); white-space: nowrap; }
 .total b { font-size: 20px; color: var(--text-primary); }
-.search input {
-  font: inherit; font-size: 13px; height: 34px; width: 260px; padding: 0 10px; color: var(--text-primary);
+.search input, .runtime-filter select {
+  font: inherit; font-size: 13px; height: var(--control-height); padding: 0 10px; color: var(--text-primary);
   background: var(--surface-1); border: 1px solid var(--rule); border-radius: 4px;
 }
-.search input:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 1px; }
+.search input { width: 260px; }
+.search input:focus-visible, .runtime-filter select:focus-visible { outline: 3px solid var(--accent-band); outline-offset: 1px; }
 
 /* --- The full picture: one card per place servers run ------------------------- */
 
@@ -142,9 +145,10 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   .masthead .context { display: none; }
   .masthead .logo { height: 34px; }
   .masthead h1 { font-size: 22px; }
-  .toolbar button { height: 44px; font-size: 14px; }
+  .toolbar { --control-height: 46px; }
+  .toolbar button { font-size: 14px; }
   .toolbar .segmented button { padding: 0 10px; }
-  .search input { height: 44px; font-size: 16px; }
+  .search input, .runtime-filter select { font-size: 16px; }
   .toolbar-end { flex: 0 0 auto; }
   .bars { display: none; }
 
@@ -169,11 +173,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .stage[hidden] { display: none; }
 
 .runtime-overview { margin: 0 0 20px; }
-.runtime-overview h2 { font-size: 18px; margin: 0 0 4px; }
 .runtime-coverage, .runtime-context, .runtime-evidence { color: var(--text-secondary); font-size: 13px; margin: 5px 0; }
-.runtime-versions { display: flex; flex-wrap: wrap; gap: 7px; }
-.runtime-version { border: 1px solid var(--hair); background: var(--surface-1); color: var(--text-primary); border-radius: 4px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; }
-.runtime-version[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
 .runtime-tags { display: block; font-size: 12px; margin-top: 5px; color: var(--text-secondary); overflow-wrap: anywhere; }
 .runtime-list { list-style: none; padding: 0; margin: 0; }
 .runtime-list li { padding: 10px 0; border-bottom: 1px solid var(--hair); }

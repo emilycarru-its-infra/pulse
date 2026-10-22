@@ -65,7 +65,7 @@ function runtimeLabel(component) {
 }
 
 function matches(s) {
-  if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => runtimeLabel(c) === ui.runtime))) return false;
+  if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => c.name === ui.runtime))) return false;
   if (ui.place && s.location !== ui.place) return false;
   if (ui.filter !== "all" && s.state !== ui.filter) return false;
   if (!ui.query) return true;
@@ -150,7 +150,7 @@ function row(s, groupKey, regionId) {
   if (s.role) who.append(el("span", "server-role", s.role));
   const inventory = s.runtimeInventory;
   if (inventory?.components?.length) {
-    const labels = [...new Set(inventory.components.map((c) => runtimeLabel(c)))];
+    const labels = [...new Set(inventory.components.filter((c) => !ui.runtime || c.name === ui.runtime).map((c) => runtimeLabel(c)))];
     who.append(el("span", `runtime-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`, `${inventory.freshness !== "fresh" ? "Last observed: " : ""}${labels.join(" · ")}`));
   }
   const side = el("span", "side");
@@ -311,31 +311,27 @@ function runtimeDetails(inventory) {
 
 function renderRuntimes() {
   const section = document.getElementById("runtime-overview");
-  section.replaceChildren(el("h2", null, "Running binaries"));
   const fresh = data.servers.filter((s) => s.runtimeInventory?.freshness === "fresh");
-  section.append(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent runtime observations. Select a version to filter.`));
+  section.replaceChildren(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent runtime observations.`));
   const counts = new Map();
   for (const server of fresh) {
-    const labels = new Set((server.runtimeInventory.components || []).map((c) => runtimeLabel(c)));
-    for (const label of labels) counts.set(label, (counts.get(label) || 0) + 1);
+    const names = new Set((server.runtimeInventory.components || []).map((c) => c.name));
+    for (const name of names) counts.set(name, (counts.get(name) || 0) + 1);
   }
-  const buttons = el("div", "runtime-versions");
-  for (const [label, count] of [...counts].sort(([a], [b]) => a.localeCompare(b))) {
-    const button = el("button", "runtime-version", `${label} · ${count}`);
-    button.type = "button";
-    button.setAttribute("aria-pressed", String(ui.runtime === label));
-    button.addEventListener("click", () => {
-      ui.runtime = ui.runtime === label ? null : label; render();
-      [...document.querySelectorAll(".runtime-version")].find((b) => b.textContent === `${label} · ${count}`)?.focus({ preventScroll: true });
-    });
-    buttons.append(button);
+  if (ui.runtime && !counts.has(ui.runtime)) counts.set(ui.runtime, 0);
+  const choices = [["", "All binaries"], ...[...counts].sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, count]) => [name, `${name} · ${count}`])];
+  const select = document.getElementById("binary");
+  const signature = JSON.stringify(choices);
+  if (select.dataset.choices !== signature) {
+    select.replaceChildren(...choices.map(([value, label]) => {
+      const option = el("option", null, label);
+      option.value = value;
+      return option;
+    }));
+    select.dataset.choices = signature;
   }
-  if (ui.runtime && !counts.has(ui.runtime)) {
-    const clear = el("button", "runtime-version", `Clear ${ui.runtime}`);
-    clear.addEventListener("click", () => { ui.runtime = null; render(); });
-    buttons.append(clear);
-  }
-  section.append(buttons);
+  select.value = ui.runtime || "";
 }
 
 function pick(id, groupKey = ui.pickedGroup, trigger = null) {
@@ -377,10 +373,15 @@ for (const g of ["view", "filter"]) {
     render();
   });
 }
+document.getElementById("binary").addEventListener("change", (e) => {
+  ui.runtime = e.target.value || null;
+  renderPicture();
+  renderGroups();
+});
 document.getElementById("search").addEventListener("input", (e) => { ui.query = e.target.value.trim().toLowerCase(); if (ui.view === "location") renderPicture(); else renderGroups(); });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.picked) pick(null);
-  if (e.key === "/" && document.activeElement?.tagName !== "INPUT") { e.preventDefault(); document.getElementById("search").focus(); }
+  if (e.key === "/" && !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) { e.preventDefault(); document.getElementById("search").focus(); }
 });
 
 (async () => {
