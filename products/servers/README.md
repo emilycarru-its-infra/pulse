@@ -93,3 +93,25 @@ single sign-on, linked to the Function App the `pulse-product` Terraform module 
 ingest and alert paths are reached directly, so the site's root lists them in the module's
 `browser_paths` (no client certificate) and `unauthenticated_paths` (no Static Web App sign-in);
 the code authenticates those callers itself.
+
+## Active runtime observations
+
+`POST /api/ingest/runtimes` accepts `pulse.server-runtimes/1` with an app-only `Pulse.Ingest`
+token. The deployment must explicitly allow that path through the host's client-certificate and
+sign-in gates; application token verification still applies. Each row contains the canonical
+item, reference and observation UUIDs, the API receipt time and effective observation time,
+its accepted or collection-failed outcome, an exact `aws_instance_id` key and bounded runtime
+facts. The sender exports the canonical observation response after acceptance. Receipt UUIDs
+are provenance supplied by the trusted publisher, not independently dereferenced by Pulse.
+
+Runtime observations match only a unique instance id in the site's catalog. Missing or ambiguous
+matches are counted as unmatched; there is no hostname fallback. Runtime evidence never changes
+server health. The latest successful component list remains visible as last observed after a
+failed collection, and ages stale after one hour even when delivery is recent. A failed runtime
+store read leaves health available and labels runtime collection unavailable.
+
+The page shows active component/version counts, exclusive version filter buttons, searchable
+versions, and inline executable/service/container evidence. Multiple versions remain separate.
+Installed packages do not prove a process is running. Windows executable file metadata is
+labelled separately from a version command against an active executable image. Missing access,
+embedded runtimes, linked libraries and unassessed containers must remain explicit gaps.

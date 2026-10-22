@@ -135,3 +135,13 @@ def test_cloudwatch_alerts_take_an_alerts_token_and_any_event_shape(entra, monke
 def test_an_alerts_token_cannot_push_health(entra):
     r = function_app.ingest_health(post("/api/ingest/health", {"contract": "pulse.server-health/1"}, bearer(auth.ALERTS_ROLE)))
     assert r.status_code == 401
+
+
+def test_runtime_ingest_requires_ingest_role(entra):
+    body = {'contract': 'pulse.server-runtimes/1', 'servers': []}
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.ALERTS_ROLE))).status_code == 401
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.INGEST_ROLE))).status_code == 202
+
+
+def test_runtime_ingest_refuses_wrong_contract(entra):
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', {}, bearer(auth.INGEST_ROLE))).status_code == 400

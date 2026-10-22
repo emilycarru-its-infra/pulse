@@ -6,7 +6,10 @@ the collectors that read Site24x7, CloudWatch and the hypervisors. The page and 
 status() and summary(); neither knows which source answered.
 """
 
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
+
+from pulse_servers.runtimes import view
 
 STATES = ["up", "degraded", "down", "stopped", "unknown"]
 # How bad a state is when a group takes the worst of its servers. A stopped server is stopped on
@@ -16,25 +19,35 @@ LEVEL = {0: "ok", 1: "idle", 2: "warn", 3: "bad"}
 
 
 def _iso(dt: datetime) -> str:
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 class ServersService:
-    def __init__(self, catalog: dict, source, title: str = "Servers"):
+    def __init__(self, catalog: dict, source, title: str = "Servers", runtime_store=None):
         """source(server, location, now) returns the server's health: state, metrics, checks
         and alerts, as pulse_servers.simulate.health does."""
+        self.runtime_store = runtime_store
         self.catalog = catalog
         self.source = source
         self.title = title
         self.locations = {loc["id"]: loc for loc in catalog.get("locations", [])}
 
     def status(self, now: datetime | None = None) -> dict:
-        now = now or datetime.now(timezone.utc)
+        now = now or datetime.now(UTC)
+        runtime_error = False
+        try:
+            runtime_rows = self.runtime_store.rows() if self.runtime_store else {}
+        except Exception:  # noqa: BLE001 - runtime collection failure must not hide server health
+            logging.getLogger(__name__).warning("Runtime projection storage unavailable")
+            runtime_rows, runtime_error = {}, True
         servers = []
         for server in self.catalog.get("servers", []):
             location = self.locations.get(server.get("location"), {})
             health = self.source(server, location, now)
-            servers.append({**server, **health})
+            runtime = view(runtime_rows.get(server["id"], {}), now)
+            if runtime_error:
+                runtime.update(freshness="unavailable", gaps=["Runtime observation storage unavailable"])
+            servers.append({**server, **health, "runtimeInventory": runtime})
 
         def group(items: list[dict]) -> dict:
             counts = dict.fromkeys(STATES, 0)
