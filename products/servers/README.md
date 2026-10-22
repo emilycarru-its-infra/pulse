@@ -117,7 +117,7 @@ Installed packages do not prove a process is running. Windows executable file me
 labelled separately from a version command against an active executable image. Missing access,
 embedded runtimes, linked libraries and unassessed containers must remain explicit gaps.
 
-Binary observations include active executable evidence and installed host binaries. Running and Inactive tabs separate them; inactive means installed but not observed running at the check. Rows group matching binary/version/path evidence and list its services together. Package builds, when supplied, remain distinct from executable versions for advisory review. Freshness and collection gaps apply to both states.
+Binary observations include active executable evidence and installed host binaries. Each binary has a collapsible detail row with an inline Running or Inactive label; inactive means installed but not observed running at the check. Rows group matching binary/version/path evidence and list its services together. Package builds, when supplied, remain distinct from executable versions for advisory review. Freshness and collection gaps apply to both states.
 
 Server service groups can be projected from authoritative inventory through
 `POST /api/ingest/inventory`, authenticated by the dedicated `Pulse.Inventory` application
@@ -127,3 +127,7 @@ mapping. The receiver matches only configured `cellarum_item_id` identities; out
 items are counted separately and missing bindings remain unknown. Older versions cannot undo
 newer classifications, and a newer blank value clears the previous group. Inventory failures
 remain separate from health and runtime evidence.
+
+The service view groups each server once by its inventory-owned `service_group` text field. Group labels come directly from that field, with no dashboard-owned category list or hostname inference. A missing value appears under No service recorded. Specific service relationships remain in the server details and search.
+
+Binary links use `?binary=PHP` for a family, with optional `version` and `server` parameters for a particular reported version on one server. Selecting a family updates the address. Each expanded binary provides a shareable link; opening it filters the family/version, expands the server and opens its binary evidence. Clearing the version keeps the family filter. Existing `#server=...` links remain supported.

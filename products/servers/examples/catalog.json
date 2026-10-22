@@ -75,7 +75,8 @@
    "os": "Windows Server 2022",
    "services": [
     "directory"
-   ]
+   ],
+   "service_group": "Directory and DNS"
   },
   {
    "id": "cloud-sis-01",
@@ -86,7 +87,8 @@
    "os": "Windows Server 2022",
    "services": [
     "sis"
-   ]
+   ],
+   "service_group": "Student information system"
   },
   {
    "id": "cloud-db-01",
@@ -97,7 +99,8 @@
    "os": "Windows Server 2022",
    "services": [
     "sis"
-   ]
+   ],
+   "service_group": "Student information system"
   },
   {
    "id": "cloud-idp-01",
@@ -108,7 +111,8 @@
    "os": "Ubuntu 24.04",
    "services": [
     "idp"
-   ]
+   ],
+   "service_group": "Single sign-on"
   },
   {
    "id": "cloud-dns-01",
@@ -119,7 +123,8 @@
    "os": "Ubuntu 24.04",
    "services": [
     "directory"
-   ]
+   ],
+   "service_group": "Directory and DNS"
   },
   {
    "id": "cloud-dns-02",
@@ -130,7 +135,8 @@
    "os": "Ubuntu 24.04",
    "services": [
     "directory"
-   ]
+   ],
+   "service_group": "Directory and DNS"
   },
   {
    "id": "cloud-rad-01",
@@ -141,7 +147,8 @@
    "os": "Windows Server 2022",
    "services": [
     "radius"
-   ]
+   ],
+   "service_group": "Wi-Fi and VPN sign-in"
   },
   {
    "id": "cloud-doc-01",
@@ -152,7 +159,8 @@
    "os": "Windows Server 2022",
    "services": [
     "docs"
-   ]
+   ],
+   "service_group": "Document management"
   },
   {
    "id": "cloud-doc-02",
@@ -163,7 +171,8 @@
    "os": "Windows Server 2022",
    "services": [
     "docs"
-   ]
+   ],
+   "service_group": "Document management"
   },
   {
    "id": "vm-prt-01",
@@ -174,7 +183,8 @@
    "os": "Windows Server 2022",
    "services": [
     "print"
-   ]
+   ],
+   "service_group": "Printing"
   },
   {
    "id": "vm-prt-02",
@@ -185,7 +195,8 @@
    "os": "Windows Server 2022",
    "services": [
     "print"
-   ]
+   ],
+   "service_group": "Printing"
   },
   {
    "id": "vm-db-01",
@@ -196,7 +207,8 @@
    "os": "Windows Server 2022",
    "services": [
     "print"
-   ]
+   ],
+   "service_group": "Printing"
   },
   {
    "id": "vm-rad-01",
@@ -207,7 +219,8 @@
    "os": "Windows Server 2022",
    "services": [
     "radius"
-   ]
+   ],
+   "service_group": "Wi-Fi and VPN sign-in"
   },
   {
    "id": "vm-nfs-01",
@@ -218,7 +231,8 @@
    "os": "Ubuntu 24.04",
    "services": [
     "files"
-   ]
+   ],
+   "service_group": "File storage"
   },
   {
    "id": "vm-ren-01",
@@ -229,7 +243,8 @@
    "os": "Windows Server 2022",
    "services": [
     "render"
-   ]
+   ],
+   "service_group": "Render farm"
   },
   {
    "id": "vm-dc-01",
@@ -240,7 +255,8 @@
    "os": "Windows Server 2025",
    "services": [
     "directory"
-   ]
+   ],
+   "service_group": "Directory and DNS"
   },
   {
    "id": "phy-dc-01",
@@ -251,7 +267,8 @@
    "os": "Windows Server 2025",
    "services": [
     "directory"
-   ]
+   ],
+   "service_group": "Directory and DNS"
   },
   {
    "id": "phy-nas-01",
@@ -263,7 +280,8 @@
    "services": [
     "files",
     "render"
-   ]
+   ],
+   "service_group": "File storage"
   },
   {
    "id": "phy-gpu-01",
@@ -274,7 +292,8 @@
    "os": "Windows Server 2022",
    "services": [
     "render"
-   ]
+   ],
+   "service_group": "Render farm"
   },
   {
    "id": "cloud-old-01",
@@ -286,7 +305,8 @@
    "services": [
     "files"
    ],
-   "stopped": true
+   "stopped": true,
+   "service_group": "File storage"
   }
  ]
 }

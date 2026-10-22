@@ -62,3 +62,16 @@ def test_summary_counts_running_servers_only():
     assert summary["product"] == "servers"
     assert summary["servers"] == len(CATALOG["servers"]) - 1
     assert summary["level"] in ("ok", "warn", "bad")
+
+
+def test_service_groups_come_from_inventory_field_without_duplicating_multi_service_hosts():
+    catalog = {"servers": [
+        {"id": "one", "service_group": "Directory and DNS", "services": ["dns", "identity"]},
+        {"id": "two", "service_group": "Directory and DNS"},
+        {"id": "unknown", "services": ["legacy"]},
+    ], "services": [{"id": "dns", "name": "DNS"}, {"id": "identity", "name": "Identity"}]}
+    service = ServersService(catalog, lambda *args: {"state": "up"})
+    result = service.status()
+    assert len(result["servers"]) == 3
+    assert result["serviceGroups"] == [{"name": "Directory and DNS", "counts": {"up": 2, "degraded": 0, "down": 0, "stopped": 0, "unknown": 0}, "level": "ok", "servers": 2, "alerts": 0}]
+    assert "service_group" not in result["servers"][2]
