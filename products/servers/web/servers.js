@@ -51,8 +51,21 @@ function meter(c) {
   return m;
 }
 
+function runtimeVersion(component) {
+  const raw = component.version || "unknown";
+  if (component.evidence_kind === "running_binary_file_metadata") {
+    if (component.name === "PowerShell") return raw.match(/^\d+(?:\.\d+){1,3}/)?.[0] || raw;
+    if (component.name === "OpenSSH") return raw.match(/OpenSSH_([\w.-]+)/)?.[1] || raw;
+  }
+  return raw;
+}
+
+function runtimeLabel(component) {
+  return `${component.name} ${runtimeVersion(component)}`;
+}
+
 function matches(s) {
-  if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => `${c.name} ${c.version || "unknown"}` === ui.runtime))) return false;
+  if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => runtimeLabel(c) === ui.runtime))) return false;
   if (ui.place && s.location !== ui.place) return false;
   if (ui.filter !== "all" && s.state !== ui.filter) return false;
   if (!ui.query) return true;
@@ -137,7 +150,7 @@ function row(s, groupKey, regionId) {
   if (s.role) who.append(el("span", "server-role", s.role));
   const inventory = s.runtimeInventory;
   if (inventory?.components?.length) {
-    const labels = [...new Set(inventory.components.map((c) => `${c.name} ${c.version || "version unknown"}`))];
+    const labels = [...new Set(inventory.components.map((c) => runtimeLabel(c)))];
     who.append(el("span", `runtime-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`, `${inventory.freshness !== "fresh" ? "Last observed: " : ""}${labels.join(" · ")}`));
   }
   const side = el("span", "side");
@@ -279,8 +292,9 @@ function runtimeDetails(inventory) {
   for (const c of inventory.components || []) {
     const li = el("li");
     const title = el("p", "runtime-title");
-    title.append(el("b", null, c.name), el("code", null, c.version || "Version unknown"));
+    title.append(el("b", null, c.name), el("code", null, c.version ? runtimeVersion(c) : "Version unknown"));
     li.append(title);
+    if (c.version && runtimeVersion(c) !== c.version) li.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
     li.append(el("p", "runtime-context", [c.service, c.container_name ? `Container: ${c.container_name}` : c.scope].filter(Boolean).join(" · ")));
     if (c.executable) li.append(el("code", "runtime-path", c.executable));
     const evidence = c.evidence_kind === "running_binary_file_metadata" ? "Version from executable file metadata" :
@@ -302,7 +316,7 @@ function renderRuntimes() {
   section.append(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent runtime observations. Select a version to filter.`));
   const counts = new Map();
   for (const server of fresh) {
-    const labels = new Set((server.runtimeInventory.components || []).map((c) => `${c.name} ${c.version || "unknown"}`));
+    const labels = new Set((server.runtimeInventory.components || []).map((c) => runtimeLabel(c)));
     for (const label of labels) counts.set(label, (counts.get(label) || 0) + 1);
   }
   const buttons = el("div", "runtime-versions");
