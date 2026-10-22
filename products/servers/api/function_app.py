@@ -31,13 +31,12 @@ App settings:
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import lru_cache
 from pathlib import Path
 
 import azure.functions as func
-
-from pulse_servers import auth, live
+from pulse_servers import auth, live, runtimes
 from pulse_servers.service import ServersService
 from pulse_servers.simulate import health
 
@@ -67,6 +66,11 @@ def store() -> live.Store:
 
 
 @lru_cache(maxsize=1)
+def runtime_store():
+    return runtimes.Store(getattr(store(), "health", None))
+
+
+@lru_cache(maxsize=1)
 def matcher() -> live.Matcher:
     return live.Matcher(catalog())
 
@@ -80,7 +84,7 @@ def service(env=None) -> ServersService:
     title = env.get("PULSE_TITLE", "Servers")
     if kind == "sample":
         return ServersService({**catalog(), "sample": True}, health, title)
-    return ServersService(catalog(), live.LiveSource(store()), title)
+    return ServersService(catalog(), live.LiveSource(store()), title, runtime_store())
 
 
 def _json(code: int, obj) -> func.HttpResponse:
@@ -147,10 +151,24 @@ def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
     try:
-        servers = live.parse_push(_body(req), datetime.now(timezone.utc))
+        servers = live.parse_push(_body(req), datetime.now(UTC))
     except live.ContractError as e:
         return _json(400, {"error": str(e)})
     return _json(202, live.record_push(store(), matcher(), servers))
+
+
+def ingest_runtimes(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        _check_token(req, auth.RUNTIMES_ROLE)
+    except auth.Unauthorized:
+        return _json(401, {"error": "unauthorized"})
+    try:
+        if len(req.get_body()) > 2_000_000:
+            raise runtimes.ContractError("runtime body exceeds byte bound")
+        rows = runtimes.parse(_body(req), datetime.now(UTC))
+        return _json(202, runtimes.record(runtime_store(), catalog(), rows))
+    except runtimes.ContractError as error:
+        return _json(400, {"error": str(error)})
 
 
 def _alert(req: func.HttpRequest, check, parse) -> func.HttpResponse:
@@ -158,7 +176,7 @@ def _alert(req: func.HttpRequest, check, parse) -> func.HttpResponse:
         check(req)
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
-    alert = parse(_body(req), datetime.now(timezone.utc))
+    alert = parse(_body(req), datetime.now(UTC))
     if alert is None:
         return _json(202, {"recorded": False, "reason": "not an alert this route understands"})
     sid = live.record_alert(store(), matcher(), alert)
@@ -184,3 +202,5 @@ app.route(route="summary", methods=["GET"])(summary)
 app.route(route="ingest/health", methods=["POST"])(ingest_health)
 app.route(route="alerts/site24x7", methods=["POST"])(alerts_site24x7)
 app.route(route="alerts/cloudwatch", methods=["POST"])(alerts_cloudwatch)
+
+app.route(route="ingest/runtimes", methods=["POST"])(ingest_runtimes)
