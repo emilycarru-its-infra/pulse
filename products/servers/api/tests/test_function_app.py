@@ -140,8 +140,9 @@ def test_an_alerts_token_cannot_push_health(entra):
 def test_runtime_ingest_requires_ingest_role(entra):
     body = {'contract': 'pulse.server-runtimes/1', 'servers': []}
     assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.ALERTS_ROLE))).status_code == 401
-    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.INGEST_ROLE))).status_code == 202
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.INGEST_ROLE))).status_code == 401
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', body, bearer(auth.RUNTIMES_ROLE))).status_code == 202
 
 
 def test_runtime_ingest_refuses_wrong_contract(entra):
-    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', {}, bearer(auth.INGEST_ROLE))).status_code == 400
+    assert function_app.ingest_runtimes(post('/api/ingest/runtimes', {}, bearer(auth.RUNTIMES_ROLE))).status_code == 400

@@ -159,7 +159,7 @@ def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
 
 def ingest_runtimes(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        _check_token(req, auth.INGEST_ROLE)
+        _check_token(req, auth.RUNTIMES_ROLE)
     except auth.Unauthorized:
         return _json(401, {"error": "unauthorized"})
     try:

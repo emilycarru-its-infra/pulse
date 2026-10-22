@@ -16,6 +16,7 @@ from functools import lru_cache
 
 INGEST_ROLE = "Pulse.Ingest"
 ALERTS_ROLE = "Pulse.Alerts"
+RUNTIMES_ROLE = "Pulse.Runtimes"
 
 
 class Unauthorized(Exception):

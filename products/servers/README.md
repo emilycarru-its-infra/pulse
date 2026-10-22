@@ -96,7 +96,7 @@ the code authenticates those callers itself.
 
 ## Active runtime observations
 
-`POST /api/ingest/runtimes` accepts `pulse.server-runtimes/1` with an app-only `Pulse.Ingest`
+`POST /api/ingest/runtimes` accepts `pulse.server-runtimes/1` with an app-only `Pulse.Runtimes`
 token. The deployment must explicitly allow that path through the host's client-certificate and
 sign-in gates; application token verification still applies. Each row contains the canonical
 item, reference and observation UUIDs, the API receipt time and effective observation time,
