@@ -67,7 +67,7 @@ def check_ingest_token(
             options={"require": ["exp", "iat", "iss", "aud"]},
             leeway=60,
         )
-    except Exception as e:  # noqa: BLE001 - every failure is the same answer
+    except Exception as e:
         raise Unauthorized("invalid token") from e
     issuers = {
         f"https://login.microsoftonline.com/{tenant}/v2.0",
@@ -89,3 +89,6 @@ def check_key(presented: str | None, expected: str | None) -> None:
         raise Unauthorized("webhook is not configured")
     if not presented or not hmac.compare_digest(presented.encode(), expected.encode()):
         raise Unauthorized("wrong key")
+
+
+INVENTORY_ROLE = "Pulse.Inventory"
