@@ -11,13 +11,13 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const ui = { view: "service", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, binaryOpen: {} };
+const ui = { view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 
 function remember() {
-  try { localStorage.setItem("servers.view", ui.view); } catch { /* private window */ }
+  try { localStorage.setItem("servers.groupBy", ui.view); } catch { /* private window */ }
 }
-try { ui.view = localStorage.getItem("servers.view") || ui.view; } catch { /* private window */ }
+try { ui.view = localStorage.getItem("servers.groupBy") || ui.view; } catch { /* private window */ }
 function readBinaryUrl() {
   const params = new URL(location.href).searchParams;
   ui.runtime = params.get("binary")?.trim().slice(0, 100) || null;
@@ -26,6 +26,12 @@ function readBinaryUrl() {
   ui.pickedGroup = null;
 }
 readBinaryUrl();
+
+// Compare mode: a binary link with no single server opens every matching server inline, showing only
+// that binary, so versions can be read side by side. Each server can still be collapsed on its own.
+function comparing() {
+  return Boolean(ui.runtime && !ui.picked);
+}
 
 function binaryUrl(binary = ui.runtime, version = ui.binaryVersion, server = ui.picked) {
   const url = new URL(location.href);
@@ -177,8 +183,10 @@ function row(s, groupKey, regionId) {
   const b = el("button", "row");
   b.type = "button";
   b.dataset.id = s.id;
-  const expanded = s.id === ui.picked && groupKey === ui.pickedGroup;
-  li.classList.toggle("server-focus", expanded);
+  const compare = comparing();
+  const expanded = compare ? !ui.compareClosed.has(s.id) : s.id === ui.picked && groupKey === ui.pickedGroup;
+  li.classList.toggle("server-focus", expanded && !compare);
+  li.classList.toggle("compare-open", expanded && compare);
   b.setAttribute("aria-expanded", String(expanded));
   b.setAttribute("aria-controls", regionId);
   b.setAttribute("aria-label", `${s.name}, ${WORD[s.state]}`);
@@ -202,8 +210,8 @@ function row(s, groupKey, regionId) {
   disclosure.setAttribute("aria-hidden", "true");
   b.append(disclosure);
   for (const a of s.alerts || []) b.append(el("span", `alert ${a.severity}`, `${a.source}: ${a.text}`));
-  b.addEventListener("click", () => pick(s.id, groupKey, b));
-  const details = expanded ? renderDetails(s) : el("section", "server-details");
+  b.addEventListener("click", () => compare ? toggleCompare(s.id, b) : pick(s.id, groupKey, b));
+  const details = !expanded ? el("section", "server-details") : compare ? renderCompare(s, groupKey) : renderDetails(s);
   details.id = regionId;
   details.hidden = !expanded;
   details.setAttribute("aria-label", `${s.name} details`);
@@ -319,7 +327,7 @@ function renderDetails(s) {
   return panel;
 }
 
-function runtimeDetails(inventory, serverId) {
+function runtimeDetails(inventory, serverId, only = null) {
   const section = el("section", "runtime-detail");
   section.append(el("h4", null, "Binaries and versions"));
   if (!inventory?.observed_at) {
@@ -330,20 +338,22 @@ function runtimeDetails(inventory, serverId) {
   const current = inventory.freshness === "fresh";
   if (!current) section.append(el("p", "runtime-freshness stale",
     `Binary evidence is stale${inventory.last_attempt === "collection_failed" ? " · latest collection failed" : ""}.`));
-  const components = groupedRuntimes(inventory.components).sort((a, b) =>
+  const components = groupedRuntimes((inventory.components || []).filter((c) =>
+    !only || (c.name === only && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))).sort((a, b) =>
     a.name.localeCompare(b.name) || runtimeVersion(a).localeCompare(runtimeVersion(b), undefined, { numeric: true }) ||
     (a.executable || "").localeCompare(b.executable || ""));
   const list = el("div", "runtime-list");
   for (const c of components) {
     const details = el("details", "binary-accordion");
     const key = JSON.stringify([serverId, c.name, c.version, c.executable, c.scope, c.container_id]);
-    details.open = Object.hasOwn(ui.binaryOpen, key) ? ui.binaryOpen[key] :
+    details.open = Object.hasOwn(ui.binaryOpen, key) ? ui.binaryOpen[key] : Boolean(only) ||
       Boolean(ui.picked === serverId && ui.runtime === c.name && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion));
     details.addEventListener("toggle", () => { ui.binaryOpen[key] = details.open; });
-    const summary = el("summary", "binary-summary");
+    const summary = el("summary", "binary-summary share-scope");
     summary.append(el("b", "binary-name", c.name), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
     const state = c.running ? "running" : "inactive";
     summary.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
+    summary.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`));
     const content = el("div", "binary-content");
     if (!c.running) content.append(el("p", "runtime-context", "Installed, but not observed running at this check. Scheduled or short-lived jobs may run between checks."));
     if (c.version && runtimeVersion(c) !== c.version) content.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
@@ -358,9 +368,6 @@ function runtimeDetails(inventory, serverId) {
     }[c.evidence_kind] || "Version could not be verified";
     content.append(el("p", "runtime-evidence", `${evidence}${c.process_count ? ` · ${c.process_count} process${c.process_count === 1 ? "" : "es"}` : ""}`));
     if (c.package_version) content.append(el("p", "runtime-evidence", `Package: ${c.package_name} ${c.package_version}${c.package_arch ? ` · ${c.package_arch}` : ""}`));
-    const link = el("a", "binary-link", "Link to this binary");
-    link.href = binaryUrl(c.name, runtimeVersion(c), serverId).href;
-    content.append(link);
     details.append(summary, content);
     list.append(details);
   }
@@ -369,6 +376,68 @@ function runtimeDetails(inventory, serverId) {
   if (inventory.collection_state === "partial" || inventory.components_omitted) section.append(el("p", "stale", "Partial collection — additional components may be missing."));
   for (const gap of inventory.gaps || []) section.append(el("p", "runtime-evidence", gap));
   return section;
+}
+
+function renderCompare(s, groupKey) {
+  const panel = el("section", "server-details compare-details");
+  const section = runtimeDetails(s.runtimeInventory, s.id, ui.runtime);
+  section.querySelector("h4").textContent = ui.binaryVersion ? `${ui.runtime} ${ui.binaryVersion}` : ui.runtime;
+  const full = el("button", "binary-link compare-full", "All server details");
+  full.type = "button";
+  full.addEventListener("click", () => pick(s.id, groupKey));
+  section.append(full);
+  panel.append(section);
+  return panel;
+}
+
+function toggleCompare(id, trigger) {
+  if (ui.compareClosed.has(id)) ui.compareClosed.delete(id); else ui.compareClosed.add(id);
+  if (ui.view === "location") renderPicture(); else renderGroups();
+  document.querySelectorAll(".row").forEach((button) => {
+    if (button.dataset.id === id && button.getAttribute("aria-controls") === trigger.getAttribute("aria-controls")) button.focus({ preventScroll: true });
+  });
+}
+
+// One line per reported version of the selected binary: how many servers run it and how many only
+// have it installed. Selecting a version narrows the servers; selecting it again clears it.
+function renderVersionSummary(section, fresh) {
+  const versions = new Map();
+  for (const server of fresh) {
+    for (const c of server.runtimeInventory.components || []) {
+      if (c.name !== ui.runtime) continue;
+      const v = c.version ? runtimeVersion(c) : "Version unknown";
+      if (!versions.has(v)) versions.set(v, { running: new Set(), inactive: new Set() });
+      versions.get(v)[c.running ? "running" : "inactive"].add(server.id);
+    }
+  }
+  if (!versions.size) return;
+  const wrap = el("div", "version-summary");
+  wrap.setAttribute("role", "group");
+  wrap.setAttribute("aria-label", `${ui.runtime} versions`);
+  const sorted = [...versions].sort(([a], [b]) => b.localeCompare(a, undefined, { numeric: true }));
+  for (const [version, seen] of sorted) {
+    const servers = new Set([...seen.running, ...seen.inactive]).size;
+    const b = el("button", "version-chip");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(ui.binaryVersion === version));
+    b.append(el("code", null, version), el("span", null,
+      `${servers} server${servers === 1 ? "" : "s"}${seen.running.size ? ` · ${seen.running.size} running` : ""}${seen.inactive.size ? ` · ${seen.inactive.size} inactive` : ""}`));
+    b.addEventListener("click", () => {
+      ui.binaryVersion = ui.binaryVersion === version ? null : version;
+      writeBinaryUrl();
+      render();
+    });
+    wrap.append(b);
+  }
+  const all = el("button", "binary-version-filter", ui.compareClosed.size ? "Expand all" : "Collapse all");
+  all.type = "button";
+  all.addEventListener("click", () => {
+    if (ui.compareClosed.size) ui.compareClosed.clear();
+    else fresh.forEach((server) => ui.compareClosed.add(server.id));
+    render();
+  });
+  wrap.append(all);
+  section.append(wrap);
 }
 
 function renderRuntimes() {
@@ -389,6 +458,7 @@ function renderRuntimes() {
     clear.addEventListener("click", () => { ui.binaryVersion = null; writeBinaryUrl(); render(); });
     section.append(clear);
   }
+  if (ui.runtime) renderVersionSummary(section, fresh);
   const choices = [["", "All binaries"], ...[...counts].sort(([a], [b]) => a.localeCompare(b))
     .map(([name, count]) => [name, `${name} · ${count}`])];
   const select = document.getElementById("binary");
@@ -480,6 +550,8 @@ for (const g of ["view", "filter"]) {
 document.getElementById("binary").addEventListener("change", (e) => {
   ui.runtime = e.target.value || null;
   ui.binaryVersion = null;
+  ui.picked = null;
+  ui.compareClosed.clear();
   writeBinaryUrl();
   renderRuntimes();
   renderPicture();
