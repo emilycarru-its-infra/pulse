@@ -104,3 +104,21 @@ def test_runtime_storage_failure_keeps_health_available():
     server = service.status(NOW)['servers'][0]
     assert server['state'] == 'up'
     assert server['runtimeInventory']['freshness'] == 'unavailable'
+
+
+def test_installed_evidence_requires_explicit_kind_and_zero_processes():
+    installed = {"name": "PHP", "version": "8.3.6", "running": False, "scope": "host",
+                 "executable": "/usr/bin/php8.3", "evidence_kind": "installed_executable_self_report",
+                 "process_count": 0, "pids": [], "package_version": "8.3.6-0vendor1"}
+    entry = row()
+    entry["facts"]["components"].append(installed)
+    body = {"contract": runtime.CONTRACT, "servers": [entry]}
+    assert len(runtime.parse(body, NOW)[0]["facts"]["components"]) == 2
+    stored = runtime.combined({}, entry)
+    assert runtime.view(stored, NOW + timedelta(hours=2))["freshness"] == "stale"
+    assert runtime.view(stored, NOW)["components"][1]["running"] is False
+    for change in ({"running": True}, {"pids": [123]}, {"scope": "container"}, {"process_count": 1}):
+        invalid = deepcopy(body)
+        invalid["servers"][0]["facts"]["components"][1].update(change)
+        with pytest.raises(runtime.ContractError):
+            runtime.parse(invalid, NOW)

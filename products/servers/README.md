@@ -116,3 +116,5 @@ and its reported versions; multiple versions on one server remain visible.
 Installed packages do not prove a process is running. Windows executable file metadata is
 labelled separately from a version command against an active executable image. Missing access,
 embedded runtimes, linked libraries and unassessed containers must remain explicit gaps.
+
+Binary observations include active executable evidence and installed host binaries. Running and Inactive tabs separate them; inactive means installed but not observed running at the check. Rows group matching binary/version/path evidence and list its services together. Package builds, when supplied, remain distinct from executable versions for advisory review. Freshness and collection gaps apply to both states.

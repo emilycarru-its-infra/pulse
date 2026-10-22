@@ -54,7 +54,7 @@ def parse(body, now):
             ):
                 raise ValueError()
             components = facts["components"]
-            if not isinstance(components, list) or len(components) > 32:
+            if not isinstance(components, list) or len(components) > 64:
                 raise ValueError()
             if row["outcome"] == "accepted":
                 if facts["collection_state"] not in {"observed", "partial"} or time(
@@ -66,8 +66,16 @@ def parse(body, now):
             for component in components:
                 if (
                     not isinstance(component, dict)
-                    or component.get("running") is not True
+                    or type(component.get("running")) is not bool
                 ):
+                    raise ValueError()
+                installed_kind = component.get("evidence_kind") in {
+                    "installed_executable_self_report", "installed_executable_unverified", "installed_binary_file_metadata"
+                }
+                if installed_kind != (component["running"] is False):
+                    raise ValueError()
+                if installed_kind and (component.get("scope") != "host" or component.get("pids") != []
+                                       or component.get("process_count") != 0 or not component.get("executable")):
                     raise ValueError()
                 if component.get("scope") not in {"host", "container", "isolated"}:
                     raise ValueError()
