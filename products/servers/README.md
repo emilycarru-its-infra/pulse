@@ -118,3 +118,12 @@ labelled separately from a version command against an active executable image. M
 embedded runtimes, linked libraries and unassessed containers must remain explicit gaps.
 
 Binary observations include active executable evidence and installed host binaries. Running and Inactive tabs separate them; inactive means installed but not observed running at the check. Rows group matching binary/version/path evidence and list its services together. Package builds, when supplied, remain distinct from executable versions for advisory review. Freshness and collection gaps apply to both states.
+
+Server service groups can be projected from authoritative inventory through
+`POST /api/ingest/inventory`, authenticated by the dedicated `Pulse.Inventory` application
+role. The bounded `pulse.server-inventory/1` snapshot contains a retrieval timestamp and
+canonical item IDs, item versions and nullable `service_group` values. It contains no category
+mapping. The receiver matches only configured `cellarum_item_id` identities; outside-catalog
+items are counted separately and missing bindings remain unknown. Older versions cannot undo
+newer classifications, and a newer blank value clears the previous group. Inventory failures
+remain separate from health and runtime evidence.

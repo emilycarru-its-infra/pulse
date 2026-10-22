@@ -7,9 +7,9 @@ status() and summary(); neither knows which source answered.
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from pulse_servers.runtimes import view
+from pulse_servers.runtimes import time, view
 
 STATES = ["up", "degraded", "down", "stopped", "unknown"]
 # How bad a state is when a group takes the worst of its servers. A stopped server is stopped on
@@ -23,9 +23,17 @@ def _iso(dt: datetime) -> str:
 
 
 class ServersService:
-    def __init__(self, catalog: dict, source, title: str = "Servers", runtime_store=None):
+    def __init__(
+        self,
+        catalog: dict,
+        source,
+        title: str = "Servers",
+        runtime_store=None,
+        inventory_store=None,
+    ):
         """source(server, location, now) returns the server's health: state, metrics, checks
         and alerts, as pulse_servers.simulate.health does."""
+        self.inventory_store = inventory_store
         self.runtime_store = runtime_store
         self.catalog = catalog
         self.source = source
@@ -38,16 +46,49 @@ class ServersService:
         try:
             runtime_rows = self.runtime_store.rows() if self.runtime_store else {}
         except Exception:  # noqa: BLE001 - runtime collection failure must not hide server health
-            logging.getLogger(__name__).warning("Runtime projection storage unavailable")
+            logging.getLogger(__name__).warning(
+                "Runtime projection storage unavailable"
+            )
             runtime_rows, runtime_error = {}, True
+        inventory_error = False
+        try:
+            inventory_rows = self.inventory_store.rows() if self.inventory_store else {}
+        except Exception:  # noqa: BLE001 - inventory outage must not hide server health
+            logging.getLogger(__name__).warning(
+                "Inventory projection storage unavailable"
+            )
+            inventory_rows, inventory_error = {}, True
         servers = []
         for server in self.catalog.get("servers", []):
             location = self.locations.get(server.get("location"), {})
             health = self.source(server, location, now)
             runtime = view(runtime_rows.get(server["id"], {}), now)
             if runtime_error:
-                runtime.update(freshness="unavailable", gaps=["Runtime observation storage unavailable"])
-            servers.append({**server, **health, "runtimeInventory": runtime})
+                runtime.update(
+                    freshness="unavailable",
+                    gaps=["Runtime observation storage unavailable"],
+                )
+            row = {**server, **health, "runtimeInventory": runtime}
+            if self.inventory_store is not None:
+                row.pop("service_group", None)
+                source = inventory_rows.get(server["id"])
+                if source and source["item_id"] == server.get("cellarum_item_id"):
+                    if source["service_group"]:
+                        row["service_group"] = source["service_group"]
+                    row["inventorySource"] = {
+                        "source": "Cellarum",
+                        "version": source["version"],
+                        "retrieved_at": source["retrieved_at"],
+                        "freshness": "fresh"
+                        if now - time(source["retrieved_at"]) <= timedelta(hours=1)
+                        else "stale",
+                    }
+                else:
+                    row["inventorySource"] = {
+                        "source": "Cellarum",
+                        "freshness": "unavailable" if inventory_error else "unassessed",
+                    }
+            servers.append(row)
 
         def group(items: list[dict]) -> dict:
             counts = dict.fromkeys(STATES, 0)
@@ -70,7 +111,29 @@ class ServersService:
             members = [s for s in servers if svc["id"] in s.get("services", [])]
             if members:
                 services.append({**svc, **group(members)})
+        service_groups = []
+        for name in sorted(
+            {
+                s.get("service_group", "").strip()
+                for s in servers
+                if s.get("service_group")
+            }
+        ):
+            if name:
+                service_groups.append(
+                    {
+                        "name": name,
+                        **group(
+                            [
+                                s
+                                for s in servers
+                                if (s.get("service_group") or "").strip() == name
+                            ]
+                        ),
+                    }
+                )
         return {
+            "serviceGroups": service_groups,
             "generatedAt": _iso(now),
             "sample": bool(self.catalog.get("sample", False)),
             "locations": locations,
@@ -91,7 +154,9 @@ class ServersService:
             level = (
                 "bad"
                 if counts["down"]
-                else "warn" if counts["degraded"] or counts["unknown"] else "ok"
+                else "warn"
+                if counts["degraded"] or counts["unknown"]
+                else "ok"
             )
             where = len([loc for loc in status["locations"] if loc["servers"]])
             line = (

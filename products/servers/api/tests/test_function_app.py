@@ -146,3 +146,15 @@ def test_runtime_ingest_requires_ingest_role(entra):
 
 def test_runtime_ingest_refuses_wrong_contract(entra):
     assert function_app.ingest_runtimes(post('/api/ingest/runtimes', {}, bearer(auth.RUNTIMES_ROLE))).status_code == 400
+
+
+def test_inventory_publish_requires_its_own_role(monkeypatch):
+    from pulse_servers import auth
+    roles = []
+    def check(req, role):
+        roles.append(role)
+        raise auth.Unauthorized("denied")
+    monkeypatch.setattr(function_app, "_check_token", check)
+    response = function_app.ingest_inventory(post("/api/ingest/inventory", {}))
+    assert response.status_code == 401
+    assert roles == ["Pulse.Inventory"]
