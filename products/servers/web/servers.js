@@ -349,10 +349,11 @@ function runtimeDetails(inventory, serverId, only = null) {
     details.open = Object.hasOwn(ui.binaryOpen, key) ? ui.binaryOpen[key] : Boolean(only) ||
       Boolean(ui.picked === serverId && ui.runtime === c.name && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion));
     details.addEventListener("toggle", () => { ui.binaryOpen[key] = details.open; });
-    const summary = el("summary", "binary-summary");
+    const summary = el("summary", "binary-summary share-scope");
     summary.append(el("b", "binary-name", c.name), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
     const state = c.running ? "running" : "inactive";
     summary.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
+    summary.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`));
     const content = el("div", "binary-content");
     if (!c.running) content.append(el("p", "runtime-context", "Installed, but not observed running at this check. Scheduled or short-lived jobs may run between checks."));
     if (c.version && runtimeVersion(c) !== c.version) content.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
@@ -367,9 +368,6 @@ function runtimeDetails(inventory, serverId, only = null) {
     }[c.evidence_kind] || "Version could not be verified";
     content.append(el("p", "runtime-evidence", `${evidence}${c.process_count ? ` · ${c.process_count} process${c.process_count === 1 ? "" : "es"}` : ""}`));
     if (c.package_version) content.append(el("p", "runtime-evidence", `Package: ${c.package_name} ${c.package_version}${c.package_arch ? ` · ${c.package_arch}` : ""}`));
-    const link = el("a", "binary-link", "Link to this binary");
-    link.href = binaryUrl(c.name, runtimeVersion(c), serverId).href;
-    content.append(link);
     details.append(summary, content);
     list.append(details);
   }

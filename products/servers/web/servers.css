@@ -221,3 +221,5 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .compare-details { padding-top: 4px; }
 .compare-details .runtime-detail h4 { margin-top: 4px; }
 .compare-full { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; margin-left: 0; }
+.binary-summary > .copy-link { margin-left: auto; }
+.binary-summary:has(> .copy-link)::after { margin-left: 0; }
