@@ -53,8 +53,8 @@ function meter(c) {
 
 function runtimeVersion(component) {
   const raw = component.version || "unknown";
-  if (component.evidence_kind === "running_binary_file_metadata") {
-    if (component.name === "PowerShell") return raw.match(/^\d+(?:\.\d+){1,3}/)?.[0] || raw;
+  if (["running_binary_file_metadata", "installed_binary_file_metadata"].includes(component.evidence_kind)) {
+    if (["PowerShell", ".NET host"].includes(component.name)) return raw.match(/^\d+(?:\.\d+){1,3}/)?.[0] || raw;
     if (component.name === "OpenSSH") return raw.match(/OpenSSH_([\w.-]+)/)?.[1] || raw;
   }
   return raw;
