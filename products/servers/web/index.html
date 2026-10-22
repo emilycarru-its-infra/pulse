@@ -22,6 +22,9 @@
         <button type="button" data-v="down" aria-pressed="false">Error</button>
         <button type="button" data-v="unknown" aria-pressed="false">No data</button>
       </div>
+      <label class="runtime-filter"><span class="visually-hidden">Running binary</span>
+        <select id="binary"><option value="">All binaries</option></select>
+      </label>
       <label class="search"><span class="visually-hidden">Find a server</span>
         <input type="search" id="search" placeholder="Find server, service, binary or version" autocomplete="off" spellcheck="false">
       </label>
@@ -30,7 +33,7 @@
       </div>
     </div>
 
-    <section id="runtime-overview" class="runtime-overview" aria-label="Running binary versions"></section>
+    <section id="runtime-overview" class="runtime-overview" aria-label="Runtime observation coverage"></section>
 
     <section class="picture" aria-label="Where the servers run" id="picture"></section>
 
