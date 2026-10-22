@@ -11,13 +11,13 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const ui = { view: "service", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, binaryOpen: {}, compareClosed: new Set() };
+const ui = { view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 
 function remember() {
-  try { localStorage.setItem("servers.view", ui.view); } catch { /* private window */ }
+  try { localStorage.setItem("servers.groupBy", ui.view); } catch { /* private window */ }
 }
-try { ui.view = localStorage.getItem("servers.view") || ui.view; } catch { /* private window */ }
+try { ui.view = localStorage.getItem("servers.groupBy") || ui.view; } catch { /* private window */ }
 function readBinaryUrl() {
   const params = new URL(location.href).searchParams;
   ui.runtime = params.get("binary")?.trim().slice(0, 100) || null;
