@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Website Status</title>
+  <link rel="stylesheet" href="/theme/tokens.css">
+  <link rel="stylesheet" href="/core/base.css">
+  <link rel="stylesheet" href="websites.css">
+</head>
+<body>
+  <main class="doc wide">
+    <p class="sample" id="sample" hidden><b>Mockup with sample data.</b> The websites are real names; every status, fact and alert on this page is simulated.</p>
+
+    <div class="toolbar">
+      <div class="segmented" role="group" aria-label="Show" id="filter">
+        <button type="button" data-v="degraded" aria-pressed="false">Warning</button>
+        <button type="button" data-v="down" aria-pressed="false">Error</button>
+        <button type="button" data-v="unknown" aria-pressed="false">No data</button>
+      </div>
+      <label class="search"><span class="visually-hidden">Find a website</span>
+        <input type="search" id="search" placeholder="Find website, owner, PHP or WordPress version" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="toolbar-end">
+        <p class="total" id="total" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <section class="picture" aria-label="Where the websites are hosted" id="picture"></section>
+
+    <div class="groups" id="groups"></div>
+
+    <div class="page-foot">
+      <ul class="legend" aria-label="Legend">
+        <li><span class="tag up"></span>Up</li>
+        <li><span class="tag degraded"></span>Warning</li>
+        <li><span class="tag down"></span>Error</li>
+        <li><span class="tag unknown"></span>No data</li>
+      </ul>
+      <p class="fine" id="updated"></p>
+    </div>
+  </main>
+  <script src="/core/shell.js"></script>
+  <script src="/core/masonry.js"></script>
+  <script src="websites.js"></script>
+</body>
+</html>

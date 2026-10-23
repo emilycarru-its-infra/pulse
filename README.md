@@ -53,6 +53,13 @@ losing the connection between infrastructure and the people who depend on it.
 The current experience uses a sample health source. Planned collectors read existing
 monitoring systems, cloud metrics and hypervisor APIs, with access set by product audience.
 
+**WebsitesPulse** does the same for the organization's websites: where each one is hosted, whether
+it answers, and the hosting facts that need attention, such as an out-of-date PHP version, a
+plugin with a known vulnerability or a missed backup.
+
+Health arrives as an hourly push from the site's data platform and as alerts from an uptime
+service's webhook; the website list comes from the site's inventory.
+
 ## The product family
 
 | Experience | What it answers | What's here today |
@@ -62,6 +69,7 @@ monitoring systems, cloud metrics and hypervisor APIs, with access set by produc
 | [SoftwarePulse](products/software/README.md) | Where can I use this application? | Curated software grid, location collections, shareable app links and installation snapshots |
 | [PrintersPulse](products/printers/README.md) | Where can I print? | Interface and sample data; collector integration remains |
 | [ServersPulse](products/servers/README.md) | Which services need attention? | Interface and sample health source; collector integration remains |
+| [WebsitesPulse](products/websites/README.md) | Which websites need attention? | Health push and uptime-alert API, sample source and page |
 
 ## Connected by design
 
