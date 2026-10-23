@@ -1,0 +1,6 @@
+# The Functions package: pulse_servers is copied beside function_app.py by pack.sh, so only
+# third-party packages are listed here.
+azure-functions
+azure-data-tables>=12.5
+azure-identity>=1.17
+PyJWT[crypto]>=2.8

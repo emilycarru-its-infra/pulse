@@ -1,0 +1,121 @@
+{
+  "title": "Websites",
+  "groups": [
+    {
+      "id": "managed-wordpress",
+      "name": "Managed WordPress",
+      "detail": "Sites on a managed WordPress host"
+    },
+    {
+      "id": "shared-hosting",
+      "name": "Shared hosting",
+      "detail": "Sites on a shared web host"
+    },
+    {
+      "id": "self-hosted",
+      "name": "Self-hosted",
+      "detail": "Sites on the organization's own servers"
+    }
+  ],
+  "websites": [
+    {
+      "id": "www-example-edu",
+      "name": "Main website",
+      "url": "https://www.example.edu/",
+      "hostname": "www.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Communications",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000000",
+      "site24x7_monitor_id": "100000"
+    },
+    {
+      "id": "library-example-edu",
+      "name": "Library",
+      "url": "https://library.example.edu/",
+      "hostname": "library.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Library",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "id": "blogs-example-edu",
+      "name": "Blogs network",
+      "url": "https://blogs.example.edu/",
+      "hostname": "blogs.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Teaching and learning",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000002"
+    },
+    {
+      "id": "graduation-example-org",
+      "name": "Graduation show",
+      "url": "https://graduation.example.org/",
+      "hostname": "graduation.example.org",
+      "group": "managed-wordpress",
+      "owner": "Communications",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000003",
+      "site24x7_monitor_id": "100003"
+    },
+    {
+      "id": "research-example-edu",
+      "name": "Research",
+      "url": "https://research.example.edu/",
+      "hostname": "research.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Research office",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000004"
+    },
+    {
+      "id": "writing-example-edu",
+      "name": "Writing centre",
+      "url": "https://writing.example.edu/",
+      "hostname": "writing.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Learning services",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000005"
+    },
+    {
+      "id": "design-example-edu",
+      "name": "Design faculty",
+      "url": "https://design.example.edu/",
+      "hostname": "design.example.edu",
+      "group": "managed-wordpress",
+      "owner": "Faculty of design",
+      "kinsta_site_id": "00000000-0000-4000-8000-000000000006",
+      "site24x7_monitor_id": "100006"
+    },
+    {
+      "id": "archive2019-example-edu",
+      "name": "Festival 2019 archive",
+      "url": "https://archive2019.example.edu/",
+      "hostname": "archive2019.example.edu",
+      "group": "shared-hosting",
+      "owner": "Events"
+    },
+    {
+      "id": "alumni-example-org",
+      "name": "Alumni association",
+      "url": "https://alumni.example.org/",
+      "hostname": "alumni.example.org",
+      "group": "shared-hosting",
+      "owner": "Alumni relations"
+    },
+    {
+      "id": "labels-example-edu",
+      "name": "Label printing",
+      "url": "https://labels.example.edu/",
+      "hostname": "labels.example.edu",
+      "group": "self-hosted",
+      "owner": "IT",
+      "site24x7_monitor_id": "100009"
+    },
+    {
+      "id": "handbook-example-edu",
+      "name": "Staff handbook",
+      "url": "https://handbook.example.edu/",
+      "hostname": "handbook.example.edu",
+      "group": "self-hosted",
+      "owner": "IT"
+    }
+  ]
+}

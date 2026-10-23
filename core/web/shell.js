@@ -42,6 +42,8 @@ Pulse.shell = async function ({ current, context, title, hideCurrent = false, hi
     computers: "M3 4h18v12H3z M8 21h8 M12 16v5",
     software: "M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z",
     printers: "M7 8V3h10v5 M7 17H3V9h18v8h-4 M7 14h10v7H7z",
+    servers: "M4 4h16v6H4z M4 14h16v6H4z M8 7h.01 M8 17h.01",
+    websites: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18",
   };
   const productLabel = (node, product) => {
     const label = document.createElement("span"); label.className = "nav-label";

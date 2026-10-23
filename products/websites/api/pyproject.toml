@@ -1,0 +1,18 @@
+[project]
+name = "pulse-websites"
+version = "0.1.0"
+description = "WebsitesPulse API, sample source and local dev server"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+azure = ["azure-functions", "azure-data-tables>=12.5", "azure-identity>=1.17", "PyJWT[crypto]>=2.8"]
+test = ["pytest", "azure-functions", "PyJWT[crypto]>=2.8"]
+
+[tool.setuptools.packages.find]
+include = ["pulse_websites*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
