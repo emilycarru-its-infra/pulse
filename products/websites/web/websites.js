@@ -1,5 +1,4 @@
-// WebsitesPulse: one card per place the websites are hosted, then every website in its group,
-// with inline details (checks, hosting facts, alerts) for the selected one.
+// WebsitesPulse: an alphabetical website grid with hosting filters and inline details.
 
 const WORD = {
   up: "Up",
@@ -9,8 +8,6 @@ const WORD = {
 };
 const CHECK_WORD = { ok: "OK", warn: "Warning", down: "Error" };
 const CHECK_TAG = { ok: "up", warn: "degraded", down: "down" };
-const LEVEL = { ok: "Normal", warn: "Warning", bad: "Error", idle: "No data" };
-const RANK = { down: 0, degraded: 1, unknown: 2, up: 3 };
 const FACTS = [
   ["host", "Hosted on"],
   ["account", "Account"],
@@ -51,26 +48,6 @@ function fact(key, value) {
   return String(value);
 }
 
-function meter(c) {
-  const m = el("div", "meter");
-  const total = Object.values(c).reduce((a, b) => a + b, 0) || 1;
-  m.setAttribute("role", "img");
-  m.setAttribute(
-    "aria-label",
-    Object.entries(c)
-      .filter(([, v]) => v)
-      .map(([k, v]) => `${v} ${WORD[k].toLowerCase()}`)
-      .join(", "),
-  );
-  for (const k of ["up", "degraded", "down", "unknown"]) {
-    if (!c[k]) continue;
-    const s = el("span", k);
-    s.style.width = `${(100 * c[k]) / total}%`;
-    m.append(s);
-  }
-  return m;
-}
-
 function matches(w) {
   if (ui.place && w.group !== ui.place) return false;
   if (ui.filter !== "all" && w.state !== ui.filter) return false;
@@ -81,41 +58,31 @@ function matches(w) {
   return ui.query.split(/\s+/).every((q) => hay.includes(q));
 }
 
+function hostingName(w) {
+  return data.groups.find((g) => g.id === w.group)?.name || w.facts?.host || "Host not recorded";
+}
+
+function visibleWebsites() {
+  return data.websites.filter(matches).sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) ||
+    a.id.localeCompare(b.id),
+  );
+}
+
 function renderPicture() {
   const wrap = document.getElementById("picture");
-  wrap.replaceChildren(
-    ...data.groups
-      .filter((g) => g.websites)
-      .map((g) => {
-        const b = el("button", "place");
-        b.type = "button";
-        b.setAttribute("aria-pressed", String(ui.place === g.id));
-        b.title =
-          ui.place === g.id ? "Show every website" : `Show only ${g.name}`;
-        const head = el("div", "head");
-        const text = el("div");
-        text.append(el("h3", null, g.name), el("p", "detail", g.detail || ""));
-        head.append(text, el("span", `chip ${g.level}`, LEVEL[g.level]));
-        const big = el("p", "big", String(g.counts.up));
-        big.append(el("small", null, `of ${g.websites} up`));
-        const counts = el("p", "counts");
-        counts.textContent =
-          [
-            ["degraded", "warning"],
-            ["down", "error"],
-            ["unknown", "no data"],
-          ]
-            .filter(([k]) => g.counts[k])
-            .map(([k, w]) => `${g.counts[k]} ${w}`)
-            .join(" · ") || "All answering";
-        b.append(head, big, meter(g.counts), counts);
-        b.addEventListener("click", () => {
-          ui.place = ui.place === g.id ? null : g.id;
-          render();
-        });
-        return b;
-      }),
-  );
+  wrap.replaceChildren(...data.groups.filter((g) => g.websites).map((g) => {
+    const b = el("button", "place", g.name);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(ui.place === g.id));
+    b.title = `${g.counts.up} of ${g.websites} up`;
+    b.append(el("span", "place-count", String(g.websites)));
+    b.addEventListener("click", () => {
+      ui.place = ui.place === g.id ? null : g.id;
+      render();
+    });
+    return b;
+  }));
 }
 
 function renderDetails(w) {
@@ -127,6 +94,7 @@ function renderDetails(w) {
   };
   add("Address", w.url || w.hostname);
   add("Owner", w.owner);
+  add("Hosting", hostingName(w));
   for (const [key, label] of FACTS) add(label, fact(key, (w.facts || {})[key]));
   add(
     "Last heard",
@@ -184,7 +152,7 @@ function renderDetails(w) {
 }
 
 function row(w) {
-  const li = el("li");
+  const li = el("li", "website-card");
   const b = el("button", "row");
   b.type = "button";
   const open = ui.picked === w.id;
@@ -195,7 +163,7 @@ function row(w) {
   const who = el("span", "who");
   who.append(
     el("span", "name", w.name),
-    el("span", "host", w.hostname || w.url || ""),
+    el("span", "host", hostingName(w)),
   );
   const side = el("span", "side");
   const f = w.facts || {};
@@ -207,7 +175,7 @@ function row(w) {
     .join(" · ");
   if (versions) side.append(el("span", "versions", versions));
   side.append(el("span", "when", ago(w.lastCheck)));
-  b.append(who, side, el("span", "disclosure", open ? "−" : "+"));
+  b.append(who, el("span", "disclosure", open ? "−" : "+"), side);
   for (const a of (w.alerts || []).slice(0, 2))
     b.append(el("span", `alert ${a.severity}`, a.text));
   b.addEventListener("click", () => pick(open ? null : w.id));
@@ -218,53 +186,10 @@ function row(w) {
 
 function renderGroups() {
   const wrap = document.getElementById("groups");
-  const cards = [];
-  for (const g of data.groups) {
-    const members = data.websites
-      .filter((w) => w.group === g.id && matches(w))
-      .sort(
-        (a, b) => RANK[a.state] - RANK[b.state] || a.name.localeCompare(b.name),
-      );
-    if (!members.length) continue;
-    const card = el("section", "card group");
-    const head = el("div", "head");
-    const text = el("div");
-    text.append(
-      el("h3", null, g.name),
-      el(
-        "p",
-        "kicker",
-        `${members.length} website${members.length > 1 ? "s" : ""}`,
-      ),
-    );
-    head.append(text, el("span", `chip ${g.level}`, LEVEL[g.level]));
-    const ul = el("ul", "rows");
-    ul.append(...members.map(row));
-    card.append(head, ul);
-    cards.push(card);
-  }
-  const loose = data.websites.filter(
-    (w) => !data.groups.some((g) => g.id === w.group) && matches(w),
-  );
-  if (loose.length) {
-    const card = el("section", "card group");
-    card.append(el("h3", null, "Other"));
-    const ul = el("ul", "rows");
-    ul.append(...loose.map(row));
-    card.append(ul);
-    cards.push(card);
-  }
-  if (!cards.length)
-    cards.push(
-      el(
-        "p",
-        "card empty-state",
-        ui.filter === "all"
-          ? "No website matches."
-          : `No websites with ${WORD[ui.filter].toLowerCase()}.`,
-      ),
-    );
-  wrap.replaceChildren(...cards);
+  const members = visibleWebsites();
+  if (members.length) wrap.replaceChildren(...members.map(row));
+  else wrap.replaceChildren(el("li", "empty-state", "No websites match these filters."));
+  renderTotal(members);
 }
 
 function pick(id) {
@@ -279,20 +204,15 @@ function pick(id) {
   renderGroups();
 }
 
-function renderTotal() {
-  const up = data.websites.filter((w) => w.state === "up").length;
-  const alerts = data.websites.reduce((n, w) => n + (w.alerts || []).length, 0);
+function renderTotal(members = visibleWebsites()) {
   const total = document.getElementById("total");
-  total.replaceChildren(
-    el("b", null, String(up)),
-    document.createTextNode(` of ${data.websites.length} up`),
-  );
-  if (alerts)
-    total.append(
-      document.createTextNode(" · "),
-      el("b", null, String(alerts)),
-      document.createTextNode(` alert${alerts > 1 ? "s" : ""}`),
-    );
+  const count = members.length === data.websites.length
+    ? `${data.websites.length} websites`
+    : `${members.length} of ${data.websites.length} websites`;
+  const up = members.filter((w) => w.state === "up").length;
+  const unknown = members.filter((w) => w.state === "unknown").length;
+  total.replaceChildren(el("b", null, count), document.createTextNode(` · ${up} up`));
+  if (unknown) total.append(document.createTextNode(` · ${unknown} no data`));
 }
 
 function render() {
@@ -300,7 +220,6 @@ function render() {
   for (const b of document.querySelectorAll("#filter button"))
     b.setAttribute("aria-pressed", String(b.dataset.v === ui.filter));
   document.getElementById("sample").hidden = !data.sample;
-  renderTotal();
   renderPicture();
   renderGroups();
 }
@@ -333,7 +252,7 @@ document.addEventListener("keydown", (e) => {
 (async () => {
   await Pulse.shell({
     current: "websites",
-    title: "Website Status",
+    title: "Websites Status",
     context: "Websites, where they are hosted and how they answer",
     hideOverview: true,
   });
@@ -346,5 +265,3 @@ document.addEventListener("keydown", (e) => {
       `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
   }, 30000);
 })();
-
-Pulse.masonry(document.getElementById("groups"));

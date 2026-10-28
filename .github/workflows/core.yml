@@ -52,6 +52,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -e 'products/websites/api[test]'
       - run: pytest -q products/websites/api
+      - run: node --check products/websites/web/websites.js
+      - run: node --test products/websites/api/tests/web/*.test.cjs
 
   printers-api:
     runs-on: ubuntu-latest
