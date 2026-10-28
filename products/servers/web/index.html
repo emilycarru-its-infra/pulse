@@ -22,12 +22,19 @@
         <button type="button" data-v="down" aria-pressed="false">Error</button>
         <button type="button" data-v="unknown" aria-pressed="false">No data</button>
       </div>
+      <label class="runtime-filter"><span class="visually-hidden">Platform</span>
+        <select id="platform"><option value="">All platforms</option></select>
+      </label>
+      <label class="runtime-filter os-filter"><span class="visually-hidden">OS version</span>
+        <select id="os"><option value="">All OS versions</option></select>
+      </label>
       <label class="runtime-filter"><span class="visually-hidden">Binary</span>
         <select id="binary"><option value="">All binaries</option></select>
       </label>
       <label class="search"><span class="visually-hidden">Find a server</span>
         <input type="search" id="search" placeholder="Find server, service, binary or version" autocomplete="off" spellcheck="false">
       </label>
+      <span id="filter-link" class="filter-link"></span>
       <div class="toolbar-end">
         <p class="total" id="total" aria-live="polite"></p>
       </div>
