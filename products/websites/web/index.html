@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Website Status</title>
+  <title>Websites Status</title>
   <link rel="stylesheet" href="/theme/tokens.css">
   <link rel="stylesheet" href="/core/base.css">
   <link rel="stylesheet" href="websites.css">
@@ -26,9 +26,9 @@
       </div>
     </div>
 
-    <section class="picture" aria-label="Where the websites are hosted" id="picture"></section>
+    <section class="picture" aria-label="Filter by hosting provider" id="picture"></section>
 
-    <div class="groups" id="groups"></div>
+    <ul class="website-grid" id="groups" aria-label="Websites in alphabetical order"></ul>
 
     <div class="page-foot">
       <ul class="legend" aria-label="Legend">
@@ -41,7 +41,6 @@
     </div>
   </main>
   <script src="/core/shell.js"></script>
-  <script src="/core/masonry.js"></script>
   <script src="websites.js"></script>
 </body>
 </html>
