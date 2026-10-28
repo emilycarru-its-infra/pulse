@@ -40,6 +40,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -e 'products/servers/api[test]'
       - run: pytest -q products/servers/api
+      - run: node --check products/servers/web/servers.js
+      - run: node --test products/servers/api/tests/web/*.test.cjs
 
   websites-api:
     runs-on: ubuntu-latest

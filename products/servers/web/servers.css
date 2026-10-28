@@ -10,7 +10,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   background: var(--surface-1); padding: 10px 14px; margin-bottom: 14px; font-size: 14px;
 }
 
-.toolbar { --control-height: 40px; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.toolbar { --control-height: 40px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
 .toolbar button { height: calc(var(--control-height) - 2px); line-height: 1; font-size: 13px; white-space: nowrap; }
 .toolbar .segmented { flex: 0 0 auto; }
 .toolbar .segmented button { width: 108px; flex: 0 0 108px; }
@@ -223,3 +223,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .compare-full { background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; margin-left: 0; }
 .binary-summary > .copy-link { margin-left: auto; }
 .binary-summary:has(> .copy-link)::after { margin-left: 0; }
+
+.toolbar .os-filter { flex-basis: 240px; }
+.filter-link { display: inline-flex; align-items: center; }
+.filter-link .copy-link { opacity: 1; pointer-events: auto; }

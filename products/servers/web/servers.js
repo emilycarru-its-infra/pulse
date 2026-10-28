@@ -11,21 +11,28 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const ui = { view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, binaryOpen: {}, compareClosed: new Set() };
+const ui = { view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 
 function remember() {
   try { localStorage.setItem("servers.groupBy", ui.view); } catch { /* private window */ }
 }
 try { ui.view = localStorage.getItem("servers.groupBy") || ui.view; } catch { /* private window */ }
-function readBinaryUrl() {
+function readBinaryUrl(initial = false) {
   const params = new URL(location.href).searchParams;
+  ui.platform = params.get("platform")?.trim().slice(0, 100) || null;
+  ui.os = params.get("os")?.trim().slice(0, 200) || null;
+  ui.view = ["location", "service"].includes(params.get("view")) ? params.get("view") : initial ? ui.view : "location";
+  ui.filter = ["degraded", "down", "unknown"].includes(params.get("status")) ? params.get("status") : "all";
+  ui.place = params.get("location") || null;
+  ui.query = params.get("q")?.trim().toLowerCase().slice(0, 500) || "";
+  ui.compareClosed.clear();
   ui.runtime = params.get("binary")?.trim().slice(0, 100) || null;
   ui.binaryVersion = ui.runtime ? params.get("version")?.trim().slice(0, 200) || null : null;
   ui.picked = params.get("server") || new URLSearchParams(location.hash.slice(1)).get("server");
   ui.pickedGroup = null;
 }
-readBinaryUrl();
+readBinaryUrl(true);
 
 // Compare mode: a binary link with no single server opens every matching server inline, showing only
 // that binary, so versions can be read side by side. Each server can still be collapsed on its own.
@@ -35,7 +42,9 @@ function comparing() {
 
 function binaryUrl(binary = ui.runtime, version = ui.binaryVersion, server = ui.picked) {
   const url = new URL(location.href);
-  for (const [key, value] of [["binary", binary], ["version", binary ? version : null], ["server", server]]) {
+  for (const [key, value] of [["binary", binary], ["version", binary ? version : null], ["server", server],
+    ["platform", ui.platform], ["os", ui.os], ["view", ui.view === "location" ? null : ui.view],
+    ["status", ui.filter === "all" ? null : ui.filter], ["location", ui.place], ["q", ui.query]]) {
     if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
   }
   const legacy = new URLSearchParams(url.hash.slice(1));
@@ -43,9 +52,9 @@ function binaryUrl(binary = ui.runtime, version = ui.binaryVersion, server = ui.
   return url;
 }
 
-function writeBinaryUrl() {
+function writeBinaryUrl(replace = false) {
   const url = binaryUrl();
-  if (url.href !== location.href) history.pushState(null, "", url);
+  if (url.href !== location.href) history[replace ? "replaceState" : "pushState"](null, "", url);
 }
 window.addEventListener("popstate", () => {
   readBinaryUrl();
@@ -111,7 +120,55 @@ function groupedRuntimes(components) {
   return [...groups.values()].map(({ services, records, ...c }) => ({ ...c, service: [...services].sort().join(", ") }));
 }
 
+// OS labels come from inventory; keep their versions intact rather than guessing a release number.
+function serverOS(server) {
+  return server.os?.trim() || "unknown";
+}
+
+function serverPlatform(server) {
+  const os = serverOS(server);
+  if (/^windows?\b/i.test(os)) return "Windows";
+  if (/\b(linux|ubuntu|debian|rocky|rhel|red hat|centos|fedora|suse|alpine)\b/i.test(os)) return "Linux";
+  if (/\b(mac\s?os|os x|darwin)\b/i.test(os)) return "macOS";
+  if (/\b(freebsd|openbsd|netbsd)\b/i.test(os)) return "BSD";
+  return os === "unknown" ? "Unknown" : "Other";
+}
+
+function renderOSFilters() {
+  const platforms = new Map();
+  const versions = new Map();
+  for (const server of data.servers) {
+    const platform = serverPlatform(server);
+    platforms.set(platform, (platforms.get(platform) || 0) + 1);
+    if (!ui.platform || platform === ui.platform) {
+      const os = serverOS(server);
+      versions.set(os, (versions.get(os) || 0) + 1);
+    }
+  }
+  for (const [id, values, selected, all] of [
+    ["platform", platforms, ui.platform, "All platforms"],
+    ["os", versions, ui.os, "All OS versions"],
+  ]) {
+    if (selected && !values.has(selected)) values.set(selected, 0);
+    const select = document.getElementById(id);
+    const choices = [["", all], ...[...values].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([value, count]) => [value, `${value === "unknown" ? "OS not recorded" : value} · ${count}`])];
+    const signature = JSON.stringify(choices);
+    if (select.dataset.choices !== signature) {
+      select.replaceChildren(...choices.map(([value, label]) => {
+        const option = el("option", null, label);
+        option.value = value;
+        return option;
+      }));
+      select.dataset.choices = signature;
+    }
+    select.value = selected || "";
+  }
+}
+
 function matches(s) {
+  if (ui.platform && serverPlatform(s) !== ui.platform) return false;
+  if (ui.os && serverOS(s) !== ui.os) return false;
   if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => c.name === ui.runtime && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))) return false;
   if (ui.place && s.location !== ui.place) return false;
   if (ui.filter !== "all" && s.state !== ui.filter) return false;
@@ -150,7 +207,7 @@ function renderPicture() {
     src.append("Monitored by ");
     (l.sources || []).forEach((s, i) => { if (i) src.append(" + "); src.append(el("b", null, s)); });
     if (!byLocation) {
-      b.addEventListener("click", () => { ui.place = ui.place === l.id ? null : l.id; render(); });
+      b.addEventListener("click", () => { ui.place = ui.place === l.id ? null : l.id; writeBinaryUrl(); render(); });
       return b;
     }
     const card = el("section", "location-card");
@@ -532,7 +589,9 @@ function render() {
     for (const b of document.querySelectorAll(`#${g} button`)) b.setAttribute("aria-pressed", String(b.dataset.v === ui[g]));
   }
   document.getElementById("sample").hidden = !data.sample;
+  document.getElementById("search").value = ui.query;
   renderTotal();
+  renderOSFilters();
   renderRuntimes();
   renderPicture();
   renderGroups();
@@ -544,6 +603,7 @@ for (const g of ["view", "filter"]) {
     if (!b) return;
     ui[g] = g === "filter" && ui.filter === b.dataset.v ? "all" : b.dataset.v;
     if (g === "view") { ui.place = null; remember(); }
+    writeBinaryUrl();
     render();
   });
 }
@@ -557,7 +617,23 @@ document.getElementById("binary").addEventListener("change", (e) => {
   renderPicture();
   renderGroups();
 });
-document.getElementById("search").addEventListener("input", (e) => { ui.query = e.target.value.trim().toLowerCase(); if (ui.view === "location") renderPicture(); else renderGroups(); });
+for (const id of ["platform", "os"]) {
+  document.getElementById(id).addEventListener("change", (e) => {
+    ui[id] = e.target.value || null;
+    if (id === "platform") ui.os = null;
+    ui.picked = null;
+    ui.pickedGroup = null;
+    ui.compareClosed.clear();
+    writeBinaryUrl();
+    render();
+  });
+}
+document.getElementById("filter-link").append(Pulse.copyLink(() => binaryUrl().href, "filtered servers"));
+document.getElementById("search").addEventListener("input", (e) => {
+  ui.query = e.target.value.trim().toLowerCase();
+  writeBinaryUrl(true);
+  if (ui.view === "location") renderPicture(); else renderGroups();
+});
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.picked) pick(null);
   if (e.key === "/" && !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) { e.preventDefault(); document.getElementById("search").focus(); }
