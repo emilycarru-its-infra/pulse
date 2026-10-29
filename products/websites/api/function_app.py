@@ -157,3 +157,10 @@ app.route(route="status", methods=["GET"])(status)
 app.route(route="summary", methods=["GET"])(summary)
 app.route(route="ingest/health", methods=["POST"])(ingest_health)
 app.route(route="alerts/site24x7", methods=["POST"])(alerts_site24x7)
+
+
+@app.timer_trigger(schedule="0 */5 * * * *", arg_name="timer", run_on_startup=False, use_monitor=True)
+def check_websites(timer: func.TimerRequest):
+    if os.environ.get("PULSE_URL_CHECKS_ENABLED", "false").lower() == "true":
+        from pulse_websites import probes
+        probes.run(catalog(), store())

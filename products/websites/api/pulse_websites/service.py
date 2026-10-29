@@ -11,7 +11,17 @@ STATES = ["up", "degraded", "down", "unknown"]
 SEVERITY = {"up": 0, "unknown": 1, "degraded": 2, "down": 3}
 LEVEL = {0: "ok", 1: "idle", 2: "warn", 3: "bad"}
 #: Catalog fields the page may show. Anything else in a catalog entry stays server-side.
-PUBLIC = ("id", "name", "url", "hostname", "group", "owner", "note", "environment", "network")
+PUBLIC = (
+    "id",
+    "name",
+    "url",
+    "hostname",
+    "group",
+    "owner",
+    "note",
+    "environment",
+    "network",
+)
 
 
 def _iso(dt: datetime) -> str:
@@ -34,6 +44,24 @@ class WebsitesService:
             group = self.groups.get(w.get("group"), {})
             health = self.source(w, group, now)
             websites.append({**{k: w[k] for k in PUBLIC if k in w}, **health})
+
+        by_id = {w["id"]: w for w in websites}
+        shared_fields = (
+            "host",
+            "php_version",
+            "wordpress_version",
+            "plugins_vulnerable",
+            "last_backup_at",
+        )
+        for entry, configured in zip(websites, self.catalog.get("websites", [])):
+            parent = by_id.get(configured.get("hosting_parent"))
+            if parent and parent["id"] != entry["id"]:
+                entry["hosting"] = {
+                    "website_id": parent["id"],
+                    "name": parent.get("network") or parent["name"],
+                    "lastCheck": parent.get("factsAt"),
+                    "facts": {k: parent.get("facts", {}).get(k) for k in shared_fields},
+                }
 
         def summarize(items: list[dict]) -> dict:
             counts = dict.fromkeys(STATES, 0)
@@ -71,7 +99,9 @@ class WebsitesService:
             level = (
                 "bad"
                 if counts["down"]
-                else "warn" if counts["degraded"] or counts["unknown"] else "ok"
+                else "warn"
+                if counts["degraded"] or counts["unknown"]
+                else "ok"
             )
             line = f"{counts['up']} of {total} websites healthy" + (
                 f", {alerts} alert{'s' if alerts != 1 else ''}" if alerts else ""
