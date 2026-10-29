@@ -20,6 +20,7 @@ const FACTS = [
 const ui = {
   filter: "all",
   place: null,
+  network: null,
   query: "",
   picked: new URLSearchParams(location.hash.slice(1)).get("site"),
 };
@@ -50,6 +51,7 @@ function fact(key, value) {
 
 function matches(w) {
   if (ui.place && w.group !== ui.place) return false;
+  if (ui.network && w.network !== ui.network) return false;
   if (ui.filter !== "all" && w.state !== ui.filter) return false;
   if (!ui.query) return true;
   const f = w.facts || {};
@@ -83,6 +85,21 @@ function renderPicture() {
     });
     return b;
   }));
+  const networks = [...new Set(data.websites.map((w) => w.network).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  for (const network of networks) {
+    const sites = data.websites.filter((w) => w.network === network);
+    const b = el("button", "place", network);
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(ui.network === network));
+    b.title = `${sites.filter((w) => w.state === "up").length} of ${sites.length} up`;
+    b.append(el("span", "place-count", String(sites.length)));
+    b.addEventListener("click", () => {
+      ui.network = ui.network === network ? null : network;
+      render();
+    });
+    wrap.append(b);
+  }
 }
 
 function renderDetails(w) {
