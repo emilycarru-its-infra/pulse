@@ -15,6 +15,17 @@ const FACTS = [
   ["wordpress_version", "WordPress"],
   ["plugins_vulnerable", "Vulnerable plugins and themes"],
   ["last_backup_at", "Last backup"],
+  ["visits_24h", "Visits (24 hours)"],
+  ["bandwidth_bytes_24h", "Server bandwidth (bytes, 24 hours)"],
+  ["cdn_bandwidth_bytes_24h", "CDN bandwidth (bytes, 24 hours)"],
+  ["disk_bytes", "Disk usage (bytes)"],
+  ["http_4xx_24h", "4xx responses (24 hours)"],
+  ["http_5xx_24h", "5xx responses (24 hours)"],
+  ["analytics_from", "Analytics from"],
+  ["analytics_to", "Analytics to"],
+  ["analytics_at", "Analytics collected"],
+  ["http_status", "HTTP status"],
+  ["response_ms", "Response time (ms)"],
 ];
 
 const ui = {
@@ -54,7 +65,7 @@ function matches(w) {
   if (ui.network && w.network !== ui.network) return false;
   if (ui.filter !== "all" && w.state !== ui.filter) return false;
   if (!ui.query) return true;
-  const f = w.facts || {};
+  const f = { ...(w.hosting?.facts || {}), ...(w.facts || {}) };
   const hay =
     `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""}`.toLowerCase();
   return ui.query.split(/\s+/).every((q) => hay.includes(q));
@@ -121,6 +132,21 @@ function renderDetails(w) {
       : "Nothing yet",
   );
   box.append(dl);
+  if (w.hosting) {
+    box.append(el("h4", null, `Shared ${w.hosting.name} hosting`));
+    const shared = el("dl");
+    for (const [key, label] of FACTS) {
+      const value = fact(key, w.hosting.facts?.[key]);
+      if (value != null) shared.append(el("dt", null, label), el("dd", null, value));
+    }
+    box.append(shared);
+    const parent = el("a", null, "View shared installation analytics");
+    parent.href = `#site=${encodeURIComponent(w.hosting.website_id)}`;
+    box.append(parent);
+    if (w.hosting.lastCheck) box.append(el("p", null, `Hosting reported ${ago(w.hosting.lastCheck)}`));
+  }
+  if (w.network && !w.hosting && w.facts?.analytics_at)
+    box.append(el("p", null, `Analytics cover the whole ${w.network} network.`));
   if ((w.alerts || []).length) {
     box.append(el("h4", null, "Alerts"));
     const ul = el("ul");
@@ -148,7 +174,7 @@ function renderDetails(w) {
         el(
           "span",
           null,
-          `${c.source} · ${CHECK_WORD[c.state]}${c.at ? ` · ${ago(c.at)}` : ""}`,
+          `${c.source} · ${CHECK_WORD[c.state]}${c.reason === "restricted" ? " · Access restricted" : c.reason === "rate-limited" ? " · Rate limited" : ""}${c.at ? ` · ${ago(c.at)}` : ""}`,
         ),
       );
       ul.append(li);
@@ -185,7 +211,7 @@ function row(w) {
   );
   if (w.network) who.append(el("span", "host network", w.network));
   const side = el("span", "side");
-  const f = w.facts || {};
+  const f = { ...(w.hosting?.facts || {}), ...(w.facts || {}) };
   const versions = [
     f.php_version && `PHP ${f.php_version}`,
     f.wordpress_version && `WP ${f.wordpress_version}`,
@@ -193,6 +219,10 @@ function row(w) {
     .filter(Boolean)
     .join(" · ");
   if (versions) side.append(el("span", "versions", versions));
+  if (w.facts?.http_status) side.append(el("span", null, `HTTP ${w.facts.http_status}`));
+  if (w.hosting && versions) side.append(el("span", null, `Shared ${w.hosting.name} hosting`));
+  if (w.facts?.visits_24h != null)
+    side.append(el("span", null, `${w.facts.visits_24h.toLocaleString()} visits · 24 h`));
   side.append(el("span", "when", w.lastCheck ? ago(w.lastCheck) :
     w.network ? "No individual check received" : "No checks received"));
   b.append(who, el("span", "disclosure", open ? "−" : "+"), side);

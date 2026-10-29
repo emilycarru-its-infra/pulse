@@ -81,3 +81,12 @@ test('overview includes counted network filters and intersects them with hosting
   run('ui.network=null; ui.filter="all"; renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'a');
 });
+test('shared versions are labelled and link to parent analytics', () => {
+  const {run,nodes} = page('#site=path');
+  run('data.websites[2].hosting={name:"Network",website_id:"a",facts:{php_version:"8.3",wordpress_version:"7.0"}}; renderGroups()');
+  const card = nodes.groups.children.find(c => c.textContent.includes('a.example.test/Art'));
+  assert.match(card.textContent, /PHP 8.3/);
+  assert.match(card.textContent, /Shared Network hosting/);
+  assert.match(card.textContent, /View shared installation analytics/);
+  assert.doesNotMatch(card.textContent, /100 visits/);
+});

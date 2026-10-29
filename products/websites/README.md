@@ -88,3 +88,16 @@ Deployed, the page is a Static Web App behind single sign-on, linked to the Func
 `pulse-product` Terraform module creates. The ingest and alert paths are reached directly, so the
 site's root lists them in the module's `browser_paths` and `unauthenticated_paths`; the code
 authenticates those callers itself.
+
+
+URL availability checks are opt-in through `PULSE_URL_CHECKS_ENABLED=true`. The Function timer
+checks the trusted catalog URLs every five minutes with at most eight concurrent requests and
+a ten-second timeout. It sends no credentials, follows no redirects, and stores only response
+status, duration and check time. Redirects indicate reachability; restricted and rate-limited
+responses are warnings. A check becomes unknown after fifteen minutes without a result.
+
+A catalog subsite can name `hosting_parent`, the catalog ID of its shared installation.
+The API exposes shared versions, backup and vulnerability context under `hosting`, without
+copying parent health or analytics totals. Installation analytics remain on the parent entry;
+optional aggregate facts include visits and server/CDN bytes over a stated 24-hour window,
+response-code totals, disk usage and collection time.

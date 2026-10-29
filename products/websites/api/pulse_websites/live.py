@@ -35,6 +35,8 @@ FACTS = (
     "wordpress_version",
     "plugins_vulnerable",
     "last_backup_at",
+    "visits_24h", "bandwidth_bytes_24h", "cdn_bandwidth_bytes_24h", "disk_bytes",
+    "http_4xx_24h", "http_5xx_24h", "analytics_at", "analytics_from", "analytics_to",
 )
 SKEW = timedelta(minutes=2)
 HOST = re.compile(
@@ -108,6 +110,8 @@ class Matcher:
         self.monitor: dict[str, str] = {}
         for w in catalog.get("websites", []):
             wid = w["id"]
+            if w.get("hosting_parent"):
+                continue
             for name in (w.get("hostname"), w.get("url"), *(w.get("aliases") or [])):
                 host = hostname(name)
                 if host:
@@ -249,6 +253,7 @@ def parse_site24x7(body: Any, now: datetime) -> Alert | None:
 class Store(Protocol):
     def put_push(self, website_id: str, push: dict) -> None: ...
     def put_alert(self, website_id: str, alert: Alert) -> None: ...
+    def put_probe(self, website_id: str, probe: dict) -> None: ...
     def rows(self) -> dict[str, dict]: ...
 
 
@@ -266,6 +271,10 @@ class MemoryStore:
             self._rows.setdefault(website_id, {"alerts": {}})["alerts"][
                 alert.source
             ] = alert.__dict__
+
+    def put_probe(self, website_id: str, probe: dict) -> None:
+        with self._lock:
+            self._rows.setdefault(website_id, {"alerts": {}})["probe"] = probe
 
     def rows(self) -> dict[str, dict]:
         with self._lock:
@@ -342,6 +351,10 @@ class TableStore:
                 }
             )
 
+    def put_probe(self, website_id: str, probe: dict) -> None:
+        self.health.upsert_entity({"PartitionKey": self.PARTITION, "RowKey": website_id,
+                                   "probe": json.dumps(probe, separators=(",", ":"))}, mode="merge")
+
     def rows(self) -> dict[str, dict]:
         out = {}
         for row in self.health.query_entities(
@@ -349,6 +362,7 @@ class TableStore:
         ):
             out[row["RowKey"]] = {
                 "push": json.loads(row["push"]) if row.get("push") else None,
+                "probe": json.loads(row["probe"]) if row.get("probe") else None,
                 "alerts": json.loads(row.get("alerts") or "{}"),
             }
         return out
@@ -451,6 +465,15 @@ class LiveSource:
         if fresh_alerts:
             worst = max(fresh_alerts, key=lambda a: ALERT_SEVERITY[a["state"]])
             state = ALERT_TO_STATE[worst["state"]]
+        probe = row.get("probe") or {}
+        probe_at = _parse_time(probe.get("at"))
+        if probe_at and now - probe_at <= timedelta(minutes=15):
+            checks["HTTP"] = {k: probe.get(k) for k in ("source", "state", "at", "reason")}
+            heard.append(probe_at)
+            facts = {**facts, "http_status": probe.get("http_status"), "response_ms": probe.get("response_ms")}
+            probe_state = ALERT_TO_STATE[probe["state"]]
+            rank = {"unknown": -1, "up": 0, "degraded": 1, "down": 2}
+            state = max((state, probe_state), key=rank.get)
         last = max(heard) if heard else None
         return {
             "state": state,
@@ -458,6 +481,7 @@ class LiveSource:
             "alerts": alerts_out,
             "facts": facts,
             "lastCheck": _iso(last) if last else None,
+            "factsAt": _iso(pushed_at) if pushed_at else None,
         }
 
 
