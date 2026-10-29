@@ -42,6 +42,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .row .who { min-width: 0; grid-column: 2; grid-row: 1; }
 .row .name { font-weight: 700; font-size: 14px; display: block; overflow-wrap: anywhere; line-height: 1.4; }
 .row .host { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 3px 0; padding: 2px 5px; border: 1px solid var(--hair); border-radius: 3px; background: var(--surface-2); color: var(--text-secondary); font-size: 10.5px; }
+.row .network { margin-left: 4px; }
 .row .side { grid-column: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 11px; color: var(--text-secondary); min-height: 15px; }
 .row .versions { font-variant-numeric: tabular-nums; }
 .row .disclosure { grid-column: 3; grid-row: 1; font-size: 18px; font-weight: 600; color: var(--text-secondary); text-align: center; }
