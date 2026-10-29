@@ -11,7 +11,7 @@ STATES = ["up", "degraded", "down", "unknown"]
 SEVERITY = {"up": 0, "unknown": 1, "degraded": 2, "down": 3}
 LEVEL = {0: "ok", 1: "idle", 2: "warn", 3: "bad"}
 #: Catalog fields the page may show. Anything else in a catalog entry stays server-side.
-PUBLIC = ("id", "name", "url", "hostname", "group", "owner", "note", "environment")
+PUBLIC = ("id", "name", "url", "hostname", "group", "owner", "note", "environment", "network")
 
 
 def _iso(dt: datetime) -> str:

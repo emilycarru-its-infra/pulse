@@ -55,3 +55,12 @@ test('deep links expand a website in place without changing alphabetical order',
   assert.equal(nodes.groups.children[2].children[0].attributes['aria-expanded'], 'true');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'a,path,z');
 });
+test('network tags remain searchable and missing checks are explained', () => {
+  const {run,nodes} = page();
+  run('Object.assign(data.websites[2],{name:"Art",network:"Network"}); ui.query="network"; renderGroups()');
+  assert.equal(nodes.groups.children.length, 1);
+  assert.match(nodes.groups.children[0].textContent, /ArtProvider ANetwork/);
+  assert.match(nodes.groups.children[0].textContent, /No individual check received/);
+  run('pick("path")');
+  assert.match(nodes.groups.children[0].textContent, /https:\/\/a.example.test\/Art\//);
+});

@@ -54,7 +54,7 @@ function matches(w) {
   if (!ui.query) return true;
   const f = w.facts || {};
   const hay =
-    `${w.name} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""}`.toLowerCase();
+    `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""}`.toLowerCase();
   return ui.query.split(/\s+/).every((q) => hay.includes(q));
 }
 
@@ -94,6 +94,7 @@ function renderDetails(w) {
   };
   add("Address", w.url || w.hostname);
   add("Owner", w.owner);
+  add("Network", w.network);
   add("Hosting", hostingName(w));
   for (const [key, label] of FACTS) add(label, fact(key, (w.facts || {})[key]));
   add(
@@ -165,6 +166,7 @@ function row(w) {
     el("span", "name", w.name),
     el("span", "host", hostingName(w)),
   );
+  if (w.network) who.append(el("span", "host network", w.network));
   const side = el("span", "side");
   const f = w.facts || {};
   const versions = [
@@ -174,7 +176,8 @@ function row(w) {
     .filter(Boolean)
     .join(" · ");
   if (versions) side.append(el("span", "versions", versions));
-  side.append(el("span", "when", ago(w.lastCheck)));
+  side.append(el("span", "when", w.lastCheck ? ago(w.lastCheck) :
+    w.network ? "No individual check received" : "No checks received"));
   b.append(who, el("span", "disclosure", open ? "−" : "+"), side);
   for (const a of (w.alerts || []).slice(0, 2))
     b.append(el("span", `alert ${a.severity}`, a.text));
