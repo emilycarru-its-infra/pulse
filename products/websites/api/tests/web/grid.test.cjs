@@ -16,9 +16,9 @@ class Element {
 }
 function page(hash = '') {
   const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section') };
-  const context = vm.createContext({ URLSearchParams, Date,
-    location: { hash, pathname: '/', search: '' },
-    history: { replaceState: (_, __, url) => { context.lastUrl = url; } },
+  const context = vm.createContext({ URL, URLSearchParams, Date,
+    location: { href: 'https://status.example/' + hash, hash, pathname: '/', search: '' },
+    history: { replaceState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); }, pushState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); } },
     document: { createElement: tag => new Element(tag), createTextNode: text => new Element('#text', text), getElementById: id => nodes[id] },
   });
   const source = readFileSync(path.join(__dirname, '../../../web/websites.js'), 'utf8');
@@ -51,7 +51,7 @@ test('deep links expand a website in place without changing alphabetical order',
   assert.equal(nodes.groups.children[1].children[0].attributes['aria-expanded'], 'true');
   assert.match(nodes.groups.children[1].textContent, /https:\/\/a.example.test\/Art\//);
   run('pick("z")');
-  assert.equal(context.lastUrl, '#site=z');
+  assert.equal(new URL(context.lastUrl).searchParams.get('site'), 'z');
   assert.equal(nodes.groups.children[2].children[0].attributes['aria-expanded'], 'true');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'a,path,z');
 });
@@ -89,4 +89,15 @@ test('shared versions are labelled and link to parent analytics', () => {
   assert.match(card.textContent, /Shared Network hosting/);
   assert.match(card.textContent, /View shared installation analytics/);
   assert.doesNotMatch(card.textContent, /100 visits/);
+});
+test('website dropdowns, search and status round-trip in shared URLs and clear together', () => {
+  const {run,context} = page();
+  run('Object.assign(ui,{place:"host-a",network:"Network",php:"8.3",wordpress:"7.1",query:"art",filter:"unknown",picked:"path"}); writeFilters()');
+  const restored = page(new URL(context.lastUrl).search);
+  for (const [key,value] of Object.entries({place:'host-a',network:'Network',php:'8.3',wordpress:'7.1',query:'art',filter:'unknown',picked:'path'}))
+    assert.equal(restored.run(`ui.${key}`),value);
+  assert.equal(restored.run('hasFilters()'),true);
+  restored.run('clearFilters(); writeFilters()');
+  assert.equal(restored.run('hasFilters()'),false);
+  assert.equal(new URL(restored.context.lastUrl).search,'');
 });

@@ -32,10 +32,92 @@ const ui = {
   filter: "all",
   place: null,
   network: null,
+  php: null,
+  wordpress: null,
   query: "",
   picked: new URLSearchParams(location.hash.slice(1)).get("site"),
 };
 let data = null;
+
+function readFilters() {
+  const url = new URL(location.href);
+  for (const [field, key] of [["place", "hosting"], ["network", "network"], ["php", "php"], ["wordpress", "wordpress"]])
+    ui[field] = url.searchParams.get(key)?.slice(0, 200) || null;
+  ui.query = url.searchParams.get("q")?.trim().toLowerCase().slice(0, 500) || "";
+  const state = url.searchParams.get("status");
+  ui.filter = ["up", "degraded", "down", "unknown"].includes(state) ? state : "all";
+  ui.picked = url.searchParams.get("site") || new URLSearchParams(url.hash.slice(1)).get("site");
+}
+readFilters();
+
+function websiteUrl() {
+  const url = new URL(location.href);
+  for (const [key, value] of [["hosting", ui.place], ["network", ui.network], ["php", ui.php], ["wordpress", ui.wordpress],
+    ["status", ui.filter === "all" ? null : ui.filter], ["q", ui.query], ["site", ui.picked]]) {
+    if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+  }
+  const legacy = new URLSearchParams(url.hash.slice(1));
+  if (legacy.has("site")) { legacy.delete("site"); url.hash = legacy.toString(); }
+  return url;
+}
+function writeFilters(replace = false) {
+  const url = websiteUrl();
+  if (url.href !== location.href) history[replace ? "replaceState" : "pushState"](null, "", url.href);
+}
+function hasFilters() {
+  return Boolean(ui.place || ui.network || ui.php || ui.wordpress || ui.query || ui.filter !== "all");
+}
+function clearFilters() {
+  Object.assign(ui, {place:null, network:null, php:null, wordpress:null, query:"", filter:"all", picked:null});
+}
+function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
+function renderDropdowns() {
+  const configs = [["hosting", "place", "All hosting", w => w.group], ["network", "network", "All networks", w => w.network || "unknown"],
+    ["php", "php", "All PHP versions", w => websiteFacts(w).php_version || "unknown"],
+    ["wordpress", "wordpress", "All WordPress versions", w => websiteFacts(w).wordpress_version || "unknown"]];
+  for (const [id, field, all, valueOf] of configs) {
+    const select = document.getElementById(id);
+    const values = new Map();
+    for (const w of data.websites) {
+      if (["php", "wordpress"].includes(id) && ((ui.place && w.group !== ui.place) || (ui.network && w.network !== ui.network))) continue;
+      const value = valueOf(w);
+      values.set(value, (values.get(value) || 0) + 1);
+    }
+    if (ui[field] && !values.has(ui[field])) values.set(ui[field], 0);
+    const options = [["", all], ...[...values].sort(([a], [b]) => a.localeCompare(b, undefined, {numeric:true})).map(([value, count]) => {
+      const label = id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
+      return [value, `${label} · ${count}`];
+    })];
+    const signature = JSON.stringify(options);
+    if (select.dataset.choices !== signature) {
+      select.replaceChildren(...options.map(([value, label]) => { const option = el("option", null, label); option.value = value; return option; }));
+      select.dataset.choices = signature;
+    }
+    select.value = ui[field] || "";
+  }
+}
+let layoutFrame;
+function scheduleLayout() {
+  if (typeof requestAnimationFrame !== "function") return;
+  cancelAnimationFrame(layoutFrame);
+  layoutFrame = requestAnimationFrame(() => {
+    const list = document.getElementById("groups");
+    if (!list.clientWidth) return;
+    const cards = [...list.children];
+    for (const card of cards) { card.style.gridColumn = ""; card.style.gridRow = ""; }
+    const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
+    const heights = Array(columns).fill(0);
+    cards.forEach((card, index) => {
+      const column = index % columns;
+      const height = Math.ceil(card.getBoundingClientRect().height);
+      card.style.gridColumn = card.className === "empty-state" ? "1 / -1" : String(column + 1);
+      card.style.gridRow = `${heights[column] + 1} / span ${height}`;
+      heights[column] += height + 12;
+    });
+    list.style.minHeight = "";
+  });
+}
+
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -62,10 +144,12 @@ function fact(key, value) {
 
 function matches(w) {
   if (ui.place && w.group !== ui.place) return false;
-  if (ui.network && w.network !== ui.network) return false;
+  if (ui.network && (w.network || "unknown") !== ui.network) return false;
+  if (ui.php && (websiteFacts(w).php_version || "unknown") !== ui.php) return false;
+  if (ui.wordpress && (websiteFacts(w).wordpress_version || "unknown") !== ui.wordpress) return false;
   if (ui.filter !== "all" && w.state !== ui.filter) return false;
   if (!ui.query) return true;
-  const f = { ...(w.hosting?.facts || {}), ...(w.facts || {}) };
+  const f = websiteFacts(w);
   const hay =
     `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""}`.toLowerCase();
   return ui.query.split(/\s+/).every((q) => hay.includes(q));
@@ -92,6 +176,7 @@ function renderPicture() {
     b.append(el("span", "place-count", String(g.websites)));
     b.addEventListener("click", () => {
       ui.place = ui.place === g.id ? null : g.id;
+      writeFilters();
       render();
     });
     return b;
@@ -107,6 +192,7 @@ function renderPicture() {
     b.append(el("span", "place-count", String(sites.length)));
     b.addEventListener("click", () => {
       ui.network = ui.network === network ? null : network;
+      writeFilters();
       render();
     });
     wrap.append(b);
@@ -141,7 +227,10 @@ function renderDetails(w) {
     }
     box.append(shared);
     const parent = el("a", null, "View shared installation analytics");
-    parent.href = `#site=${encodeURIComponent(w.hosting.website_id)}`;
+    const parentUrl = websiteUrl();
+    for (const key of ["hosting", "network", "php", "wordpress", "status", "q"]) parentUrl.searchParams.delete(key);
+    parentUrl.searchParams.set("site", w.hosting.website_id);
+    parent.href = parentUrl.href;
     box.append(parent);
     if (w.hosting.lastCheck) box.append(el("p", null, `Hosting reported ${ago(w.hosting.lastCheck)}`));
   }
@@ -188,7 +277,9 @@ function renderDetails(w) {
     open.target = "_blank";
     open.rel = "noopener noreferrer";
     const share = el("a", null, "Link to this entry");
-    share.href = `#site=${encodeURIComponent(w.id)}`;
+    const shareUrl = websiteUrl();
+    shareUrl.searchParams.set("site", w.id);
+    share.href = shareUrl.href;
     links.append(open, share);
     box.append(links);
   }
@@ -211,7 +302,7 @@ function row(w) {
   );
   if (w.network) who.append(el("span", "host network", w.network));
   const side = el("span", "side");
-  const f = { ...(w.hosting?.facts || {}), ...(w.facts || {}) };
+  const f = websiteFacts(w);
   const versions = [
     f.php_version && `PHP ${f.php_version}`,
     f.wordpress_version && `WP ${f.wordpress_version}`,
@@ -237,20 +328,16 @@ function row(w) {
 function renderGroups() {
   const wrap = document.getElementById("groups");
   const members = visibleWebsites();
+  if (wrap.style && wrap.getBoundingClientRect) wrap.style.minHeight = `${wrap.getBoundingClientRect().height}px`;
   if (members.length) wrap.replaceChildren(...members.map(row));
   else wrap.replaceChildren(el("li", "empty-state", "No websites match these filters."));
   renderTotal(members);
+  scheduleLayout();
 }
 
 function pick(id) {
   ui.picked = id;
-  history.replaceState(
-    null,
-    "",
-    id
-      ? `#site=${encodeURIComponent(id)}`
-      : location.pathname + location.search,
-  );
+  writeFilters();
   renderGroups();
 }
 
@@ -270,6 +357,9 @@ function render() {
   for (const b of document.querySelectorAll("#filter button"))
     b.setAttribute("aria-pressed", String(b.dataset.v === ui.filter));
   document.getElementById("sample").hidden = !data.sample;
+  document.getElementById("search").value = ui.query;
+  document.getElementById("clear-filters").hidden = !hasFilters();
+  renderDropdowns();
   renderPicture();
   renderGroups();
 }
@@ -278,16 +368,21 @@ document.getElementById("filter").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   ui.filter = ui.filter === b.dataset.v ? "all" : b.dataset.v;
+  writeFilters();
   render();
 });
 document.getElementById("search").addEventListener("input", (e) => {
   ui.query = e.target.value.trim().toLowerCase();
-  renderGroups();
+  writeFilters(true);
+  render();
 });
-window.addEventListener("hashchange", () => {
-  ui.picked = new URLSearchParams(location.hash.slice(1)).get("site");
-  if (data) renderGroups();
-});
+for (const event of ["popstate", "hashchange"]) window.addEventListener(event, () => { readFilters(); if (data) render(); });
+for (const [id, field] of [["hosting", "place"], ["network", "network"], ["php", "php"], ["wordpress", "wordpress"]])
+  document.getElementById(id).addEventListener("change", e => { ui[field] = e.target.value || null; writeFilters(); render(); });
+document.getElementById("clear-filters").addEventListener("click", () => { clearFilters(); writeFilters(); render(); });
+document.getElementById("filter-link").append(Pulse.copyLink(() => websiteUrl().href, "filtered websites"));
+new ResizeObserver(scheduleLayout).observe(document.getElementById("groups"));
+document.fonts.ready.then(scheduleLayout);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.picked) pick(null);
   if (

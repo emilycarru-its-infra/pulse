@@ -18,9 +18,15 @@
         <button type="button" data-v="down" aria-pressed="false">Error</button>
         <button type="button" data-v="unknown" aria-pressed="false">No data</button>
       </div>
+      <label class="dropdown"><span class="visually-hidden">Hosting provider</span><select id="hosting"><option value="">All hosting</option></select></label>
+      <label class="dropdown"><span class="visually-hidden">Website network</span><select id="network"><option value="">All networks</option></select></label>
+      <label class="dropdown"><span class="visually-hidden">PHP version</span><select id="php"><option value="">All PHP versions</option></select></label>
+      <label class="dropdown"><span class="visually-hidden">WordPress version</span><select id="wordpress"><option value="">All WordPress versions</option></select></label>
       <label class="search"><span class="visually-hidden">Find a website</span>
         <input type="search" id="search" placeholder="Find website, owner, PHP or WordPress version" autocomplete="off" spellcheck="false">
       </label>
+      <button type="button" id="clear-filters" class="clear-filters" hidden>Clear Filters</button>
+      <span id="filter-link" class="filter-link"></span>
       <div class="toolbar-end">
         <p class="total" id="total" aria-live="polite"></p>
       </div>

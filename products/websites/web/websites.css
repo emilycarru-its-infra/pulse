@@ -26,7 +26,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .place:hover, .place:focus-visible { border-color: var(--rule); }
 .place:focus-visible { outline: 2px solid var(--accent-band); outline-offset: 2px; }
 .place[aria-pressed="true"] { color: var(--text-primary); border-color: var(--accent-band); background: var(--surface-2); }
-.website-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); align-items: start; list-style: none; padding: 0; margin: 0; }
+.website-grid { display: grid; column-gap: 12px; grid-auto-rows: 1px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); align-items: start; list-style: none; padding: 0; margin: 0; }
 .website-card { min-width: 0; background: var(--surface-1); border: 1px solid var(--hair); border-radius: 4px; overflow: hidden; }
 
 .rows { list-style: none; }
@@ -78,3 +78,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .legend .tag { width: 18px; height: 18px; font-size: 11px; }
 .page-foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 24px; margin-top: 18px; }
 .empty-state { grid-column: 1 / -1; padding: 24px; color: var(--text-secondary); }
+
+.dropdown select { font: inherit; font-size: 13px; height: var(--control-height); color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--rule); border-radius: 4px; padding: 0 28px 0 10px; max-width: 220px; }
+.clear-filters { background: var(--clear-filters-bg, var(--warn)); color: var(--clear-filters-text, #000); border: 1px solid currentColor; border-radius: 4px; font-weight: 700; padding: 0 12px; }
+.clear-filters[hidden] { display: none; }

@@ -69,3 +69,13 @@ test('legacy binary links and saved group preference still load', () => {
   assert.equal(run('ui.binaryVersion'), '3.12');
   assert.equal(run('ui.view'), 'service');
 });
+test('any selected filter enables results mode and clearing restores the overview', () => {
+  const {run} = page('https://status.example/?os=Ubuntu+24.04&binary=Python&version=3.12&q=worker&view=service');
+  assert.equal(run('hasFilters()'),true);
+  run('clearFilters(); writeBinaryUrl()');
+  assert.equal(run('hasFilters()'),false);
+  assert.equal(run('ui.view'),'service');
+  const url = new URL(run('location.href'));
+  assert.equal(url.searchParams.get('view'),'service');
+  for (const name of ['os','binary','version','q','status','location','platform']) assert.equal(url.searchParams.has(name),false);
+});
