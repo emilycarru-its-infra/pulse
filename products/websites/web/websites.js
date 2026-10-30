@@ -99,24 +99,37 @@ function renderDropdowns() {
   }
 }
 let layoutFrame;
-function scheduleLayout() {
+let layoutScroll;
+function scheduleLayout(position) {
   if (typeof requestAnimationFrame !== "function") return;
+  if (position && Number.isFinite(position.y)) layoutScroll = position;
   cancelAnimationFrame(layoutFrame);
   layoutFrame = requestAnimationFrame(() => {
     const list = document.getElementById("groups");
     if (!list.clientWidth) return;
     const cards = [...list.children];
-    for (const card of cards) { card.style.gridColumn = ""; card.style.gridRow = ""; }
-    const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
+    const style = getComputedStyle(list);
+    const gap = parseFloat(style.columnGap);
+    const minimum = parseFloat(style.getPropertyValue("--card-min-width"));
+    const columns = Math.max(1, Math.floor((list.clientWidth + gap) / (minimum + gap)));
+    // Keep row placement while measuring: clearing it moves the focused card to the top.
+    cards.forEach((card, index) => {
+      card.style.gridColumn = card.className === "empty-state" ? "1 / -1" : String(index % columns + 1);
+    });
     const heights = Array(columns).fill(0);
     cards.forEach((card, index) => {
       const column = index % columns;
       const height = Math.ceil(card.getBoundingClientRect().height);
       card.style.gridColumn = card.className === "empty-state" ? "1 / -1" : String(column + 1);
       card.style.gridRow = `${heights[column] + 1} / span ${height}`;
-      heights[column] += height + 12;
+      heights[column] += height + gap;
     });
     list.style.minHeight = "";
+    if (layoutScroll) {
+      const position = layoutScroll;
+      layoutScroll = null;
+      window.scrollTo({left: position.x, top: position.y, behavior: "instant"});
+    }
   });
 }
 
@@ -272,24 +285,12 @@ function renderDetails(w) {
     }
     box.append(ul);
   }
-  if (w.url) {
-    const links = el("p", "link");
-    const open = el("a", null, "Open the site");
-    open.href = w.url;
-    open.target = "_blank";
-    open.rel = "noopener noreferrer";
-    const share = el("a", null, "Link to this entry");
-    const shareUrl = websiteUrl();
-    shareUrl.searchParams.set("site", w.id);
-    share.href = shareUrl.href;
-    links.append(open, share);
-    box.append(links);
-  }
   return box;
 }
 
 function row(w) {
   const li = el("li", "website-card");
+  li.dataset.websiteId = w.id;
   const b = el("button", "row");
   b.type = "button";
   const open = ui.picked === w.id;
@@ -321,20 +322,55 @@ function row(w) {
   b.append(who, el("span", "disclosure", open ? "−" : "+"), side);
   for (const a of (w.alerts || []).slice(0, 2))
     b.append(el("span", `alert ${a.severity}`, a.text));
-  b.addEventListener("click", () => pick(open ? null : w.id));
+  b.addEventListener("click", () => pick(ui.picked === w.id ? null : w.id));
   li.append(b);
+  const actions = el("div", "card-actions");
+  if (w.url) {
+    const visit = el("a", "card-action");
+    visit.href = w.url;
+    visit.target = "_blank";
+    visit.rel = "noopener noreferrer";
+    visit.title = "Open the site in a new tab";
+    visit.setAttribute("aria-label", `Open ${w.name} in a new tab`);
+    visit.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>';
+    actions.append(visit);
+  }
+  actions.append(Pulse.copyLink(() => {
+    const url = websiteUrl();
+    url.searchParams.set("site", w.id);
+    return url.href;
+  }, w.name));
+  li.append(actions);
   if (open) li.append(renderDetails(w));
   return li;
 }
 
 function renderGroups() {
   const wrap = document.getElementById("groups");
+  const position = typeof window !== "undefined" ? {x: window.scrollX, y: window.scrollY} : null;
   const members = visibleWebsites();
   if (wrap.style && wrap.getBoundingClientRect) wrap.style.minHeight = `${wrap.getBoundingClientRect().height}px`;
-  if (members.length) wrap.replaceChildren(...members.map(row));
-  else wrap.replaceChildren(el("li", "empty-state", "No websites match these filters."));
+  const previous = new Map([...wrap.children].map(card => [card.dataset.websiteId, card]));
+  const cards = members.map(w => {
+    const next = row(w);
+    const card = previous.get(w.id);
+    if (!card) return next;
+    // Preserve the focused disclosure and its scroll anchor across expansion and polling.
+    const button = card.firstElementChild;
+    button.replaceChildren(...next.firstElementChild.childNodes);
+    button.setAttribute("aria-expanded", next.firstElementChild.getAttribute("aria-expanded"));
+    while (card.children.length > 1) card.lastChild.remove();
+    card.append(...[...next.children].slice(1));
+    return card;
+  });
+  if (!cards.length) cards.push(el("li", "empty-state", "No websites match these filters."));
+  const retained = new Set(cards);
+  for (const card of [...wrap.children]) if (!retained.has(card)) card.remove();
+  cards.forEach((card, index) => {
+    if (wrap.children[index] !== card) wrap.insertBefore(card, wrap.children[index] || null);
+  });
   renderTotal(members);
-  scheduleLayout();
+  scheduleLayout(position);
 }
 
 function pick(id) {

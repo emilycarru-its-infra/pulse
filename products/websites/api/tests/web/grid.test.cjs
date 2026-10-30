@@ -5,18 +5,24 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 class Element {
-  constructor(tag, text = '') { this.tag = tag; this.text = text; this.children = []; this.attributes = {}; this.events = {}; }
+  constructor(tag, text = '') { this.tag = tag; this.text = text; this.children = []; this.attributes = {}; this.events = {}; this.dataset = {}; }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return this.text + this.children.map(c => c.textContent).join(''); }
   get lastChild() { return this.children.at(-1); }
-  append(...children) { this.children.push(...children); }
-  replaceChildren(...children) { this.children = children; this.text = ''; }
+  get firstElementChild() { return this.children[0]; }
+  get childNodes() { return this.children; }
+  getAttribute(key) { return this.attributes[key]; }
+  remove() { if (this.parent) this.parent.children.splice(this.parent.children.indexOf(this), 1); this.parent = null; }
+  insertBefore(child, reference) { child.remove(); const i = reference ? this.children.indexOf(reference) : this.children.length; this.children.splice(i, 0, child); child.parent = this; }
+  append(...children) { for (const child of children) { child.remove(); child.parent = this; this.children.push(child); } }
+  replaceChildren(...children) { for (const child of [...this.children]) child.remove(); this.children = []; this.text = ''; this.append(...children); }
   setAttribute(key, value) { this.attributes[key] = value; }
   addEventListener(name, callback) { this.events[name] = callback; }
 }
 function page(hash = '') {
   const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section') };
   const context = vm.createContext({ URL, URLSearchParams, Date,
+    Pulse: {copyLink: (getURL, name) => { const button = new Element('button'); button.setAttribute('aria-label', `Copy link to ${name}`); button.getURL = getURL; return button; }},
     location: { href: 'https://status.example/' + hash, hash, pathname: '/', search: '' },
     history: { replaceState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); }, pushState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); } },
     document: { createElement: tag => new Element(tag), createTextNode: text => new Element('#text', text), getElementById: id => nodes[id] },
@@ -100,4 +106,34 @@ test('website dropdowns, search and status round-trip in shared URLs and clear t
   restored.run('clearFilters(); writeFilters()');
   assert.equal(restored.run('hasFilters()'),false);
   assert.equal(new URL(restored.context.lastUrl).search,'');
+});
+
+
+test('expansion and polling retain card disclosures instead of removing focused controls', () => {
+  const {run, nodes} = page();
+  run('renderGroups()');
+  const card = nodes.groups.children[1];
+  const button = card.firstElementChild;
+  run('pick("path")');
+  assert.equal(nodes.groups.children[1], card);
+  assert.equal(card.firstElementChild, button);
+  assert.equal(button.attributes['aria-expanded'], 'true');
+  run('renderGroups()');
+  assert.equal(card.firstElementChild, button);
+  button.events.click();
+  assert.equal(button.attributes['aria-expanded'], 'false');
+});
+
+test('header actions open a site safely and copy its entry link with active filters', () => {
+  const {run, nodes} = page('?network=Example');
+  run('ui.network=null; ui.query="art"; renderGroups()');
+  const card = nodes.groups.children[0];
+  const [visit, share] = card.children[1].children;
+  assert.equal(visit.href, 'https://a.example.test/Art/');
+  assert.equal(visit.target, '_blank');
+  assert.equal(visit.rel, 'noopener noreferrer');
+  const link = new URL(share.getURL());
+  assert.equal(link.searchParams.get('site'), 'path');
+  assert.equal(link.searchParams.get('q'), 'art');
+  assert.equal(run('ui.picked'), null);
 });

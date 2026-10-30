@@ -26,14 +26,14 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .place:hover, .place:focus-visible { border-color: var(--rule); }
 .place:focus-visible { outline: 2px solid var(--accent-band); outline-offset: 2px; }
 .place[aria-pressed="true"] { color: var(--text-primary); border-color: var(--accent-band); background: var(--surface-2); }
-.website-grid { display: grid; column-gap: 12px; grid-auto-rows: 1px; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); align-items: start; list-style: none; padding: 0; margin: 0; }
-.website-card { min-width: 0; background: var(--surface-1); border: 1px solid var(--hair); border-radius: 4px; overflow: hidden; }
+.website-grid { --card-min-width: 320px; overflow-anchor: none; display: grid; column-gap: 12px; grid-auto-rows: 1px; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min-width), 100%), 1fr)); align-items: start; list-style: none; padding: 0; margin: 0; }
+.website-card { position: relative; min-width: 0; background: var(--surface-1); border: 1px solid var(--hair); border-radius: 4px; overflow: hidden; }
 
 .rows { list-style: none; }
 .row {
   width: 100%; font: inherit; color: inherit; background: none; border: 0;
   display: grid; grid-template-columns: 26px minmax(0, 1fr) 14px; gap: 4px 10px; align-items: center;
-  padding: 14px; min-height: 108px; text-align: left; cursor: pointer;
+  padding: 14px; padding-right: 94px; min-height: 108px; text-align: left; cursor: pointer;
 }
 .row:hover, .row:focus-visible { background: color-mix(in srgb, var(--accent-band) 18%, transparent); outline: none; }
 .row[aria-expanded="true"] { background: color-mix(in srgb, var(--accent-band) 30%, transparent); }
@@ -71,7 +71,15 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .details ul { list-style: none; display: grid; gap: 4px; }
 .details li { display: flex; gap: 8px; align-items: center; }
 .details .tag { width: 18px; height: 18px; font-size: 11px; }
-.details .link { display: inline-flex; gap: 12px; margin-top: 8px; }
+.card-actions { position: absolute; top: 10px; right: 8px; display: flex; gap: 2px; }
+.card-actions .card-action, .card-actions .copy-link {
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  padding: 5px; border: 0; border-radius: 4px; background: transparent; color: var(--text-secondary);
+  opacity: 1; pointer-events: auto; cursor: pointer;
+}
+.card-actions svg { width: 18px; height: 18px; }
+.card-actions .card-action:hover, .card-actions .copy-link:hover { background: var(--surface-2); color: var(--text-primary); }
+.card-actions a:focus-visible, .card-actions button:focus-visible { outline: 2px solid var(--accent-band); outline-offset: -2px; }
 
 .legend { list-style: none; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--text-secondary); }
 .legend li { display: flex; align-items: center; gap: 6px; }
