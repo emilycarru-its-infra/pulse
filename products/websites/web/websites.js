@@ -128,7 +128,9 @@ function scheduleLayout(position) {
     if (layoutScroll) {
       const position = layoutScroll;
       layoutScroll = null;
-      window.scrollTo({left: position.x, top: position.y, behavior: "instant"});
+      const anchor = position.anchor && document.getElementById(position.anchor.id);
+      const top = anchor ? window.scrollY + anchor.getBoundingClientRect().top - position.anchor.top : position.y;
+      window.scrollTo({left: position.x, top, behavior: "instant"});
     }
   });
 }
@@ -291,6 +293,7 @@ function renderDetails(w) {
 function row(w) {
   const li = el("li", "website-card");
   li.dataset.websiteId = w.id;
+  li.id = `website-${w.id}`;
   const b = el("button", "row");
   b.type = "button";
   const open = ui.picked === w.id;
@@ -345,9 +348,9 @@ function row(w) {
   return li;
 }
 
-function renderGroups() {
+function renderGroups(anchor = null) {
   const wrap = document.getElementById("groups");
-  const position = typeof window !== "undefined" ? {x: window.scrollX, y: window.scrollY} : null;
+  const position = typeof window !== "undefined" ? {x: window.scrollX, y: window.scrollY, anchor} : null;
   const members = visibleWebsites();
   if (wrap.style && wrap.getBoundingClientRect) wrap.style.minHeight = `${wrap.getBoundingClientRect().height}px`;
   const previous = new Map([...wrap.children].map(card => [card.dataset.websiteId, card]));
@@ -374,9 +377,11 @@ function renderGroups() {
 }
 
 function pick(id) {
+  const card = document.getElementById(`website-${id || ui.picked}`);
+  const anchor = card ? {id: card.id, top: card.getBoundingClientRect().top} : null;
   ui.picked = id;
   writeFilters();
-  renderGroups();
+  renderGroups(anchor);
 }
 
 function renderTotal(members = visibleWebsites()) {
