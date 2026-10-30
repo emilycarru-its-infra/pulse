@@ -166,6 +166,14 @@ function renderOSFilters() {
   }
 }
 
+function hasFilters() {
+  return Boolean(ui.platform || ui.os || ui.runtime || ui.binaryVersion || ui.place || ui.query || ui.filter !== "all");
+}
+function clearFilters() {
+  Object.assign(ui, {platform:null, os:null, runtime:null, binaryVersion:null, place:null, query:"", filter:"all", picked:null, pickedGroup:null, binaryOpen:{}});
+  ui.compareClosed.clear();
+}
+
 function matches(s) {
   if (ui.platform && serverPlatform(s) !== ui.platform) return false;
   if (ui.os && serverOS(s) !== ui.os) return false;
@@ -181,6 +189,8 @@ function matches(s) {
 
 function renderPicture() {
   const wrap = document.getElementById("picture");
+  wrap.hidden = hasFilters();
+  if (hasFilters()) { wrap.replaceChildren(); return; }
   const byLocation = ui.view === "location";
   wrap.classList.toggle("by-location", byLocation);
   if (byLocation && ui.picked) {
@@ -303,7 +313,18 @@ function worst(list) {
 
 function renderGroups() {
   const wrap = document.getElementById("groups");
-  wrap.parentElement.hidden = ui.view === "location";
+  const filtered = hasFilters();
+  wrap.parentElement.hidden = ui.view === "location" && !filtered;
+  wrap.classList.toggle("filtered-results", filtered);
+  if (filtered) {
+    const servers = data.servers.filter(matches).sort((a,b) => RANK[a.state] - RANK[b.state] || a.name.localeCompare(b.name));
+    if (!servers.length) { wrap.replaceChildren(el("p", "card empty-state", "No servers match the current filters.")); return; }
+    if (ui.picked) ui.pickedGroup = "filtered";
+    const list = el("ul", "rows filtered-servers");
+    list.append(...servers.map((server,index) => row(server, "filtered", `filtered-details-${index}`)));
+    wrap.replaceChildren(list);
+    return;
+  }
   if (ui.view === "location") { wrap.replaceChildren(); return; }
   const list = groups();
   if (!list.length) {
@@ -449,7 +470,7 @@ function renderCompare(s, groupKey) {
 
 function toggleCompare(id, trigger) {
   if (ui.compareClosed.has(id)) ui.compareClosed.delete(id); else ui.compareClosed.add(id);
-  if (ui.view === "location") renderPicture(); else renderGroups();
+  if (ui.view === "location" && !hasFilters()) renderPicture(); else renderGroups();
   document.querySelectorAll(".row").forEach((button) => {
     if (button.dataset.id === id && button.getAttribute("aria-controls") === trigger.getAttribute("aria-controls")) button.focus({ preventScroll: true });
   });
@@ -537,7 +558,7 @@ function pick(id, groupKey = ui.pickedGroup, trigger = null) {
   ui.picked = close ? null : id;
   ui.pickedGroup = ui.picked ? groupKey : null;
   writeBinaryUrl();
-  if (ui.view === "location") renderPicture(); else renderGroups();
+  if (ui.view === "location" && !hasFilters()) renderPicture(); else renderGroups();
   syncServerFocus();
   if (!ui.picked && focusReturn) {
     [...document.querySelectorAll(".row")].find((button) =>
@@ -577,6 +598,11 @@ for (const container of [document.getElementById("groups"), document.getElementB
 }
 
 function renderTotal() {
+  if (hasFilters()) {
+    const members = data.servers.filter(matches);
+    document.getElementById("total").textContent = `${members.length} of ${data.servers.length} servers · ${members.filter(s => s.state === "up").length} healthy`;
+    return;
+  }
   const running = data.servers.filter((s) => s.state !== "stopped");
   const up = running.filter((s) => s.state === "up").length;
   const alerts = data.servers.reduce((n, s) => n + (s.alerts || []).length, 0);
@@ -590,6 +616,7 @@ function render() {
   }
   document.getElementById("sample").hidden = !data.sample;
   document.getElementById("search").value = ui.query;
+  document.getElementById("clear-filters").hidden = !hasFilters();
   renderTotal();
   renderOSFilters();
   renderRuntimes();
@@ -613,9 +640,7 @@ document.getElementById("binary").addEventListener("change", (e) => {
   ui.picked = null;
   ui.compareClosed.clear();
   writeBinaryUrl();
-  renderRuntimes();
-  renderPicture();
-  renderGroups();
+  render();
 });
 for (const id of ["platform", "os"]) {
   document.getElementById(id).addEventListener("change", (e) => {
@@ -628,11 +653,12 @@ for (const id of ["platform", "os"]) {
     render();
   });
 }
+document.getElementById("clear-filters").addEventListener("click", () => { clearFilters(); writeBinaryUrl(); render(); });
 document.getElementById("filter-link").append(Pulse.copyLink(() => binaryUrl().href, "filtered servers"));
 document.getElementById("search").addEventListener("input", (e) => {
   ui.query = e.target.value.trim().toLowerCase();
   writeBinaryUrl(true);
-  if (ui.view === "location") renderPicture(); else renderGroups();
+  render();
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && ui.picked) pick(null);

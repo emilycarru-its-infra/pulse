@@ -227,3 +227,8 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .toolbar .os-filter { flex-basis: 240px; }
 .filter-link { display: inline-flex; align-items: center; }
 .filter-link .copy-link { opacity: 1; pointer-events: auto; }
+
+.groups.filtered-results { display: block; }
+.filtered-servers { border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); padding: 0 16px; }
+.clear-filters { background: var(--clear-filters-bg, var(--warn)); color: var(--clear-filters-text, #000); border: 1px solid currentColor; border-radius: 4px; font-weight: 700; padding: 0 12px; }
+.clear-filters[hidden] { display: none; }
