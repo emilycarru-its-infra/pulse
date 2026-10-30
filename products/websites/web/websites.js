@@ -47,6 +47,8 @@ function readFilters() {
   const state = url.searchParams.get("status");
   ui.filter = ["up", "degraded", "down", "unknown"].includes(state) ? state : "all";
   ui.picked = url.searchParams.get("site") || new URLSearchParams(url.hash.slice(1)).get("site");
+  const search = typeof document !== "undefined" ? document.getElementById("search") : null;
+  if (search) search.value = ui.query;
 }
 readFilters();
 
@@ -357,7 +359,7 @@ function render() {
   for (const b of document.querySelectorAll("#filter button"))
     b.setAttribute("aria-pressed", String(b.dataset.v === ui.filter));
   document.getElementById("sample").hidden = !data.sample;
-  document.getElementById("search").value = ui.query;
+  if (document.activeElement !== document.getElementById("search")) document.getElementById("search").value = ui.query;
   document.getElementById("clear-filters").hidden = !hasFilters();
   renderDropdowns();
   renderPicture();

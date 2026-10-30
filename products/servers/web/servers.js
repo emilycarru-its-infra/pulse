@@ -31,6 +31,8 @@ function readBinaryUrl(initial = false) {
   ui.binaryVersion = ui.runtime ? params.get("version")?.trim().slice(0, 200) || null : null;
   ui.picked = params.get("server") || new URLSearchParams(location.hash.slice(1)).get("server");
   ui.pickedGroup = null;
+  const search = typeof document !== "undefined" ? document.getElementById("search") : null;
+  if (search) search.value = ui.query;
 }
 readBinaryUrl(true);
 
@@ -615,7 +617,7 @@ function render() {
     for (const b of document.querySelectorAll(`#${g} button`)) b.setAttribute("aria-pressed", String(b.dataset.v === ui[g]));
   }
   document.getElementById("sample").hidden = !data.sample;
-  document.getElementById("search").value = ui.query;
+  if (document.activeElement !== document.getElementById("search")) document.getElementById("search").value = ui.query;
   document.getElementById("clear-filters").hidden = !hasFilters();
   renderTotal();
   renderOSFilters();
