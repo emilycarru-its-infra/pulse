@@ -20,5 +20,9 @@
 
 .tech-options > button .tech-badge { border: 0; border-radius: 0; background: transparent; padding: 4px 2px; }
 @media (prefers-color-scheme: dark) {
-  .tech-badge:is([data-brand="openssh"], [data-brand="macos"], [data-brand="containerd"], [data-brand="aws"], [data-brand="amazonlinux"], [data-brand="bind"]) .tech-logo { filter: brightness(0) invert(1); }
+  .tech-badge:is([data-brand="openssh"], [data-brand="macos"], [data-brand="containerd"], [data-brand="bind"]) .tech-logo { filter: brightness(0) invert(1); }
 }
+
+.tech-badge:is([data-brand="aws"], [data-brand="amazonlinux"]) .tech-logo { width: 24px; height: 17px; }
+.tech-picker .tech-options > button { height: auto; min-height: 38px; line-height: 1.35; white-space: normal; }
+.tech-picker .tech-options .tech-label { white-space: normal; }

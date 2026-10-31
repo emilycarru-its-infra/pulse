@@ -14,6 +14,7 @@ function usage(value) {
 const PATCH_WORD = {needs_patch:"Needs patch", restart_required:"Restart required", awaiting_vendor_fix:"Awaiting vendor fix", verified_fixed:"Verified fixed", not_affected:"Not affected", unknown:"Unknown / stale"};
 const ui = { patching:false, cve:null, patchState:null, view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
+let filteredList = null;
 
 function remember() {
   try { localStorage.setItem("servers.groupBy", ui.view); } catch { /* private window */ }
@@ -369,8 +370,12 @@ function renderGroups() {
     const servers = data.servers.filter(matches).sort((a,b) => RANK[a.state] - RANK[b.state] || a.name.localeCompare(b.name));
     if (!servers.length) { wrap.replaceChildren(el("p", "card empty-state", "No servers match the current filters.")); return; }
     if (ui.picked) ui.pickedGroup = "filtered";
-    const list = el("ul", "rows filtered-servers");
-    list.append(...servers.map((server,index) => row(server, "filtered", `filtered-details-${index}`)));
+    if (!filteredList) {
+      filteredList = el("ul", "rows filtered-servers");
+      Pulse.masonry(filteredList);
+    }
+    const list = filteredList;
+    list.replaceChildren(...servers.map((server,index) => row(server, "filtered", `filtered-details-${index}`)));
     wrap.replaceChildren(list);
     return;
   }

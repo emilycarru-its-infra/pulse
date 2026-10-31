@@ -229,7 +229,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .filter-link .copy-link { opacity: 1; pointer-events: auto; }
 
 .groups.filtered-results { display: block; }
-.filtered-servers { border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); padding: 0 16px; }
+.filtered-servers { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(440px, 100%), 1fr)); gap: 12px; padding: 0; margin: 0; }
+.filtered-servers > li { min-width: 0; border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); padding: 4px 12px; }
+.filtered-servers > li > .row { border-top: 0; }
 .clear-filters { background: var(--clear-filters-bg, var(--warn)); color: var(--clear-filters-text, #000); border: 1px solid currentColor; border-radius: 4px; font-weight: 700; padding: 0 12px; }
 .clear-filters[hidden] { display: none; }
 

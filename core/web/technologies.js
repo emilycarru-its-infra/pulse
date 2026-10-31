@@ -96,7 +96,7 @@
     trigger.addEventListener('keydown', e => keys(e, Math.max(0, buttons.findIndex(b => b.dataset.value === select.value))));
     const refresh = () => {
       const options = [...select.options].sort((a, b) => {
-        const rank = o => !o.value ? -1 : /^other\b/i.test(o.textContent.trim()) ? 2 : /^unknown\b|\bnot recorded\b|\bunrecorded\b/i.test(o.textContent.trim()) ? 1 : 0;
+        const rank = o => !o.value ? -1 : /^other\b/i.test(o.textContent.trim()) ? 2 : /^unknown\b|\bnot (recorded|reported)\b|\bunrecorded\b/i.test(o.textContent.trim()) ? 1 : 0;
         return rank(a) - rank(b);
       });
       const next = JSON.stringify(options.map(o => [o.value, o.textContent, o.disabled]));

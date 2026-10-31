@@ -3,7 +3,8 @@
     "id": "amazonwebservices",
     "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/amazonwebservices/amazonwebservices-original.svg",
     "collection": "Devicon",
-    "license": "MIT; trademarks remain with their owners"
+    "license": "MIT; trademarks remain with their owners",
+    "adaptation": "Smile-only artwork; wordmark path removed and empty viewBox padding trimmed"
   },
   {
     "id": "apache",
