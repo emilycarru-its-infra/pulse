@@ -1,0 +1,19 @@
+.tech-badge { --tech-color: #707780; display: inline-flex; align-items: center; gap: .4em; max-width: 100%; padding: .24em .55em; border: 1px solid color-mix(in srgb, var(--tech-color) 32%, var(--hair)); border-radius: 5px; background: color-mix(in srgb, var(--tech-color) 10%, var(--surface-1)); color: var(--text-primary); font-size: 12px; line-height: 1.35; vertical-align: middle; }
+.tech-logo { flex: 0 0 auto; width: 19px; height: 19px; object-fit: contain; background: #fff; border-radius: 3px; padding: 1px; }
+.tech-badge[data-brand="openssh"] .tech-logo { width: 31px; }
+.tech-label { min-width: 0; overflow-wrap: anywhere; }
+.tech-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; margin-top: 5px; }
+.tech-picker { position: relative; display: block; width: 100%; }
+.tech-picker-trigger { display: flex; width: 100%; align-items: center; min-height: 40px; padding: 5px 30px 5px 8px; text-align: left; border: 1px solid var(--rule); border-radius: 4px; color: var(--text-primary); background: var(--surface-1); font: inherit; cursor: pointer; }
+.tech-picker-trigger::after { content: ''; position: absolute; right: 13px; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); }
+.tech-picker-trigger .tech-badge { border-color: transparent; padding: 2px 0; background: transparent; }
+.tech-picker-trigger .tech-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.has-tech-picker::after { display: none !important; }
+.tech-options { display: flex; flex-direction: column; position: absolute; top: calc(100% + 5px); left: 0; min-width: 100%; width: max-content; max-width: min(520px, 90vw); max-height: min(380px, 60vh); overflow-y: auto; overscroll-behavior: contain; z-index: 80; padding: 6px; background: var(--surface-1); border: 1px solid var(--hair); border-radius: 8px; box-shadow: 0 8px 30px rgb(0 0 0 / 20%); }
+.tech-options[hidden], .has-tech-picker select[hidden] { display: none; }
+.tech-options > button { display: flex; width: 100%; padding: 4px; text-align: left; border: 1px solid transparent; border-radius: 5px; color: var(--text-primary); background: transparent; cursor: pointer; font: inherit; }
+.tech-options > button .tech-badge { width: 100%; }
+.tech-options > button[aria-selected="true"] { border-color: var(--tech-color, var(--rule)); background: var(--surface-2); }
+.tech-options > button:focus-visible, .tech-picker-trigger:focus-visible { outline: 2px solid var(--accent-band); outline-offset: 2px; }
+.tech-options > button:hover { background: var(--surface-2); }
+@media (prefers-color-scheme: dark) { .tech-badge { background: color-mix(in srgb, var(--tech-color) 20%, var(--surface-1)); border-color: color-mix(in srgb, var(--tech-color) 50%, var(--hair)); } }

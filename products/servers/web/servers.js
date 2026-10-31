@@ -208,7 +208,7 @@ function renderPicture() {
     }
     b.innerHTML = `<div class="head"><div><h3></h3><p class="detail"></p></div></div>
       <p class="big"></p><p class="counts"></p><p class="sources"></p>`;
-    b.querySelector("h3").textContent = l.name;
+    b.querySelector("h3").replaceChildren(PulseTech.badge(l.name));
     b.querySelector(".detail").textContent = l.detail || "";
     b.querySelector(".head").append(chip(l.level));
     const running = l.servers - l.counts.stopped;
@@ -267,10 +267,20 @@ function row(s, groupKey, regionId) {
   const identity = el("code", "hostname", s.id);
   who.append(identity);
   if (s.role) who.append(el("span", "server-role", s.role));
+  const platforms = el("span", "tech-tags");
+  if (s.os) platforms.append(PulseTech.badge(s.os));
+  who.append(platforms);
   const inventory = s.runtimeInventory;
   if (inventory?.components?.length) {
-    const labels = [...new Set(inventory.components.filter((c) => !ui.runtime || c.name === ui.runtime).map((c) => `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`))];
-    who.append(el("span", `runtime-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`, `${inventory.freshness !== "fresh" ? "Last observed: " : ""}${labels.join(" · ")}`));
+    const tags = el("span", `tech-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`);
+    const seen = new Set();
+    for (const c of inventory.components.filter(c => !ui.runtime || c.name === ui.runtime)) {
+      const label = `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`;
+      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name));
+      seen.add(label);
+    }
+    if (inventory.freshness !== "fresh") tags.prepend(el("span", "muted", "Last observed:"));
+    who.append(tags);
   }
   const side = el("span", "side");
   side.append(bars(s.metrics), el("span", "when", s.state === "stopped" ? "stopped" : Pulse.ago(s.lastCheck)));
@@ -364,7 +374,10 @@ function renderDetails(s) {
     if (!v) continue;
     dl.append(el("dt", null, k));
     const dd = el("dd");
-    if (k === "Hostname") dd.append(el("code", null, v)); else dd.textContent = v;
+    if (k === "Hostname") dd.append(el("code", null, v));
+    else if (k === "OS") dd.append(PulseTech.badge(v));
+    else if (k === "Runs on") dd.append(PulseTech.badge(v, place.name));
+    else dd.textContent = v;
     dl.append(dd);
   }
   if (s.metrics) {
@@ -430,7 +443,7 @@ function runtimeDetails(inventory, serverId, only = null) {
       Boolean(ui.picked === serverId && ui.runtime === c.name && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion));
     details.addEventListener("toggle", () => { ui.binaryOpen[key] = details.open; });
     const summary = el("summary", "binary-summary share-scope");
-    summary.append(el("b", "binary-name", c.name), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
+    summary.append(PulseTech.badge(c.name), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
     const state = c.running ? "running" : "inactive";
     summary.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
     summary.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`));
@@ -624,6 +637,7 @@ function render() {
   renderRuntimes();
   renderPicture();
   renderGroups();
+  for (const id of ["platform", "os", "binary"]) PulseTech.picker(document.getElementById(id));
 }
 
 for (const g of ["view", "filter"]) {
@@ -680,3 +694,5 @@ document.addEventListener("keydown", (e) => {
 })();
 
 Pulse.masonry(document.getElementById("groups"));
+
+window.addEventListener("technology-brands-ready", () => { if (data) render(); });
