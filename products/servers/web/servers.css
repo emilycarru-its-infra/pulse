@@ -124,8 +124,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   background: color-mix(in srgb, var(--surface-2) 35%, var(--surface-1));
 }
 .server-details[hidden] { display: none; }
-.server-details .head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
-.server-details .state-line { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; font-size: 18px; font-weight: 700; }
+.server-details .head { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 10px; }
+.server-details .head .kicker { min-width: 0; }
+.server-details .state-line { flex: 0 0 auto; max-width: 60%; margin: 0 0 0 auto; font-size: 18px; line-height: 1.25; font-weight: 700; text-align: right; }
 .server-details h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin: 16px 0 6px; }
 .server-details dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; }
 .server-details dt { color: var(--text-secondary); }
@@ -299,3 +300,5 @@ button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band)
 .binary-filter-tag .tech-badge { padding: 5px 8px; }
 .binary-filter-tag[aria-pressed="true"] .tech-badge { outline: 2px solid var(--accent-band); outline-offset: 1px; font-weight: 700; }
 .binary-filter-tag:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
+
+.runtime-state.historical { color: var(--text-secondary); border-color: var(--hair); border-style: dashed; font-weight: 500; }

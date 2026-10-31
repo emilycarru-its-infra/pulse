@@ -404,8 +404,8 @@ function renderGroups() {
 function renderDetails(s) {
   const panel = el("section", "server-details");
   const place = data.locations.find((l) => l.id === s.location) || {};
-  panel.innerHTML = `<div class="head"><p class="kicker"></p></div>
-    <p class="state-line"></p><dl></dl>`;
+  panel.innerHTML = `<div class="head"><p class="kicker"></p><p class="state-line"></p></div>
+    <dl></dl>`;
   panel.querySelector(".kicker").textContent = `${place.name || ""} · ${s.env || ""}`;
   panel.querySelector(".state-line").textContent =
     s.state === "stopped" ? "Stopped on purpose" : `${WORD[s.state]}${s.uptimeDays ? ` · ${s.uptimeDays} days uptime` : ""}`;
@@ -473,7 +473,7 @@ function runtimeDetails(inventory, serverId, only = null) {
   }
   const current = inventory.freshness === "fresh";
   if (!current) section.append(el("p", "runtime-freshness stale",
-    `Binary evidence is stale${inventory.last_attempt === "collection_failed" ? " · latest collection failed" : ""}.`));
+    `Last observed ${Pulse.ago(inventory.observed_at)}. Binary evidence is stale${inventory.last_attempt === "collection_failed" ? " · latest collection failed" : ""}.`));
   const components = groupedRuntimes((inventory.components || []).filter((c) =>
     !only || (c.name === only && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))).sort((a, b) =>
     a.name.localeCompare(b.name) || runtimeVersion(a).localeCompare(runtimeVersion(b), undefined, { numeric: true }) ||
@@ -507,7 +507,13 @@ function runtimeDetails(inventory, serverId, only = null) {
     const version = el("td");
     version.append(el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
     const state = el("td");
-    state.append(el("span", `runtime-state ${c.running ? "running" : "inactive"}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
+    const stateName = c.running ? "Running" : "Inactive";
+    const stateLabel = el("span", `runtime-state ${current ? c.running ? "running" : "inactive" : "historical"}`, stateName);
+    if (!current) {
+      stateLabel.title = `Last observed ${stateName.toLowerCase()} ${Pulse.ago(inventory.observed_at)}; evidence is stale`;
+      stateLabel.setAttribute("aria-label", stateLabel.title);
+    }
+    state.append(stateLabel);
     const actions = el("td");
     const controls = el("span", "binary-actions");
     controls.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`), el("span", "binary-disclosure"));
