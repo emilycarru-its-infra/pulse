@@ -311,7 +311,7 @@ function row(s, groupKey, regionId) {
     const seen = new Set();
     for (const c of inventory.components.filter(c => !ui.runtime || c.name === ui.runtime)) {
       const label = `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`;
-      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name, "binary"));
+      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name, expanded ? "binary" : "label"));
       seen.add(label);
     }
     if (inventory.freshness !== "fresh") tags.prepend(el("span", "muted", "Last observed:"));
@@ -422,7 +422,7 @@ function renderDetails(s) {
     else dd.textContent = v;
     dl.append(dd);
   }
-  if (s.metrics) {
+  if (s.metrics && Object.values(s.metrics).some(value => typeof value === "number" && Number.isFinite(value))) {
     panel.append(el("h4", null, "Resource usage"));
     for (const [k, label] of [["cpu", "CPU"], ["mem", "Memory"], ["disk", "Disk"]]) {
       const { value: v, level } = usage(s.metrics[k]);
@@ -478,18 +478,48 @@ function runtimeDetails(inventory, serverId, only = null) {
     !only || (c.name === only && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))).sort((a, b) =>
     a.name.localeCompare(b.name) || runtimeVersion(a).localeCompare(runtimeVersion(b), undefined, { numeric: true }) ||
     (a.executable || "").localeCompare(b.executable || ""));
-  const list = el("div", "runtime-list");
-  for (const c of components) {
-    const details = el("details", "binary-accordion");
-    const key = JSON.stringify([serverId, c.name, c.version, c.executable, c.scope, c.container_id]);
-    details.open = Object.hasOwn(ui.binaryOpen, key) ? ui.binaryOpen[key] : Boolean(only) ||
+  const list = el("table", "runtime-table");
+  const columns = el("colgroup");
+  for (const width of ["40%", "", "72px", "42px"]) {
+    const column = el("col"); if (width) column.style.width = width; columns.append(column);
+  }
+  list.append(columns);
+  const head = el("thead", "visually-hidden");
+  const headings = el("tr");
+  for (const label of ["Binary", "Version", "State", "Actions"]) {
+    const th = el("th", null, label); th.scope = "col"; headings.append(th);
+  }
+  head.append(headings);
+  const body = el("tbody"); list.append(head, body);
+  for (const [index, c] of components.entries()) {
+    const key = JSON.stringify([serverId, c.name, c.version, c.executable, c.scope, c.container_id, c.running, c.evidence_kind]);
+    const open = Object.hasOwn(ui.binaryOpen, key) ? ui.binaryOpen[key] : Boolean(only) ||
       Boolean(ui.picked === serverId && ui.runtime === c.name && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion));
-    details.addEventListener("toggle", () => { ui.binaryOpen[key] = details.open; });
-    const summary = el("summary", "binary-summary share-scope");
-    summary.append(PulseTech.badge(c.name, c.name, "binary"), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
-    const state = c.running ? "running" : "inactive";
-    summary.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
-    summary.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`));
+    const entry = el("tr", "binary-entry");
+    const name = el("td");
+    const toggle = el("button", "binary-name-toggle"); toggle.type = "button";
+    toggle.append(PulseTech.badge(c.name, c.name, "binary"));
+    toggle.setAttribute("aria-expanded", String(open));
+    const evidenceRow = el("tr", "binary-evidence");
+    evidenceRow.id = `binary-evidence-${encodeURIComponent(serverId)}-${index}`;
+    evidenceRow.hidden = !open; toggle.setAttribute("aria-controls", evidenceRow.id);
+    name.append(toggle);
+    const version = el("td");
+    version.append(el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
+    const state = el("td");
+    state.append(el("span", `runtime-state ${c.running ? "running" : "inactive"}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
+    const actions = el("td");
+    const controls = el("span", "binary-actions");
+    controls.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`), el("span", "binary-disclosure"));
+    controls.lastElementChild.setAttribute("aria-hidden", "true"); actions.append(controls);
+    entry.append(name, version, state, actions);
+    entry.addEventListener("click", event => {
+      if (event.target.closest(".copy-link")) return;
+      const next = evidenceRow.hidden;
+      ui.binaryOpen[key] = next; evidenceRow.hidden = !next;
+      toggle.setAttribute("aria-expanded", String(next));
+    });
+    const evidenceCell = el("td"); evidenceCell.colSpan = 4;
     const content = el("div", "binary-content");
     if (!c.running) content.append(el("p", "runtime-context", "Installed, but not observed running at this check. Scheduled or short-lived jobs may run between checks."));
     if (c.version && runtimeVersion(c) !== c.version) content.append(el("p", "runtime-evidence", `File metadata: ${c.version}`));
@@ -504,8 +534,8 @@ function runtimeDetails(inventory, serverId, only = null) {
     }[c.evidence_kind] || "Version could not be verified";
     content.append(el("p", "runtime-evidence", `${evidence}${c.process_count ? ` · ${c.process_count} process${c.process_count === 1 ? "" : "es"}` : ""}`));
     if (c.package_version) content.append(el("p", "runtime-evidence", `Package: ${c.package_name} ${c.package_version}${c.package_arch ? ` · ${c.package_arch}` : ""}`));
-    details.append(summary, content);
-    list.append(details);
+    evidenceCell.append(content); evidenceRow.append(evidenceCell);
+    body.append(entry, evidenceRow);
   }
   section.append(list);
   if (!components.length) section.append(el("p", "muted", "No binaries recorded. Installed coverage may be incomplete."));
@@ -579,7 +609,8 @@ function renderVersionSummary(section, fresh) {
 function renderRuntimes() {
   const section = document.getElementById("runtime-overview");
   const fresh = data.servers.filter((s) => s.runtimeInventory?.freshness === "fresh");
-  section.replaceChildren(el("p", "runtime-coverage", `${fresh.length} of ${data.servers.length} servers have recent binary observations. Filter a binary to review running and inactive versions.`));
+  section.replaceChildren();
+  section.hidden = !ui.runtime;
   const counts = new Map();
   for (const server of fresh) {
     const names = new Set((server.runtimeInventory.components || []).map((c) => c.name));

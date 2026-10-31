@@ -46,15 +46,7 @@
     </div>
 
     <section id="patching-overview" class="patching-overview" hidden aria-label="Kernel patching coverage"></section>
-    <section id="runtime-overview" class="runtime-overview" aria-label="Binary observation coverage"></section>
-
-    <section class="picture" aria-label="Where the servers run" id="picture"></section>
-
-    <div class="stage">
-      <div class="groups" id="groups"></div>
-    </div>
-
-    <div class="page-foot">
+    <div class="status-meta">
       <ul class="legend" aria-label="Legend">
         <li><span class="tag up"></span>Up</li>
         <li><span class="tag degraded"></span>Warning</li>
@@ -64,6 +56,15 @@
       </ul>
       <p class="fine" id="updated"></p>
     </div>
+    <section id="runtime-overview" class="runtime-overview" aria-label="Binary versions" hidden></section>
+
+    <section class="picture" aria-label="Where the servers run" id="picture"></section>
+
+    <div class="stage">
+      <div class="groups" id="groups"></div>
+    </div>
+
+
   </main>
   <script src="/core/shell.js"></script>
   <script src="/core/technologies.js"></script>

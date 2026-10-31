@@ -329,8 +329,8 @@ function row(w) {
     .join(" · ");
   if (versions) {
     const tags = el("span", "tech-tags");
-    if (f.php_version) tags.append(PulseTech.badge(`PHP ${f.php_version}`, "PHP", "binary"));
-    if (f.wordpress_version) tags.append(PulseTech.badge(`WordPress ${f.wordpress_version}`, "WordPress", "binary"));
+    if (f.php_version) tags.append(PulseTech.badge(`PHP ${f.php_version}`, "PHP", open ? "binary" : "label"));
+    if (f.wordpress_version) tags.append(PulseTech.badge(`WordPress ${f.wordpress_version}`, "WordPress", open ? "binary" : "label"));
     side.append(tags);
   }
   if (w.facts?.http_status) side.append(el("span", null, `HTTP ${w.facts.http_status}`));
