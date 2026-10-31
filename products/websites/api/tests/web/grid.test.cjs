@@ -76,11 +76,11 @@ test('network tags remain searchable and missing checks are explained', () => {
 test('overview includes counted network filters and intersects them with hosting and health', () => {
   const {run,nodes} = page();
   run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderPicture()');
-  const button = nodes.picture.children.find(b => b.textContent === 'Network2');
+  const button = nodes.picture.children[1].children.find(b => b.textContent === 'Network · 2');
   assert.ok(button);
   assert.equal(button.attributes['aria-pressed'], 'false');
   run('ui.network="Network"; renderPicture(); renderGroups()');
-  assert.equal(nodes.picture.children[0].attributes['aria-pressed'], 'true');
+  assert.equal(nodes.picture.children[1].children.find(b => b.dataset.value === 'Network').attributes['aria-pressed'], 'true');
   assert.equal(run('visibleWebsites().length'), 2);
   run('ui.filter="unknown"; ui.place="host-a"; renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'path');
@@ -98,7 +98,7 @@ test('shared versions are labelled and link to parent analytics', () => {
   assert.match(card.textContent, /View shared installation analytics/);
   assert.doesNotMatch(card.textContent, /100 visits/);
 });
-test('website dropdowns, search and status round-trip in shared URLs and clear together', () => {
+test('website filter tags, search and status round-trip in shared URLs and clear together', () => {
   const {run,context} = page();
   run('Object.assign(ui,{place:"host-a",network:"Network",php:"8.3",wordpress:"7.1",query:"art",filter:"unknown",picked:"path"}); writeFilters()');
   const restored = page(new URL(context.lastUrl).search);
