@@ -45,13 +45,13 @@ test('website order is alphabetical across providers and health states', () => {
   assert.equal(nodes.groups.children.length, 3);
   assert.ok(nodes.groups.children.every(c => c.className === 'website-card'));
   assert.match(nodes.groups.children[0].textContent, /Provider B/);
-  assert.equal(nodes.total.textContent, '3 websites · 1 up · 1 no data');
+  assert.equal(nodes.total.textContent, '3 websites · 1 up · 1 not reporting');
 });
 test('search, status and hosting filters intersect and update the visible count', () => {
   const {run, nodes} = page();
   run('Object.assign(ui,{place:"host-a",filter:"unknown",query:"art"}); renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'path');
-  assert.equal(nodes.total.textContent, '1 of 3 websites · 0 up · 1 no data');
+  assert.equal(nodes.total.textContent, '1 of 3 websites · 0 up · 1 not reporting');
 });
 test('deep links expand a website in place without changing alphabetical order', () => {
   const {run,nodes,context} = page('#site=path');
