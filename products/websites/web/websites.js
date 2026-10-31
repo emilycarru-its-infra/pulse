@@ -225,7 +225,7 @@ function renderDetails(w) {
   const add = (label, value) => {
     if (value) {
       const dd = el("dd");
-      if (["Network", "Hosting", "Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, ["PHP", "WordPress"].includes(label) ? label : ""));
+      if (["Network", "Hosting", "Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, ["PHP", "WordPress"].includes(label) ? label : "", ["PHP", "WordPress"].includes(label) ? "binary" : "label"));
       else dd.textContent = value;
       dl.append(el("dt", null, label), dd);
     }
@@ -249,7 +249,7 @@ function renderDetails(w) {
       const value = fact(key, w.hosting.facts?.[key]);
       if (value != null) {
         const dd = el("dd");
-        if (["Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, label === "Hosted on" ? value : label));
+        if (["Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, label === "Hosted on" ? value : label, label === "Hosted on" ? "label" : "binary"));
         else dd.textContent = value;
         shared.append(el("dt", null, label), dd);
       }
@@ -329,8 +329,8 @@ function row(w) {
     .join(" · ");
   if (versions) {
     const tags = el("span", "tech-tags");
-    if (f.php_version) tags.append(PulseTech.badge(`PHP ${f.php_version}`, "PHP"));
-    if (f.wordpress_version) tags.append(PulseTech.badge(`WordPress ${f.wordpress_version}`, "WordPress"));
+    if (f.php_version) tags.append(PulseTech.badge(`PHP ${f.php_version}`, "PHP", "binary"));
+    if (f.wordpress_version) tags.append(PulseTech.badge(`WordPress ${f.wordpress_version}`, "WordPress", "binary"));
     side.append(tags);
   }
   if (w.facts?.http_status) side.append(el("span", null, `HTTP ${w.facts.http_status}`));

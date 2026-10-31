@@ -34,8 +34,8 @@
     const [file, color] = registry[key];
     return {key, color, icon: `/core/brands/${file.includes('.') ? file : `${file}.svg`}`};
   }
-  function badge(label, hint = '') {
-    const node = document.createElement('span'); node.className = 'tech-badge';
+  function badge(label, hint = '', kind = 'label') {
+    const node = document.createElement('span'); node.className = kind === 'binary' ? 'tech-badge tech-binary' : 'tech-badge';
     const found = brand(label, hint);
     if (found) {
       node.dataset.brand = found.key || 'site'; node.style.setProperty('--tech-color', found.color);
@@ -95,7 +95,10 @@
     trigger.addEventListener('click', () => list.hidden ? open() : close());
     trigger.addEventListener('keydown', e => keys(e, Math.max(0, buttons.findIndex(b => b.dataset.value === select.value))));
     const refresh = () => {
-      const options = [...select.options];
+      const options = [...select.options].sort((a, b) => {
+        const rank = o => !o.value ? -1 : /^other\b/i.test(o.textContent.trim()) ? 2 : /^unknown\b|\bnot recorded\b|\bunrecorded\b/i.test(o.textContent.trim()) ? 1 : 0;
+        return rank(a) - rank(b);
+      });
       const next = JSON.stringify(options.map(o => [o.value, o.textContent, o.disabled]));
       if (signature !== next) {
         const focusedValue = buttons.find(b => b === document.activeElement)?.dataset.value;

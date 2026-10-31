@@ -100,7 +100,7 @@
     "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/proxmox/proxmox-original.svg",
     "collection": "Devicon",
     "license": "MIT; trademarks remain with their owners",
-    "adaptation": "ViewBox trims empty padding only; all logo paths are preserved"
+    "adaptation": "Emblem-only viewport; original vector paths retained"
   },
   {
     "id": "python",

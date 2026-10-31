@@ -219,7 +219,21 @@ function renderPicture() {
     }
     b.innerHTML = `<div class="head"><div><h3></h3><p class="detail"></p></div></div>
       <p class="big"></p><p class="counts"></p><p class="sources"></p>`;
-    b.querySelector("h3").replaceChildren(PulseTech.badge(l.name));
+    const title = b.querySelector("h3");
+    const platformNames = l.platforms || data.servers.filter(s => s.location === l.id).map(s => s.platform).filter(Boolean);
+    if (!PulseTech.brand(l.name)) {
+      const marks = el("span", "place-platform-logos");
+      const seen = new Set();
+      for (const name of platformNames) {
+        const brand = PulseTech.brand(name);
+        if (!brand || seen.has(brand.key)) continue;
+        seen.add(brand.key);
+        const mark = PulseTech.badge("", name); mark.title = name;
+        mark.setAttribute("role", "img"); mark.setAttribute("aria-label", name); marks.append(mark);
+      }
+      if (marks.children.length) title.append(marks);
+    }
+    title.append(PulseTech.badge(l.name));
     b.querySelector(".detail").textContent = l.detail || "";
     b.querySelector(".head").append(chip(l.level));
     const running = l.servers - l.counts.stopped;
@@ -296,7 +310,7 @@ function row(s, groupKey, regionId) {
     const seen = new Set();
     for (const c of inventory.components.filter(c => !ui.runtime || c.name === ui.runtime)) {
       const label = `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`;
-      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name));
+      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name, "binary"));
       seen.add(label);
     }
     if (inventory.freshness !== "fresh") tags.prepend(el("span", "muted", "Last observed:"));
@@ -467,7 +481,7 @@ function runtimeDetails(inventory, serverId, only = null) {
       Boolean(ui.picked === serverId && ui.runtime === c.name && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion));
     details.addEventListener("toggle", () => { ui.binaryOpen[key] = details.open; });
     const summary = el("summary", "binary-summary share-scope");
-    summary.append(PulseTech.badge(c.name), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
+    summary.append(PulseTech.badge(c.name, c.name, "binary"), el("code", "binary-version", c.version ? runtimeVersion(c) : "Version unknown"));
     const state = c.running ? "running" : "inactive";
     summary.append(el("span", `runtime-state ${state}`, `${current ? "" : "Last observed: "}${c.running ? "Running" : "Inactive"}`));
     summary.append(Pulse.copyLink(() => binaryUrl(c.name, runtimeVersion(c), serverId).href, `${c.name} ${runtimeVersion(c)}`));
