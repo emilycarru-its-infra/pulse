@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const path = require('node:path');
 
 class Element {
-  constructor(tag, text = '') { this.tag = tag; this.text = text; this.children = []; this.attributes = {}; this.events = {}; this.dataset = {}; }
+  constructor(tag, text = '') { this.tag = tag; this.text = text; this.children = []; this.attributes = {}; this.events = {}; this.dataset = {}; this.style = {setProperty() {}}; }
   set textContent(text) { this.text = text; this.children = []; }
   get textContent() { return this.text + this.children.map(c => c.textContent).join(''); }
   get lastChild() { return this.children.at(-1); }
@@ -21,12 +21,14 @@ class Element {
 }
 function page(hash = '') {
   const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section') };
-  const context = vm.createContext({ URL, URLSearchParams, Date,
+  const context = vm.createContext({ URL, URLSearchParams, Date, window: {dispatchEvent() {}}, Event: class {}, fetch: async () => ({ok:false}),
     Pulse: {copyLink: (getURL, name) => { const button = new Element('button'); button.setAttribute('aria-label', `Copy link to ${name}`); button.getURL = getURL; return button; }},
     location: { href: 'https://status.example/' + hash, hash, pathname: '/', search: '' },
     history: { replaceState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); }, pushState: (_, __, url) => { context.lastUrl = String(url); context.location.href = String(url); } },
-    document: { createElement: tag => new Element(tag), createTextNode: text => new Element('#text', text), getElementById: id => nodes[id] },
+    document: { addEventListener() {}, createElement: tag => new Element(tag), createTextNode: text => new Element('#text', text), getElementById: id => nodes[id] },
   });
+  vm.runInContext(readFileSync(path.join(__dirname, '../../../../../core/web/technologies.js'), 'utf8'), context);
+  context.PulseTech = context.window.PulseTech;
   const source = readFileSync(path.join(__dirname, '../../../web/websites.js'), 'utf8');
   vm.runInContext(source.split('document.getElementById("filter").addEventListener')[0], context);
   const run = script => vm.runInContext(script, context);

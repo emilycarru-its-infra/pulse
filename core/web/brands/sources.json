@@ -1,0 +1,181 @@
+[
+  {
+    "id": "amazonwebservices",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/amazonwebservices/amazonwebservices-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "apache",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/apache/apache-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "apple",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/apple/apple-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "azure",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/azure/azure-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "debian",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/debian/debian-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "dotnetcore",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/dotnetcore/dotnetcore-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "java",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/java/java-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "linux",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/linux/linux-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "mariadb",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/mariadb/mariadb-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "microsoftsqlserver",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/microsoftsqlserver/microsoftsqlserver-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "mysql",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/mysql/mysql-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "nginx",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/nginx/nginx-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "nodejs",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/nodejs/nodejs-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "php",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/php/php-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "postgresql",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/postgresql/postgresql-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "powershell",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/powershell/powershell-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "proxmox",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/proxmox/proxmox-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "python",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/python/python-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "rockylinux",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/rockylinux/rockylinux-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "ubuntu",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/ubuntu/ubuntu-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "windows11",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/windows11/windows11-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "wordpress",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/wordpress/wordpress-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "docker",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/docker/docker-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "redis",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/redis/redis-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "containerd",
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/containerd.svg",
+    "collection": "Simple Icons",
+    "license": "Brand artwork; see source"
+  },
+  {
+    "id": "kinsta",
+    "source": "https://kinsta.com/wp-content/themes/kinsta/images/custom-pages/page/press/kinsta-icon.svg?v=20250707",
+    "collection": "Vendor artwork",
+    "format": "svg"
+  },
+  {
+    "id": "greengeeks",
+    "source": "https://www.greengeeks.com/_ipx/_/img/logo-icon.svg",
+    "collection": "Vendor artwork",
+    "format": "svg"
+  },
+  {
+    "id": "openssh",
+    "source": "https://www.openssh.org/images/openssh.gif",
+    "collection": "Vendor artwork",
+    "format": "gif"
+  },
+  {
+    "id": "bind",
+    "source": "https://commons.wikimedia.org/wiki/Special:FilePath/Internet_Systems_Consortium_logo.svg",
+    "collection": "Vendor artwork",
+    "format": "svg"
+  },
+  {
+    "id": "amplify",
+    "source": "https://raw.githubusercontent.com/aws-amplify/amplify-ui/main/docs/public/amplify-logo.svg",
+    "collection": "AWS Amplify official project"
+  }
+]

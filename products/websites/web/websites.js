@@ -186,7 +186,8 @@ function visibleWebsites() {
 function renderPicture() {
   const wrap = document.getElementById("picture");
   wrap.replaceChildren(...data.groups.filter((g) => g.websites).map((g) => {
-    const b = el("button", "place", g.name);
+    const b = el("button", "place");
+    b.append(PulseTech.badge(g.name));
     b.type = "button";
     b.setAttribute("aria-pressed", String(ui.place === g.id));
     b.title = `${g.counts.up} of ${g.websites} up`;
@@ -202,7 +203,8 @@ function renderPicture() {
     .sort((a, b) => a.localeCompare(b));
   for (const network of networks) {
     const sites = data.websites.filter((w) => w.network === network);
-    const b = el("button", "place", network);
+    const b = el("button", "place");
+    b.append(PulseTech.badge(network));
     b.type = "button";
     b.setAttribute("aria-pressed", String(ui.network === network));
     b.title = `${sites.filter((w) => w.state === "up").length} of ${sites.length} up`;
@@ -221,7 +223,12 @@ function renderDetails(w) {
   box.id = `details-${w.id}`;
   const dl = el("dl");
   const add = (label, value) => {
-    if (value) dl.append(el("dt", null, label), el("dd", null, value));
+    if (value) {
+      const dd = el("dd");
+      if (["Network", "Hosting", "Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, ["PHP", "WordPress"].includes(label) ? label : ""));
+      else dd.textContent = value;
+      dl.append(el("dt", null, label), dd);
+    }
   };
   add("Address", w.url || w.hostname);
   add("Owner", w.owner);
@@ -240,7 +247,12 @@ function renderDetails(w) {
     const shared = el("dl");
     for (const [key, label] of FACTS) {
       const value = fact(key, w.hosting.facts?.[key]);
-      if (value != null) shared.append(el("dt", null, label), el("dd", null, value));
+      if (value != null) {
+        const dd = el("dd");
+        if (["Hosted on", "PHP", "WordPress"].includes(label)) dd.append(PulseTech.badge(value, label === "Hosted on" ? value : label));
+        else dd.textContent = value;
+        shared.append(el("dt", null, label), dd);
+      }
     }
     box.append(shared);
     const parent = el("a", null, "View shared installation analytics");
@@ -304,9 +316,9 @@ function row(w) {
   const who = el("span", "who");
   who.append(
     el("span", "name", w.name),
-    el("span", "host", hostingName(w)),
+    PulseTech.badge(hostingName(w)),
   );
-  if (w.network) who.append(el("span", "host network", w.network));
+  if (w.network) who.append(PulseTech.badge(w.network));
   const side = el("span", "side");
   const f = websiteFacts(w);
   const versions = [
@@ -315,7 +327,12 @@ function row(w) {
   ]
     .filter(Boolean)
     .join(" · ");
-  if (versions) side.append(el("span", "versions", versions));
+  if (versions) {
+    const tags = el("span", "tech-tags");
+    if (f.php_version) tags.append(PulseTech.badge(`PHP ${f.php_version}`, "PHP"));
+    if (f.wordpress_version) tags.append(PulseTech.badge(`WordPress ${f.wordpress_version}`, "WordPress"));
+    side.append(tags);
+  }
   if (w.facts?.http_status) side.append(el("span", null, `HTTP ${w.facts.http_status}`));
   if (w.hosting && versions) side.append(el("span", null, `Shared ${w.hosting.name} hosting`));
   if (w.facts?.visits_24h != null)
@@ -405,6 +422,7 @@ function render() {
   renderDropdowns();
   renderPicture();
   renderGroups();
+  for (const id of ["hosting", "network", "php", "wordpress"]) PulseTech.picker(document.getElementById(id), ["php", "wordpress"].includes(id) ? id : "");
 }
 
 document.getElementById("filter").addEventListener("click", (e) => {
@@ -453,3 +471,5 @@ document.addEventListener("keydown", (e) => {
       `Updated ${new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`;
   }, 30000);
 })();
+
+window.addEventListener("technology-brands-ready", () => { if (data) render(); });
