@@ -154,8 +154,8 @@ function renderOSFilters() {
     }
   }
   for (const [id, values, selected, all] of [
-    ["platform", platforms, ui.platform, "All platforms"],
-    ["os", versions, ui.os, "All OS versions"],
+    ["platform", platforms, ui.platform, "All Platforms"],
+    ["os", versions, ui.os, "All Operating Systems versions"],
   ]) {
     if (selected && !values.has(selected)) values.set(selected, 0);
     const select = document.getElementById(id);
@@ -311,7 +311,7 @@ function row(s, groupKey, regionId) {
     const seen = new Set();
     for (const c of inventory.components.filter(c => !ui.runtime || c.name === ui.runtime)) {
       const label = `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`;
-      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name, expanded ? "binary" : "label"));
+      if (!seen.has(label)) tags.append(PulseTech.badge(label, c.name, "binary"));
       seen.add(label);
     }
     if (inventory.freshness !== "fresh") tags.prepend(el("span", "muted", "Last observed:"));
@@ -498,7 +498,7 @@ function runtimeDetails(inventory, serverId, only = null) {
     const entry = el("tr", "binary-entry");
     const name = el("td");
     const toggle = el("button", "binary-name-toggle"); toggle.type = "button";
-    toggle.append(PulseTech.badge(c.name, c.name, "binary"));
+    toggle.append(PulseTech.badge(c.name, c.name));
     toggle.setAttribute("aria-expanded", String(open));
     const evidenceRow = el("tr", "binary-evidence");
     evidenceRow.id = `binary-evidence-${encodeURIComponent(serverId)}-${index}`;
@@ -639,6 +639,20 @@ function renderRuntimes() {
     select.dataset.choices = signature;
   }
   select.value = ui.runtime || "";
+  const tags = document.getElementById("binary-filters");
+  const focused = document.activeElement?.closest(".binary-filter-tag")?.dataset.value;
+  tags.replaceChildren(...choices.map(([value, label]) => {
+    const button = el("button", "binary-filter-tag"); button.type = "button"; button.dataset.value = value;
+    button.setAttribute("aria-pressed", String((ui.runtime || "") === value));
+    button.append(PulseTech.badge(label, value, "binary"));
+    if (value) button.title = `${counts.get(value)} servers with recent ${value} observations`;
+    button.addEventListener("click", () => {
+      select.value = ui.runtime === value ? "" : value;
+      select.dispatchEvent(new Event("change", {bubbles: true}));
+    });
+    return button;
+  }));
+  if (focused !== undefined) [...tags.children].find(button => button.dataset.value === focused)?.focus({preventScroll: true});
 }
 
 function pick(id, groupKey = ui.pickedGroup, trigger = null) {
@@ -762,7 +776,7 @@ function render() {
   renderRuntimes();
   renderPicture();
   renderGroups();
-  for (const id of ["platform", "os", "binary"]) PulseTech.picker(document.getElementById(id));
+  for (const id of ["platform", "os"]) PulseTech.picker(document.getElementById(id));
 }
 
 for (const g of ["view", "filter"]) {
