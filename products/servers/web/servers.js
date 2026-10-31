@@ -294,10 +294,12 @@ function row(s, groupKey, regionId) {
   who.append(identity);
   if (s.role) who.append(el("span", "server-role", s.role));
   const platforms = el("span", "platform-meta");
-  const platformBrand = PulseTech.brand(s.platform)?.key;
+  const location = data.locations.find(l => l.id === s.location);
+  const platform = s.platform || (location?.platforms?.length === 1 ? location.platforms[0] : null);
+  const platformBrand = PulseTech.brand(platform)?.key;
   const osBrand = PulseTech.brand(s.os)?.key;
-  if (s.platform && s.platform !== s.os && s.platform !== "Unknown" && (!platformBrand || platformBrand !== osBrand)) {
-    platforms.append(PulseTech.badge(s.platform));
+  if (platform && platform !== s.os && platform !== "Unknown" && (!platformBrand || platformBrand !== osBrand)) {
+    platforms.append(PulseTech.badge(platform));
   }
   if (s.os) platforms.append(PulseTech.badge(s.os));
   if (ui.patching) {
