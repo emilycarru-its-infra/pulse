@@ -278,16 +278,21 @@ function row(s, groupKey, regionId) {
   const identity = el("code", "hostname", s.id);
   who.append(identity);
   if (s.role) who.append(el("span", "server-role", s.role));
-  const platforms = el("span", "tech-tags");
+  const platforms = el("span", "platform-meta");
+  const platformBrand = PulseTech.brand(s.platform)?.key;
+  const osBrand = PulseTech.brand(s.os)?.key;
+  if (s.platform && s.platform !== s.os && s.platform !== "Unknown" && (!platformBrand || platformBrand !== osBrand)) {
+    platforms.append(PulseTech.badge(s.platform));
+  }
   if (s.os) platforms.append(PulseTech.badge(s.os));
-  who.append(platforms);
   if (ui.patching) {
     const patch = patchFor(s);
     who.append(el("span", `patch-status patch-${patch?.state || "unknown"}`, PATCH_WORD[patch?.state || "unknown"]));
   }
   const inventory = s.runtimeInventory;
+  let binaries = null;
   if (inventory?.components?.length) {
-    const tags = el("span", `tech-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`);
+    const tags = el("span", `tech-tags binary-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`);
     const seen = new Set();
     for (const c of inventory.components.filter(c => !ui.runtime || c.name === ui.runtime)) {
       const label = `${runtimeLabel(c)} · ${c.running ? "Running" : "Inactive"}`;
@@ -295,14 +300,17 @@ function row(s, groupKey, regionId) {
       seen.add(label);
     }
     if (inventory.freshness !== "fresh") tags.prepend(el("span", "muted", "Last observed:"));
-    who.append(tags);
+    binaries = tags;
   }
   const side = el("span", "side");
-  side.append(bars(s.metrics), el("span", "when", s.state === "stopped" ? "stopped" : Pulse.ago(s.lastCheck)));
+  const telemetry = el("span", "telemetry");
+  telemetry.append(bars(s.metrics), el("span", "when", s.state === "stopped" ? "stopped" : Pulse.ago(s.lastCheck)));
+  side.append(platforms, telemetry);
   b.append(tag, who, side);
   const disclosure = el("span", "disclosure");
   disclosure.setAttribute("aria-hidden", "true");
   b.append(disclosure);
+  if (binaries) b.append(binaries);
   for (const a of s.alerts || []) b.append(el("span", `alert ${a.severity}`, `${a.source}: ${a.text}`));
   b.addEventListener("click", () => compare ? toggleCompare(s.id, b) : pick(s.id, groupKey, b));
   const details = !expanded ? el("section", "server-details") : compare ? renderCompare(s, groupKey) : renderDetails(s);

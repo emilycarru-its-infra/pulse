@@ -10,7 +10,7 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   background: var(--surface-1); padding: 10px 14px; margin-bottom: 14px; font-size: 14px;
 }
 
-.toolbar { --control-height: 40px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+.toolbar { --control-height: 40px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; overflow: visible; padding-bottom: 4px; }
 .toolbar button { height: calc(var(--control-height) - 2px); line-height: 1; font-size: 13px; white-space: nowrap; }
 .toolbar .segmented { flex: 0 0 auto; }
 .toolbar .segmented button { width: 108px; flex: 0 0 108px; }
@@ -246,3 +246,28 @@ button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band)
 .patch-restart_required, .patch-awaiting_vendor_fix { border-color: #d78c22; }
 .patch-verified_fixed, .patch-not_affected { border-color: #318653; }
 .patch-detail { margin: 18px 0; }
+
+
+/* OS and hosting metadata sit above the binary inventory, without pill styling. */
+.row { align-items: start; padding: 12px 4px; }
+.row > .tag { margin-top: 3px; }
+.row > .disclosure { padding-top: 4px; }
+.row .side { align-self: start; flex-direction: column; align-items: flex-end; gap: 12px; padding-top: 2px; }
+.row .platform-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; max-width: 220px; }
+.platform-meta .tech-badge { border: 0; border-radius: 0; padding: 0; background: transparent; font-size: 11px; color: var(--text-secondary); justify-content: flex-end; text-align: right; }
+.platform-meta .tech-logo { width: 16px; height: 16px; }
+.row .telemetry { display: flex; align-items: center; gap: 10px; }
+.row .binary-tags { grid-column: 2 / -1; margin-top: 8px; gap: 6px; }
+.row .binary-tags .tech-badge { font-size: 11px; padding: 4px 7px; }
+.row .binary-tags .tech-logo { width: 17px; height: 17px; }
+@media (max-width: 700px) {
+  .row .platform-meta { max-width: 150px; }
+  .row .telemetry { flex-direction: column; align-items: flex-end; gap: 5px; }
+}
+@media (max-width: 480px) {
+  .row { grid-template-columns: 26px minmax(0, 1fr) 14px; }
+  .row .side { grid-column: 2; grid-row: 2; flex-direction: row; align-items: center; justify-content: space-between; width: 100%; margin-top: 8px; }
+  .row .platform-meta { align-items: flex-start; max-width: 60%; }
+  .platform-meta .tech-badge { justify-content: flex-start; text-align: left; }
+  .row .disclosure { grid-column: 3; grid-row: 1; }
+}
