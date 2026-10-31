@@ -79,3 +79,25 @@ test('any selected filter enables results mode and clearing restores the overvie
   assert.equal(url.searchParams.get('view'),'service');
   for (const name of ['os','binary','version','q','status','location','platform']) assert.equal(url.searchParams.has(name),false);
 });
+
+test('kernel patch links round trip and clearing removes patching mode', () => {
+  const {run} = page('https://status.example/?mode=patching&cve=CVE-2026-12345&patch=restart_required');
+  assert.equal(run('ui.patching'), true);
+  assert.equal(run('ui.cve'), 'CVE-2026-12345');
+  assert.equal(run('ui.patchState'), 'restart_required');
+  run('writeBinaryUrl()');
+  assert.equal(new URL(run('location.href')).searchParams.get('patch'), 'restart_required');
+  run('clearFilters(); writeBinaryUrl()');
+  assert.equal(new URL(run('location.href')).searchParams.has('cve'), false);
+  assert.equal(run('hasFilters()'), false);
+});
+
+test('patching intersects filters, excludes non-applicable platforms and keeps missing evidence unknown', () => {
+  const {run} = page('https://status.example/?cve=CVE-2026-12345&patch=unknown');
+  run('data={serviceNames:{}}');
+  assert.equal(run('matches({name:"worker", id:"w", patches:[]})'), true);
+  assert.equal(run('matches({patches:[{cve:"CVE-2026-12345",state:"not_affected",applicable:false}]})'), false);
+  assert.equal(run('matches({patches:[{cve:"CVE-2026-12345",state:"verified_fixed",applicable:true}]})'), false);
+  run('ui.patchState="needs_patch";ui.platform="Linux"');
+  assert.equal(run('matches({os:"Ubuntu 24.04",patches:[{cve:"CVE-2026-12345",state:"needs_patch",applicable:true}]})'), true);
+});

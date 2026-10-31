@@ -232,3 +232,17 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .filtered-servers { border: 1px solid var(--hair); border-radius: 4px; background: var(--surface-1); padding: 0 16px; }
 .clear-filters { background: var(--clear-filters-bg, var(--warn)); color: var(--clear-filters-text, #000); border: 1px solid currentColor; border-radius: 4px; font-weight: 700; padding: 0 12px; }
 .clear-filters[hidden] { display: none; }
+
+.patch-filter[hidden], .patching-overview[hidden] { display: none; }
+#patching-toggle { min-height: 40px; padding: 8px 14px; font: inherit; font-weight: 600; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface-1); color: var(--text-primary); cursor: pointer; }
+#patching-toggle[aria-pressed="true"] { background: var(--brand-yellow, #bed600); color: #111; }
+.patching-overview { margin: 16px 0 22px; padding: 16px; border: 1px solid var(--hair); border-radius: 5px; background: var(--surface-1); }
+.patching-overview h2 { margin: 0 0 12px; font-size: 18px; }
+.patch-counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.patch-status { display: inline-block; width: fit-content; margin-top: 5px; padding: 4px 8px; border: 1px solid var(--hair); border-radius: 4px; font-size: 12px; background: var(--surface-2); color: var(--text-primary); }
+button.patch-status { font: inherit; font-size: 12px; cursor: pointer; }
+button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band); outline-offset: 2px; }
+.patch-needs_patch { border-color: #d64545; }
+.patch-restart_required, .patch-awaiting_vendor_fix { border-color: #d78c22; }
+.patch-verified_fixed, .patch-not_affected { border-color: #318653; }
+.patch-detail { margin: 18px 0; }
