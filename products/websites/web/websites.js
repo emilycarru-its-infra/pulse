@@ -4,7 +4,7 @@ const WORD = {
   up: "Up",
   degraded: "Warning",
   down: "Error",
-  unknown: "No data",
+  unknown: "Not reporting",
 };
 const CHECK_WORD = { ok: "OK", warn: "Warning", down: "Error" };
 const CHECK_TAG = { ok: "up", warn: "degraded", down: "down" };
@@ -409,7 +409,7 @@ function renderTotal(members = visibleWebsites()) {
   const up = members.filter((w) => w.state === "up").length;
   const unknown = members.filter((w) => w.state === "unknown").length;
   total.replaceChildren(el("b", null, count), document.createTextNode(` · ${up} up`));
-  if (unknown) total.append(document.createTextNode(` · ${unknown} no data`));
+  if (unknown) total.append(document.createTextNode(` · ${unknown} not reporting`));
 }
 
 function render() {

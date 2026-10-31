@@ -1,8 +1,8 @@
 // ServersPulse: where the servers run (one card per place), then every server grouped by the
 // service it carries or by where it runs, and inline details for the selected entry.
 
-const WORD = { up: "Up", degraded: "Warning", down: "Error", stopped: "Stopped", unknown: "No data" };
-const LEVEL = { ok: "Normal", warn: "Warning", bad: "Error", idle: "No data" };
+const WORD = { up: "Up", degraded: "Warning", down: "Error", stopped: "Stopped", unknown: "Not reporting" };
+const LEVEL = { ok: "Normal", warn: "Warning", bad: "Error", idle: "Not reporting" };
 const RANK = { down: 0, degraded: 1, unknown: 2, up: 3, stopped: 4 };
 const LEVEL_RANK = { bad: 0, warn: 1, idle: 2, ok: 3 };
 function usage(value) {
@@ -81,7 +81,7 @@ function chip(level) {
 }
 
 function countsLine(c) {
-  const parts = [["up", "up"], ["degraded", "warning"], ["down", "error"], ["unknown", "no data"], ["stopped", "stopped"]]
+  const parts = [["up", "up"], ["degraded", "warning"], ["down", "error"], ["unknown", "not reporting"], ["stopped", "stopped"]]
     .filter(([k]) => c[k]).map(([k, w]) => `<b>${c[k]}</b> ${w}`);
   return parts.join(" · ");
 }
@@ -266,7 +266,7 @@ function bars(m) {
   for (const [k, label] of [["cpu", "CPU"], ["mem", "Mem"], ["disk", "Disk"]]) {
     const { value: v, level } = usage(m?.[k]);
     const b = el("span", `bar usage-${level}`);
-    b.title = v == null ? `${label}: no data` : `${label} ${Math.round(v)}%`;
+    b.title = v == null ? `${label}: not reported` : `${label} ${Math.round(v)}%`;
     b.innerHTML = `${label}<i><b style="width:${v ?? 0}%"></b></i>`;
     wrap.append(b);
   }
@@ -453,7 +453,7 @@ function renderDetails(s) {
       const li = el("li");
       const level = c.state === "ok" ? "ok" : c.state === "warn" ? "warn" : c.state === "down" ? "bad" : "idle";
       const name = el("span", "source-name", c.source);
-      const status = el("span", `source-severity ${level}`, { ok: "OK", warn: "Warning", bad: "Error", idle: "No data" }[level]);
+      const status = el("span", `source-severity ${level}`, { ok: "OK", warn: "Warning", bad: "Error", idle: "Not reporting" }[level]);
       li.className = "source-check";
       li.append(status, name, el("span", "source-age", Pulse.ago(c.at)));
       ul.append(li);
