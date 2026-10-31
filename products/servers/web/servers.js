@@ -11,7 +11,8 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const ui = { view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
+const PATCH_WORD = {needs_patch:"Needs patch", restart_required:"Restart required", awaiting_vendor_fix:"Awaiting vendor fix", verified_fixed:"Verified fixed", not_affected:"Not affected", unknown:"Unknown / stale"};
+const ui = { patching:false, cve:null, patchState:null, view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 
 function remember() {
@@ -20,6 +21,9 @@ function remember() {
 try { ui.view = localStorage.getItem("servers.groupBy") || ui.view; } catch { /* private window */ }
 function readBinaryUrl(initial = false) {
   const params = new URL(location.href).searchParams;
+  ui.cve = /^CVE-[0-9]{4}-[0-9]{4,8}$/.test(params.get("cve") || "") ? params.get("cve") : null;
+  ui.patching = params.get("mode") === "patching" || Boolean(ui.cve);
+  ui.patchState = Object.hasOwn(PATCH_WORD, params.get("patch")) ? params.get("patch") : null;
   ui.platform = params.get("platform")?.trim().slice(0, 100) || null;
   ui.os = params.get("os")?.trim().slice(0, 200) || null;
   ui.view = ["location", "service"].includes(params.get("view")) ? params.get("view") : initial ? ui.view : "location";
@@ -45,6 +49,7 @@ function comparing() {
 function binaryUrl(binary = ui.runtime, version = ui.binaryVersion, server = ui.picked) {
   const url = new URL(location.href);
   for (const [key, value] of [["binary", binary], ["version", binary ? version : null], ["server", server],
+    ["mode", ui.patching ? "patching" : null], ["cve", ui.patching ? ui.cve : null], ["patch", ui.patching ? ui.patchState : null],
     ["platform", ui.platform], ["os", ui.os], ["view", ui.view === "location" ? null : ui.view],
     ["status", ui.filter === "all" ? null : ui.filter], ["location", ui.place], ["q", ui.query]]) {
     if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
@@ -169,14 +174,20 @@ function renderOSFilters() {
 }
 
 function hasFilters() {
-  return Boolean(ui.platform || ui.os || ui.runtime || ui.binaryVersion || ui.place || ui.query || ui.filter !== "all");
+  return Boolean(ui.patching || ui.platform || ui.os || ui.runtime || ui.binaryVersion || ui.place || ui.query || ui.filter !== "all");
 }
 function clearFilters() {
-  Object.assign(ui, {platform:null, os:null, runtime:null, binaryVersion:null, place:null, query:"", filter:"all", picked:null, pickedGroup:null, binaryOpen:{}});
+  Object.assign(ui, {patching:false, cve:null, patchState:null, platform:null, os:null, runtime:null, binaryVersion:null, place:null, query:"", filter:"all", picked:null, pickedGroup:null, binaryOpen:{}});
   ui.compareClosed.clear();
 }
 
+function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
 function matches(s) {
+  if (ui.patching) {
+    const patch = patchFor(s);
+    if (patch?.applicable === false) return false;
+    if (ui.patchState && (patch?.state || "unknown") !== ui.patchState) return false;
+  }
   if (ui.platform && serverPlatform(s) !== ui.platform) return false;
   if (ui.os && serverOS(s) !== ui.os) return false;
   if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => c.name === ui.runtime && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))) return false;
@@ -270,6 +281,10 @@ function row(s, groupKey, regionId) {
   const platforms = el("span", "tech-tags");
   if (s.os) platforms.append(PulseTech.badge(s.os));
   who.append(platforms);
+  if (ui.patching) {
+    const patch = patchFor(s);
+    who.append(el("span", `patch-status patch-${patch?.state || "unknown"}`, PATCH_WORD[patch?.state || "unknown"]));
+  }
   const inventory = s.runtimeInventory;
   if (inventory?.components?.length) {
     const tags = el("span", `tech-tags ${inventory.freshness !== "fresh" ? "stale" : ""}`);
@@ -390,6 +405,7 @@ function renderDetails(s) {
       panel.append(m);
     }
   }
+  if (ui.patching) panel.append(patchDetails(s));
   panel.append(runtimeDetails(s.runtimeInventory, s.id));
   if ((s.alerts || []).length) {
     panel.append(el("h4", null, "Alerts"));
@@ -624,6 +640,56 @@ function renderTotal() {
   document.getElementById("total").innerHTML = `<b>${up}</b> of ${running.length} healthy` + (alerts ? ` · <b>${alerts}</b> alert${alerts > 1 ? "s" : ""}` : "");
 }
 
+function patchDetails(server) {
+  const p = patchFor(server) || {state:"unknown", reason:"Kernel not observed"};
+  const section = el("section", "patch-detail");
+  section.append(el("h4", null, `Kernel patching · ${ui.cve || data.patching?.cves?.[0] || "No advisory configured"}`));
+  section.append(el("p", `patch-status patch-${p.state}`, PATCH_WORD[p.state] || PATCH_WORD.unknown));
+  section.append(el("p", null, p.reason));
+  const list = el("dl");
+  for (const [name, value] of [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
+    ["Running package", p.running_package ? `${p.running_package.name} ${p.running_package.version}` : null],
+    ["Vendor status", p.vendor_state], ["Fixed package", p.fixed_version], ["Source package", p.source_package],
+    ["IPv4 TCP listeners", p.tcp4_listener_count ?? "Not assessed"], ["MPTCP listeners", p.mptcp_listener_count ?? "Not assessed"],
+    ["Network exposure", p.exposure === "unassessed" ? "Not assessed" : p.exposure],
+    ["Kernel observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"],
+    ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]]) {
+    if (value !== undefined && value !== null) list.append(el("dt", null, name), el("dd", null, String(value)));
+  }
+  section.append(list);
+  const advisory = el("a", null, "Vendor advisory");
+  advisory.href = p.vendor === "Ubuntu" ? `https://ubuntu.com/security/${p.cve}` : `https://www.cve.org/CVERecord?id=${encodeURIComponent(p.cve || ui.cve || "")}`;
+  advisory.target = "_blank"; advisory.rel = "noopener noreferrer"; section.append(advisory);
+  for (const gap of p.gaps || []) section.append(el("p", "muted", gap));
+  return section;
+}
+function renderPatching() {
+  const choices = data.patching?.cves || [];
+  document.getElementById("patching-toggle").hidden = !choices.length && !ui.patching;
+  document.getElementById("patching-toggle").setAttribute("aria-pressed", String(ui.patching));
+  for (const filter of document.querySelectorAll(".patch-filter")) filter.hidden = !ui.patching;
+  const select = document.getElementById("cve");
+  const values = [...new Set([...(ui.cve ? [ui.cve] : []), ...choices])];
+  if (select.dataset.choices !== values.join(',')) {
+    select.replaceChildren(...values.map(v => { const o=el("option", null, v); o.value=v; return o; }));
+    select.dataset.choices = values.join(',');
+  }
+  select.value = ui.cve || choices[0] || "";
+  document.getElementById("patch-state").value = ui.patchState || "";
+  const section = document.getElementById("patching-overview"); section.hidden = !ui.patching;
+  if (!ui.patching) return;
+  const scope = data.servers.filter(s => patchFor(s)?.applicable !== false);
+  section.replaceChildren(el("h2", null, `${select.value || "Kernel"} · Patching`));
+  const counts = el("div", "patch-counts");
+  for (const [state, label] of Object.entries(PATCH_WORD)) {
+    const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
+    const b = el("button", `patch-status patch-${state}`, `${n} ${label}`); b.type="button";
+    b.setAttribute("aria-pressed", String(ui.patchState === state));
+    b.addEventListener("click", () => {ui.patchState=ui.patchState===state?null:state;writeBinaryUrl();render();});counts.append(b);
+  }
+  section.append(counts, el("p", "muted", `${scope.length} Linux or platform-unverified servers. Kernel and vendor evidence are independent of uptime. Missing or stale observations stay unknown; network exposure and livepatch coverage require their own evidence.`));
+}
+
 function render() {
   if (!data) return;
   for (const g of ["view", "filter"]) {
@@ -632,6 +698,7 @@ function render() {
   document.getElementById("sample").hidden = !data.sample;
   if (document.activeElement !== document.getElementById("search")) document.getElementById("search").value = ui.query;
   document.getElementById("clear-filters").hidden = !hasFilters();
+  renderPatching();
   renderTotal();
   renderOSFilters();
   renderRuntimes();
@@ -696,3 +763,11 @@ document.addEventListener("keydown", (e) => {
 Pulse.masonry(document.getElementById("groups"));
 
 window.addEventListener("technology-brands-ready", () => { if (data) render(); });
+
+document.getElementById("patching-toggle").addEventListener("click", () => {
+  ui.patching = !ui.patching; ui.cve = ui.patching ? data.patching?.cves?.[0] || null : null;
+  ui.patchState = null; ui.picked = null; writeBinaryUrl(); render();
+});
+for (const [id, field] of [["cve", "cve"], ["patch-state", "patchState"]]) document.getElementById(id).addEventListener("change", e => {
+  ui[field] = e.target.value || null; ui.picked = null; writeBinaryUrl(); render();
+});

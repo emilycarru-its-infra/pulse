@@ -53,6 +53,16 @@ def parse(body, now):
                 or facts["instance_id"] != iid
             ):
                 raise ValueError()
+            kernel = facts.get("kernel")
+            if kernel is not None:
+                if (not isinstance(kernel, dict) or kernel.get("contract") != "linux-kernel-evidence/1"
+                        or not isinstance(kernel.get("running_release"), str)
+                        or len(kernel.get("assessments", [])) > 16
+                        or len(json.dumps(kernel)) > 20000):
+                    raise ValueError()
+                for assessment in kernel.get("assessments", []):
+                    if not isinstance(assessment, dict) or not isinstance(assessment.get("cve"), str):
+                        raise ValueError()
             components = facts["components"]
             if not isinstance(components, list) or len(components) > 64:
                 raise ValueError()

@@ -7,8 +7,11 @@ status() and summary(); neither knows which source answered.
 """
 
 import logging
+import os
+import re
 from datetime import UTC, datetime, timedelta
 
+from pulse_servers.patches import assessments
 from pulse_servers.runtimes import time, view
 
 STATES = ["up", "degraded", "down", "stopped", "unknown"]
@@ -33,6 +36,11 @@ class ServersService:
     ):
         """source(server, location, now) returns the server's health: state, metrics, checks
         and alerts, as pulse_servers.simulate.health does."""
+        self.patch_cves = [
+            v.strip()
+            for v in os.environ.get("PULSE_KERNEL_CVES", "").split(",")
+            if re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,8}", v.strip())
+        ]
         self.inventory_store = inventory_store
         self.runtime_store = runtime_store
         self.catalog = catalog
@@ -68,7 +76,12 @@ class ServersService:
                     freshness="unavailable",
                     gaps=["Runtime observation storage unavailable"],
                 )
-            row = {**server, **health, "runtimeInventory": runtime}
+            row = {
+                **server,
+                **health,
+                "runtimeInventory": runtime,
+                "patches": assessments(server, runtime, self.patch_cves, now),
+            }
             if self.inventory_store is not None:
                 row.pop("service_group", None)
                 source = inventory_rows.get(server["id"])
@@ -133,6 +146,7 @@ class ServersService:
                     }
                 )
         return {
+            "patching": {"cves": self.patch_cves},
             "serviceGroups": service_groups,
             "generatedAt": _iso(now),
             "sample": bool(self.catalog.get("sample", False)),
