@@ -2,11 +2,11 @@
 (() => {
   const registry = {
     amplify: ['amplify', '#d96619'], aws: ['amazonwebservices', '#c66a00'], azure: ['azure', '#0078d4'], proxmox: ['proxmox', '#c65f00'],
-    windows: ['windows11', '#0078d4'], linux: ['linux', '#a57700'], macos: ['apple', '#666666'],
+    hyperv: ['hyperv', '#0078d4'], windows: ['windows11', '#0078d4'], linux: ['linux', '#a57700'], macos: ['apple', '#666666'],
     ubuntu: ['ubuntu', '#d74613'], debian: ['debian', '#a80030'], rocky: ['rockylinux', '#008361'],
     amazonlinux: ['amazonwebservices', '#c66a00'], apache: ['apache', '#b82043'], java: ['java', '#c94715'],
     mysql: ['mysql', '#00618a'], mariadb: ['mariadb', '#007080'], nginx: ['nginx', '#00843d'],
-    nodejs: ['nodejs', '#438b35'], openssh: ['openssh.gif', '#a27700'], php: ['php', '#656aa3'],
+    nodejs: ['nodejs', '#438b35'], openssh: ['ssh', '#526780'], php: ['php', '#656aa3'],
     postgresql: ['postgresql', '#336791'], python: ['python', '#3674a5'], sqlserver: ['microsoftsqlserver', '#c52c28'],
     docker: ['docker', '#167cc1'], containerd: ['containerd', '#575757'], wordpress: ['wordpress', '#21759b'],
     kinsta: ['kinsta', '#e84f00'], greengeeks: ['greengeeks', '#387329'], powershell: ['powershell', '#245da8'],
@@ -16,7 +16,7 @@
     [/kinsta/i, 'kinsta'], [/green\s?geeks/i, 'greengeeks'], [/amplify/i, 'amplify'],
     [/amazon\s+linux/i, 'amazonlinux'], [/\baws\b|amazon web/i, 'aws'], [/azure/i, 'azure'],
     [/proxmox/i, 'proxmox'], [/ubuntu/i, 'ubuntu'], [/debian/i, 'debian'], [/rocky/i, 'rocky'],
-    [/windows|hyper-v/i, 'windows'], [/mac\s?os|darwin|\bapple\b/i, 'macos'], [/linux/i, 'linux'],
+    [/hyper[ -]?v/i, 'hyperv'], [/windows/i, 'windows'], [/mac\s?os|darwin|\bapple\b/i, 'macos'], [/linux/i, 'linux'],
     [/apache/i, 'apache'], [/containerd/i, 'containerd'], [/docker/i, 'docker'], [/\bjava\b/i, 'java'],
     [/mariadb/i, 'mariadb'], [/mysql/i, 'mysql'], [/nginx/i, 'nginx'], [/node\.?js/i, 'nodejs'],
     [/openssh/i, 'openssh'], [/\bphp\b/i, 'php'], [/postgres/i, 'postgresql'], [/python/i, 'python'],
@@ -34,8 +34,8 @@
     const [file, color] = registry[key];
     return {key, color, icon: `/core/brands/${file.includes('.') ? file : `${file}.svg`}`};
   }
-  function badge(label, hint = '') {
-    const node = document.createElement('span'); node.className = 'tech-badge';
+  function badge(label, hint = '', kind = 'label') {
+    const node = document.createElement('span'); node.className = kind === 'binary' ? 'tech-badge tech-binary' : 'tech-badge';
     const found = brand(label, hint);
     if (found) {
       node.dataset.brand = found.key || 'site'; node.style.setProperty('--tech-color', found.color);
@@ -63,9 +63,19 @@
     let signature = '', buttons = [], search = '', lastKey = 0;
     const close = (focus = false) => { list.hidden = true; trigger.setAttribute('aria-expanded', 'false'); if (focus) trigger.focus(); };
     const focus = i => buttons[(i + buttons.length) % buttons.length]?.focus();
+    const position = () => {
+      list.style.left = '0'; list.style.top = 'calc(100% + 5px)'; list.style.bottom = 'auto';
+      const anchor = trigger.getBoundingClientRect();
+      const below = window.innerHeight - anchor.bottom - 16, above = anchor.top - 16;
+      const upwards = below < 160 && above > below;
+      if (upwards) { list.style.top = 'auto'; list.style.bottom = 'calc(100% + 5px)'; }
+      list.style.maxHeight = `${Math.max(80, Math.min(380, window.innerHeight * .6, upwards ? above : below))}px`;
+      const bounds = list.getBoundingClientRect();
+      list.style.left = `${Math.max(12 - bounds.left, Math.min(0, window.innerWidth - 12 - bounds.right))}px`;
+    };
     const open = () => {
       for (const [other, p] of pickers) if (other !== select) p.close();
-      list.hidden = false; trigger.setAttribute('aria-expanded', 'true');
+      list.hidden = false; trigger.setAttribute('aria-expanded', 'true'); position();
       focus(Math.max(0, buttons.findIndex(b => b.dataset.value === select.value)));
     };
     function keys(event, index) {
@@ -85,7 +95,10 @@
     trigger.addEventListener('click', () => list.hidden ? open() : close());
     trigger.addEventListener('keydown', e => keys(e, Math.max(0, buttons.findIndex(b => b.dataset.value === select.value))));
     const refresh = () => {
-      const options = [...select.options];
+      const options = [...select.options].sort((a, b) => {
+        const rank = o => !o.value ? -1 : /^other\b/i.test(o.textContent.trim()) ? 2 : /^unknown\b|\bnot (recorded|reported)\b|\bunrecorded\b/i.test(o.textContent.trim()) ? 1 : 0;
+        return rank(a) - rank(b);
+      });
       const next = JSON.stringify(options.map(o => [o.value, o.textContent, o.disabled]));
       if (signature !== next) {
         const focusedValue = buttons.find(b => b === document.activeElement)?.dataset.value;

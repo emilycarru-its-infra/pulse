@@ -24,17 +24,15 @@
       <div class="segmented" role="group" aria-label="Show" id="filter">
         <button type="button" data-v="degraded" aria-pressed="false">Warning</button>
         <button type="button" data-v="down" aria-pressed="false">Error</button>
-        <button type="button" data-v="unknown" aria-pressed="false">No data</button>
+        <button type="button" data-v="unknown" aria-pressed="false">Not reporting</button>
       </div>
       <label class="runtime-filter"><span class="visually-hidden">Platform</span>
-        <select id="platform"><option value="">All platforms</option></select>
+        <select id="platform"><option value="">All Platforms</option></select>
       </label>
-      <label class="runtime-filter os-filter"><span class="visually-hidden">OS version</span>
-        <select id="os"><option value="">All OS versions</option></select>
+      <label class="runtime-filter os-filter"><span class="visually-hidden">Operating Systems versions</span>
+        <select id="os"><option value="">All Operating Systems versions</option></select>
       </label>
-      <label class="runtime-filter"><span class="visually-hidden">Binary</span>
-        <select id="binary"><option value="">All binaries</option></select>
-      </label>
+      <select id="binary" aria-label="Binary" hidden><option value="">All binaries</option></select>
       <label class="search"><span class="visually-hidden">Find a server</span>
         <input type="search" id="search" placeholder="Find server, service, binary or version" autocomplete="off" spellcheck="false">
       </label>
@@ -45,8 +43,23 @@
       </div>
     </div>
 
+    <div class="filter-meta-row">
+      <div id="binary-filters" class="binary-filter-tags" role="group" aria-label="Filter by binary"></div>
+      <div class="status-meta">
+        <ul class="legend" aria-label="Legend">
+          <li><span class="tag up"></span>Up</li>
+          <li><span class="tag degraded"></span>Warning</li>
+          <li><span class="tag down"></span>Error</li>
+          <li><span class="tag stopped"></span>Stopped on purpose</li>
+          <li><span class="tag unknown"></span>Not reporting</li>
+        </ul>
+        <p class="fine" id="updated"></p>
+      </div>
+    </div>
+
     <section id="patching-overview" class="patching-overview" hidden aria-label="Kernel patching coverage"></section>
-    <section id="runtime-overview" class="runtime-overview" aria-label="Binary observation coverage"></section>
+
+    <section id="runtime-overview" class="runtime-overview" aria-label="Binary versions" hidden></section>
 
     <section class="picture" aria-label="Where the servers run" id="picture"></section>
 
@@ -54,16 +67,7 @@
       <div class="groups" id="groups"></div>
     </div>
 
-    <div class="page-foot">
-      <ul class="legend" aria-label="Legend">
-        <li><span class="tag up"></span>Up</li>
-        <li><span class="tag degraded"></span>Warning</li>
-        <li><span class="tag down"></span>Error</li>
-        <li><span class="tag stopped"></span>Stopped on purpose</li>
-        <li><span class="tag unknown"></span>No data</li>
-      </ul>
-      <p class="fine" id="updated"></p>
-    </div>
+
   </main>
   <script src="/core/shell.js"></script>
   <script src="/core/technologies.js"></script>

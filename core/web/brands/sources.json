@@ -3,7 +3,8 @@
     "id": "amazonwebservices",
     "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/amazonwebservices/amazonwebservices-original.svg",
     "collection": "Devicon",
-    "license": "MIT; trademarks remain with their owners"
+    "license": "MIT; trademarks remain with their owners",
+    "adaptation": "Smile-only artwork; wordmark path removed and empty viewBox padding trimmed"
   },
   {
     "id": "apache",
@@ -99,7 +100,8 @@
     "id": "proxmox",
     "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/proxmox/proxmox-original.svg",
     "collection": "Devicon",
-    "license": "MIT; trademarks remain with their owners"
+    "license": "MIT; trademarks remain with their owners",
+    "adaptation": "Emblem-only viewport; original vector paths retained"
   },
   {
     "id": "python",
@@ -153,19 +155,14 @@
     "id": "kinsta",
     "source": "https://kinsta.com/wp-content/themes/kinsta/images/custom-pages/page/press/kinsta-icon.svg?v=20250707",
     "collection": "Vendor artwork",
-    "format": "svg"
+    "format": "svg",
+    "adaptation": "Removed the two native SVG backing-tile paths; logo paths are preserved"
   },
   {
     "id": "greengeeks",
     "source": "https://www.greengeeks.com/_ipx/_/img/logo-icon.svg",
     "collection": "Vendor artwork",
     "format": "svg"
-  },
-  {
-    "id": "openssh",
-    "source": "https://www.openssh.org/images/openssh.gif",
-    "collection": "Vendor artwork",
-    "format": "gif"
   },
   {
     "id": "bind",
@@ -177,5 +174,18 @@
     "id": "amplify",
     "source": "https://raw.githubusercontent.com/aws-amplify/amplify-ui/main/docs/public/amplify-logo.svg",
     "collection": "AWS Amplify official project"
+  },
+  {
+    "id": "hyperv",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/hyperv/hyperv-original.svg",
+    "collection": "Devicon",
+    "license": "MIT; trademarks remain with their owners"
+  },
+  {
+    "id": "ssh",
+    "source": "https://raw.githubusercontent.com/devicons/devicon/32fe1d3b3f36ad11f90ab94f7db59738139c2bf6/icons/ssh/ssh-original.svg",
+    "collection": "Devicon",
+    "license": "MIT",
+    "usage": "Transparent SSH protocol symbol for OpenSSH; not the opaque OpenSSH project banner"
   }
 ]
