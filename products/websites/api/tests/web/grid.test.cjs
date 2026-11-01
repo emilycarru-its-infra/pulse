@@ -20,7 +20,7 @@ class Element {
   addEventListener(name, callback) { this.events[name] = callback; }
 }
 function page(hash = '') {
-  const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section') };
+  const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section'), hosting: new Element('select'), network: new Element('select') };
   const context = vm.createContext({ URL, URLSearchParams, Date, window: {dispatchEvent() {}}, Event: class {}, fetch: async () => ({ok:false}),
     Pulse: {copyLink: (getURL, name) => { const button = new Element('button'); button.setAttribute('aria-label', `Copy link to ${name}`); button.getURL = getURL; return button; }},
     location: { href: 'https://status.example/' + hash, hash, pathname: '/', search: '' },
@@ -73,15 +73,14 @@ test('network tags remain searchable and missing checks are explained', () => {
   assert.match(nodes.groups.children[0].textContent, /https:\/\/a.example.test\/Art\//);
 });
 
-test('overview includes counted network filters and intersects them with hosting and health', () => {
+test('dropdown includes counted networks and intersects them with hosting and health', () => {
   const {run,nodes} = page();
-  run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderPicture()');
-  assert.ok([...nodes.picture.children[0].children, ...nodes.picture.children.slice(1)].every(group => group.children.every(button => button.dataset.value)));
-  const button = nodes.picture.children[0].children[1].children.find(b => b.textContent === 'Network · 2');
+  run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderDropdowns()');
+  const button = nodes.network.children.find(b => b.textContent === 'Network · 2');
   assert.ok(button);
-  assert.equal(button.attributes['aria-pressed'], 'false');
-  run('ui.network="Network"; renderPicture(); renderGroups()');
-  assert.equal(nodes.picture.children[0].children[1].children.find(b => b.dataset.value === 'Network').attributes['aria-pressed'], 'true');
+  assert.equal(button.value, 'Network');
+  run('ui.network="Network"; renderDropdowns(); renderGroups()');
+  assert.equal(nodes.network.value, 'Network');
   assert.equal(run('visibleWebsites().length'), 2);
   run('ui.filter="unknown"; ui.place="host-a"; renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'path');

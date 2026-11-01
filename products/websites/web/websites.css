@@ -88,8 +88,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 /* Keep provider and network marks distinct from the version pills below them. */
 .hosting-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 14px; margin-top: 3px; }
 .website-filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
-.picture { flex-direction: column; gap: 12px; align-items: stretch; }
-.website-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.picture { gap: 12px 24px; align-items: center; }
+.toolbar .dropdown { min-width: 0; max-width: 100%; }
+.dropdown select { font: inherit; font-size: 13px; height: var(--control-height); color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--rule); border-radius: 4px; padding: 0 28px 0 10px; max-width: 220px; }
 .website-filter-tag { border: 0; padding: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; cursor: pointer; max-width: 100%; }
 .website-filter-tag .tech-badge { padding: 5px 8px; }
 .website-filter-tag[aria-pressed="true"] .tech-badge { outline: 2px solid var(--accent-band); outline-offset: 1px; font-weight: 700; }

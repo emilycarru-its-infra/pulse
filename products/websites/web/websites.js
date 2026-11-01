@@ -73,13 +73,34 @@ function clearFilters() {
   Object.assign(ui, {place:null, network:null, php:null, wordpress:null, query:"", filter:"all", picked:null});
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
+function renderDropdowns() {
+  for (const [id, field, all, valueOf] of [["hosting", "place", "All hosting", w => w.group],
+    ["network", "network", "All networks", w => w.network || "unknown"]]) {
+    const select = document.getElementById(id);
+    const counts = new Map();
+    for (const website of data.websites) {
+      const value = valueOf(website); counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    if (ui[field] && !counts.has(ui[field])) counts.set(ui[field], 0);
+    const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
+    const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
+    const choices = [["", all], ...[...counts].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
+      .map(([value, count]) => [value, `${labelOf(value)} · ${count}`])];
+    const signature = JSON.stringify(choices);
+    if (select.dataset.choices !== signature) {
+      select.replaceChildren(...choices.map(([value, label]) => {
+        const option = el("option", null, label); option.value = value; return option;
+      }));
+      select.dataset.choices = signature;
+    }
+    select.value = ui[field] || "";
+  }
+}
 function renderPicture() {
   const wrap = document.getElementById("picture");
   const focused = document.activeElement?.closest(".website-filter-tag");
   const focusKey = focused ? [focused.dataset.field, focused.dataset.value] : null;
-  const configs = [["hosting", "place", "Hosting provider", w => w.group],
-    ["network", "network", "Website network", w => w.network || "unknown"],
-    ["php", "php", "PHP version", w => websiteFacts(w).php_version || "unknown"],
+  const configs = [["php", "php", "PHP version", w => websiteFacts(w).php_version || "unknown"],
     ["wordpress", "wordpress", "WordPress version", w => websiteFacts(w).wordpress_version || "unknown"]];
   const buttons = [];
   const groups = configs.map(([id, field, name, valueOf]) => {
@@ -109,9 +130,7 @@ function renderPicture() {
     }
     return group;
   });
-  const hostingRow = el("div", "website-filter-row");
-  hostingRow.append(groups[0], groups[1]);
-  wrap.replaceChildren(hostingRow, groups[2], groups[3]);
+  wrap.replaceChildren(...groups);
   if (focusKey) buttons.find(button => button.dataset.field === focusKey[0] && button.dataset.value === focusKey[1])?.focus({preventScroll:true});
 }
 let layoutFrame;
@@ -400,8 +419,10 @@ function render() {
   document.getElementById("sample").hidden = !data.sample;
   if (document.activeElement !== document.getElementById("search")) document.getElementById("search").value = ui.query;
   document.getElementById("clear-filters").hidden = !hasFilters();
+  renderDropdowns();
   renderPicture();
   renderGroups();
+  for (const id of ["hosting", "network"]) PulseTech.picker(document.getElementById(id));
 }
 
 document.getElementById("filter").addEventListener("click", (e) => {
@@ -417,6 +438,8 @@ document.getElementById("search").addEventListener("input", (e) => {
   render();
 });
 for (const event of ["popstate", "hashchange"]) window.addEventListener(event, () => { readFilters(); if (data) render(); });
+for (const [id, field] of [["hosting", "place"], ["network", "network"]])
+  document.getElementById(id).addEventListener("change", e => { ui[field] = e.target.value || null; writeFilters(); render(); });
 document.getElementById("clear-filters").addEventListener("click", () => { clearFilters(); writeFilters(); render(); });
 document.getElementById("filter-link").append(Pulse.copyLink(() => websiteUrl().href, "filtered websites"));
 new ResizeObserver(scheduleLayout).observe(document.getElementById("groups"));
