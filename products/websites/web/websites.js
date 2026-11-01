@@ -74,11 +74,38 @@ function clearFilters() {
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
 function renderDropdowns() {
-  const configs = [["hosting", "place", "All hosting", w => w.group], ["network", "network", "All networks", w => w.network || "unknown"],
-    ["php", "php", "All PHP versions", w => websiteFacts(w).php_version || "unknown"],
-    ["wordpress", "wordpress", "All WordPress versions", w => websiteFacts(w).wordpress_version || "unknown"]];
-  for (const [id, field, all, valueOf] of configs) {
+  for (const [id, field, all, valueOf] of [["hosting", "place", "All hosting", w => w.group],
+    ["network", "network", "All networks", w => w.network || "unknown"]]) {
     const select = document.getElementById(id);
+    const counts = new Map();
+    for (const website of data.websites) {
+      const value = valueOf(website); counts.set(value, (counts.get(value) || 0) + 1);
+    }
+    if (ui[field] && !counts.has(ui[field])) counts.set(ui[field], 0);
+    const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
+    const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
+    const choices = [["", all], ...[...counts].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
+      .map(([value, count]) => [value, `${labelOf(value)} · ${count}`])];
+    const signature = JSON.stringify(choices);
+    if (select.dataset.choices !== signature) {
+      select.replaceChildren(...choices.map(([value, label]) => {
+        const option = el("option", null, label); option.value = value; return option;
+      }));
+      select.dataset.choices = signature;
+    }
+    select.value = ui[field] || "";
+  }
+}
+function renderPicture() {
+  const wrap = document.getElementById("picture");
+  const focused = document.activeElement?.closest(".website-filter-tag");
+  const focusKey = focused ? [focused.dataset.field, focused.dataset.value] : null;
+  const configs = [["php", "php", "PHP version", w => websiteFacts(w).php_version || "unknown"],
+    ["wordpress", "wordpress", "WordPress version", w => websiteFacts(w).wordpress_version || "unknown"]];
+  const buttons = [];
+  const groups = configs.map(([id, field, name, valueOf]) => {
+    const group = el("div", "website-filter-group");
+    group.setAttribute("role", "group"); group.setAttribute("aria-label", name);
     const values = new Map();
     for (const w of data.websites) {
       if (["php", "wordpress"].includes(id) && ((ui.place && w.group !== ui.place) || (ui.network && w.network !== ui.network))) continue;
@@ -86,17 +113,25 @@ function renderDropdowns() {
       values.set(value, (values.get(value) || 0) + 1);
     }
     if (ui[field] && !values.has(ui[field])) values.set(ui[field], 0);
-    const options = [["", all], ...[...values].sort(([a], [b]) => a.localeCompare(b, undefined, {numeric:true})).map(([value, count]) => {
-      const label = id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
-      return [value, `${label} · ${count}`];
-    })];
-    const signature = JSON.stringify(options);
-    if (select.dataset.choices !== signature) {
-      select.replaceChildren(...options.map(([value, label]) => { const option = el("option", null, label); option.value = value; return option; }));
-      select.dataset.choices = signature;
+    const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
+    const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
+    const choices = [...values].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
+      .map(([value, count]) => [value, `${value !== "unknown" && id === "php" ? "PHP " : value !== "unknown" && id === "wordpress" ? "WordPress " : ""}${labelOf(value)} · ${count}`]);
+    for (const [value, label] of choices) {
+      const button = el("button", "website-filter-tag"); button.type = "button";
+      button.dataset.field = field; button.dataset.value = value;
+      button.setAttribute("aria-pressed", String((ui[field] || "") === value));
+      button.append(PulseTech.badge(label, ["php", "wordpress"].includes(id) ? id : labelOf(value), "binary"));
+      button.addEventListener("click", () => {
+        ui[field] = ui[field] === value ? null : value || null;
+        writeFilters(); render();
+      });
+      buttons.push(button); group.append(button);
     }
-    select.value = ui[field] || "";
-  }
+    return group;
+  });
+  wrap.replaceChildren(...groups);
+  if (focusKey) buttons.find(button => button.dataset.field === focusKey[0] && button.dataset.value === focusKey[1])?.focus({preventScroll:true});
 }
 let layoutFrame;
 let layoutScroll;
@@ -181,41 +216,6 @@ function visibleWebsites() {
     a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) ||
     a.id.localeCompare(b.id),
   );
-}
-
-function renderPicture() {
-  const wrap = document.getElementById("picture");
-  wrap.replaceChildren(...data.groups.filter((g) => g.websites).map((g) => {
-    const b = el("button", "place");
-    b.append(PulseTech.badge(g.name));
-    b.type = "button";
-    b.setAttribute("aria-pressed", String(ui.place === g.id));
-    b.title = `${g.counts.up} of ${g.websites} up`;
-    b.append(el("span", "place-count", String(g.websites)));
-    b.addEventListener("click", () => {
-      ui.place = ui.place === g.id ? null : g.id;
-      writeFilters();
-      render();
-    });
-    return b;
-  }));
-  const networks = [...new Set(data.websites.map((w) => w.network).filter(Boolean))]
-    .sort((a, b) => a.localeCompare(b));
-  for (const network of networks) {
-    const sites = data.websites.filter((w) => w.network === network);
-    const b = el("button", "place");
-    b.append(PulseTech.badge(network));
-    b.type = "button";
-    b.setAttribute("aria-pressed", String(ui.network === network));
-    b.title = `${sites.filter((w) => w.state === "up").length} of ${sites.length} up`;
-    b.append(el("span", "place-count", String(sites.length)));
-    b.addEventListener("click", () => {
-      ui.network = ui.network === network ? null : network;
-      writeFilters();
-      render();
-    });
-    wrap.append(b);
-  }
 }
 
 function renderDetails(w) {
@@ -314,11 +314,11 @@ function row(w) {
   b.append(el("span", `tag ${w.state}`));
   b.lastChild.setAttribute("aria-label", WORD[w.state]);
   const who = el("span", "who");
-  who.append(
-    el("span", "name", w.name),
-    PulseTech.badge(hostingName(w)),
-  );
-  if (w.network) who.append(PulseTech.badge(w.network));
+  who.append(el("span", "name", w.name));
+  const hosting = el("span", "hosting-meta");
+  hosting.append(PulseTech.badge(hostingName(w)));
+  if (w.network) hosting.append(PulseTech.badge(w.network));
+  who.append(hosting);
   const side = el("span", "side");
   const f = websiteFacts(w);
   const versions = [
@@ -422,7 +422,7 @@ function render() {
   renderDropdowns();
   renderPicture();
   renderGroups();
-  for (const id of ["hosting", "network", "php", "wordpress"]) PulseTech.picker(document.getElementById(id), ["php", "wordpress"].includes(id) ? id : "");
+  for (const id of ["hosting", "network"]) PulseTech.picker(document.getElementById(id));
 }
 
 document.getElementById("filter").addEventListener("click", (e) => {
@@ -438,7 +438,7 @@ document.getElementById("search").addEventListener("input", (e) => {
   render();
 });
 for (const event of ["popstate", "hashchange"]) window.addEventListener(event, () => { readFilters(); if (data) render(); });
-for (const [id, field] of [["hosting", "place"], ["network", "network"], ["php", "php"], ["wordpress", "wordpress"]])
+for (const [id, field] of [["hosting", "place"], ["network", "network"]])
   document.getElementById(id).addEventListener("change", e => { ui[field] = e.target.value || null; writeFilters(); render(); });
 document.getElementById("clear-filters").addEventListener("click", () => { clearFilters(); writeFilters(); render(); });
 document.getElementById("filter-link").append(Pulse.copyLink(() => websiteUrl().href, "filtered websites"));

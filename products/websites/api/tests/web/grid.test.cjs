@@ -20,7 +20,7 @@ class Element {
   addEventListener(name, callback) { this.events[name] = callback; }
 }
 function page(hash = '') {
-  const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section') };
+  const nodes = { groups: new Element('ul'), total: new Element('p'), picture: new Element('section'), hosting: new Element('select'), network: new Element('select') };
   const context = vm.createContext({ URL, URLSearchParams, Date, window: {dispatchEvent() {}}, Event: class {}, fetch: async () => ({ok:false}),
     Pulse: {copyLink: (getURL, name) => { const button = new Element('button'); button.setAttribute('aria-label', `Copy link to ${name}`); button.getURL = getURL; return button; }},
     location: { href: 'https://status.example/' + hash, hash, pathname: '/', search: '' },
@@ -73,14 +73,14 @@ test('network tags remain searchable and missing checks are explained', () => {
   assert.match(nodes.groups.children[0].textContent, /https:\/\/a.example.test\/Art\//);
 });
 
-test('overview includes counted network filters and intersects them with hosting and health', () => {
+test('dropdown includes counted networks and intersects them with hosting and health', () => {
   const {run,nodes} = page();
-  run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderPicture()');
-  const button = nodes.picture.children.find(b => b.textContent === 'Network2');
+  run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderDropdowns()');
+  const button = nodes.network.children.find(b => b.textContent === 'Network · 2');
   assert.ok(button);
-  assert.equal(button.attributes['aria-pressed'], 'false');
-  run('ui.network="Network"; renderPicture(); renderGroups()');
-  assert.equal(nodes.picture.children[0].attributes['aria-pressed'], 'true');
+  assert.equal(button.value, 'Network');
+  run('ui.network="Network"; renderDropdowns(); renderGroups()');
+  assert.equal(nodes.network.value, 'Network');
   assert.equal(run('visibleWebsites().length'), 2);
   run('ui.filter="unknown"; ui.place="host-a"; renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'path');
@@ -98,7 +98,7 @@ test('shared versions are labelled and link to parent analytics', () => {
   assert.match(card.textContent, /View shared installation analytics/);
   assert.doesNotMatch(card.textContent, /100 visits/);
 });
-test('website dropdowns, search and status round-trip in shared URLs and clear together', () => {
+test('website filter tags, search and status round-trip in shared URLs and clear together', () => {
   const {run,context} = page();
   run('Object.assign(ui,{place:"host-a",network:"Network",php:"8.3",wordpress:"7.1",query:"art",filter:"unknown",picked:"path"}); writeFilters()');
   const restored = page(new URL(context.lastUrl).search);
