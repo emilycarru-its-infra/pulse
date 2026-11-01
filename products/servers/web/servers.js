@@ -649,7 +649,7 @@ function renderRuntimes() {
   select.value = ui.runtime || "";
   const tags = document.getElementById("binary-filters");
   const focused = document.activeElement?.closest(".binary-filter-tag")?.dataset.value;
-  tags.replaceChildren(...choices.map(([value, label]) => {
+  tags.replaceChildren(...choices.filter(([value]) => value).map(([value, label]) => {
     const button = el("button", "binary-filter-tag"); button.type = "button"; button.dataset.value = value;
     button.setAttribute("aria-pressed", String((ui.runtime || "") === value));
     button.append(PulseTech.badge(label, value, "binary"));

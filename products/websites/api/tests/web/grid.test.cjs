@@ -76,11 +76,12 @@ test('network tags remain searchable and missing checks are explained', () => {
 test('overview includes counted network filters and intersects them with hosting and health', () => {
   const {run,nodes} = page();
   run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderPicture()');
-  const button = nodes.picture.children[1].children.find(b => b.textContent === 'Network · 2');
+  assert.ok([...nodes.picture.children[0].children, ...nodes.picture.children.slice(1)].every(group => group.children.every(button => button.dataset.value)));
+  const button = nodes.picture.children[0].children[1].children.find(b => b.textContent === 'Network · 2');
   assert.ok(button);
   assert.equal(button.attributes['aria-pressed'], 'false');
   run('ui.network="Network"; renderPicture(); renderGroups()');
-  assert.equal(nodes.picture.children[1].children.find(b => b.dataset.value === 'Network').attributes['aria-pressed'], 'true');
+  assert.equal(nodes.picture.children[0].children[1].children.find(b => b.dataset.value === 'Network').attributes['aria-pressed'], 'true');
   assert.equal(run('visibleWebsites().length'), 2);
   run('ui.filter="unknown"; ui.place="host-a"; renderGroups()');
   assert.equal(run('visibleWebsites().map(w => w.id).join(",")'), 'path');

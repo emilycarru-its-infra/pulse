@@ -77,12 +77,12 @@ function renderPicture() {
   const wrap = document.getElementById("picture");
   const focused = document.activeElement?.closest(".website-filter-tag");
   const focusKey = focused ? [focused.dataset.field, focused.dataset.value] : null;
-  const configs = [["hosting", "place", "Hosting provider", "All hosting", w => w.group],
-    ["network", "network", "Website network", "All networks", w => w.network || "unknown"],
-    ["php", "php", "PHP version", "All PHP versions", w => websiteFacts(w).php_version || "unknown"],
-    ["wordpress", "wordpress", "WordPress version", "All WordPress versions", w => websiteFacts(w).wordpress_version || "unknown"]];
+  const configs = [["hosting", "place", "Hosting provider", w => w.group],
+    ["network", "network", "Website network", w => w.network || "unknown"],
+    ["php", "php", "PHP version", w => websiteFacts(w).php_version || "unknown"],
+    ["wordpress", "wordpress", "WordPress version", w => websiteFacts(w).wordpress_version || "unknown"]];
   const buttons = [];
-  wrap.replaceChildren(...configs.map(([id, field, name, all, valueOf]) => {
+  const groups = configs.map(([id, field, name, valueOf]) => {
     const group = el("div", "website-filter-group");
     group.setAttribute("role", "group"); group.setAttribute("aria-label", name);
     const values = new Map();
@@ -94,8 +94,8 @@ function renderPicture() {
     if (ui[field] && !values.has(ui[field])) values.set(ui[field], 0);
     const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
     const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
-    const choices = [["", all], ...[...values].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
-      .map(([value, count]) => [value, `${value !== "unknown" && id === "php" ? "PHP " : value !== "unknown" && id === "wordpress" ? "WordPress " : ""}${labelOf(value)} · ${count}`])];
+    const choices = [...values].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
+      .map(([value, count]) => [value, `${value !== "unknown" && id === "php" ? "PHP " : value !== "unknown" && id === "wordpress" ? "WordPress " : ""}${labelOf(value)} · ${count}`]);
     for (const [value, label] of choices) {
       const button = el("button", "website-filter-tag"); button.type = "button";
       button.dataset.field = field; button.dataset.value = value;
@@ -108,7 +108,10 @@ function renderPicture() {
       buttons.push(button); group.append(button);
     }
     return group;
-  }));
+  });
+  const hostingRow = el("div", "website-filter-row");
+  hostingRow.append(groups[0], groups[1]);
+  wrap.replaceChildren(hostingRow, groups[2], groups[3]);
   if (focusKey) buttons.find(button => button.dataset.field === focusKey[0] && button.dataset.value === focusKey[1])?.focus({preventScroll:true});
 }
 let layoutFrame;
