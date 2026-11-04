@@ -64,3 +64,42 @@ run "reject_unsupported_hosting_mode" {
   }
   expect_failures = [var.hosting_mode]
 }
+
+run "user_assigned_identity_flex" {
+  command = plan
+  variables {
+    user_assigned_identity = {
+      id           = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ids/providers/Microsoft.ManagedIdentity/userAssignedIdentities/example"
+      client_id    = "11111111-1111-1111-1111-111111111111"
+      principal_id = "22222222-2222-2222-2222-222222222222"
+    }
+  }
+  assert {
+    condition     = azurerm_function_app_flex_consumption.this[0].identity[0].type == "UserAssigned" && azurerm_function_app_flex_consumption.this[0].storage_authentication_type == "UserAssignedIdentity"
+    error_message = "Flex must run on the user-assigned identity, storage included."
+  }
+  assert {
+    condition     = azurerm_function_app_flex_consumption.this[0].app_settings.AZURE_CLIENT_ID == "11111111-1111-1111-1111-111111111111" && azurerm_function_app_flex_consumption.this[0].app_settings.AzureWebJobsStorage__clientId == "11111111-1111-1111-1111-111111111111"
+    error_message = "The code and the host must select the user-assigned identity by client id."
+  }
+  assert {
+    condition     = azurerm_role_assignment.tables.principal_id == "22222222-2222-2222-2222-222222222222" && length(azapi_update_resource.flex_key_vault_reference_identity) == 1
+    error_message = "Grants and Key Vault references must use the user-assigned identity."
+  }
+}
+
+run "user_assigned_identity_dedicated" {
+  command = plan
+  variables {
+    hosting_mode = "dedicated"
+    user_assigned_identity = {
+      id           = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/ids/providers/Microsoft.ManagedIdentity/userAssignedIdentities/example"
+      client_id    = "11111111-1111-1111-1111-111111111111"
+      principal_id = "22222222-2222-2222-2222-222222222222"
+    }
+  }
+  assert {
+    condition     = azurerm_linux_function_app.dedicated[0].identity[0].type == "UserAssigned" && azurerm_linux_function_app.dedicated[0].key_vault_reference_identity_id != null
+    error_message = "Dedicated hosting must run on the user-assigned identity, Key Vault references included."
+  }
+}

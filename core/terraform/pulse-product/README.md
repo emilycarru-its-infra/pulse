@@ -6,7 +6,7 @@ already exists:
 - **Storage account** with shared keys off, a table for every event, a table for the
   latest event per seat, and the Function App's deployment container.
 - **Application Insights**, on a Log Analytics workspace you pass in or one it creates.
-- **Function App** on Flex Consumption, Python 3.12, with a system-assigned identity that
+- **Function App** on Flex Consumption, Python 3.12, with a system-assigned identity, or the user-assigned one passed in `user_assigned_identity`, that
   reaches storage with Storage Table Data Contributor and Storage Blob Data Owner (no keys
   or connection strings). HTTPS only, TLS 1.2, and client certificates `Required` except on the browser routes.
 - **Static Web App** (Standard) for the page, with the Function App linked as its `/api`

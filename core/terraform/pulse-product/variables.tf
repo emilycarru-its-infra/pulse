@@ -167,3 +167,13 @@ variable "dedicated_sku" {
     error_message = "dedicated_sku must be B1, B2 or B3."
   }
 }
+
+variable "user_assigned_identity" {
+  description = "Run the Function App on this existing user-assigned identity instead of a system-assigned one. It reaches storage and Key Vault references with it, and every role assignment the module makes goes to its principal."
+  type = object({
+    id           = string
+    client_id    = string
+    principal_id = string
+  })
+  default = null
+}
