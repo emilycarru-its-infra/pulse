@@ -101,3 +101,34 @@ test('patching intersects filters, excludes non-applicable platforms and keeps m
   run('ui.patchState="needs_patch";ui.platform="Linux"');
   assert.equal(run('matches({os:"Ubuntu 24.04",patches:[{cve:"CVE-2026-12345",state:"needs_patch",applicable:true}]})'), true);
 });
+
+
+test('kernel release survives copied links, reload, history and clear filters', () => {
+  const {run, events} = page('https://status.example/?mode=patching&cve=CVE-2026-12345&kernel=6.8.0-100-generic&platform=Linux');
+  assert.equal(run('ui.kernel'), '6.8.0-100-generic');
+  run('writeBinaryUrl()');
+  const restored = page(run('binaryUrl().href'));
+  assert.equal(restored.run('ui.kernel'), '6.8.0-100-generic');
+  assert.equal(restored.run('ui.cve'), 'CVE-2026-12345');
+  run('location.href = "https://status.example/?kernel=unknown"');
+  events.popstate();
+  assert.equal(run('ui.kernel'), 'unknown');
+  assert.equal(run('hasFilters()'), true);
+  run('clearFilters(); writeBinaryUrl()');
+  assert.equal(run('ui.kernel'), null);
+  assert.equal(new URL(run('location.href')).searchParams.has('kernel'), false);
+});
+
+test('kernel filtering uses fresh running evidence and intersects patch status', () => {
+  const {run} = page('https://status.example/?cve=CVE-2026-12345&kernel=6.8.0-100-generic&patch=restart_required');
+  run(`data={serviceNames:{}};
+    globalThis.server={os:'Ubuntu 24.04', runtimeInventory:{freshness:'fresh',kernel:{running_release:'6.8.0-100-generic'}},
+      patches:[{cve:'CVE-2026-12345',state:'restart_required',applicable:true}]};`);
+  assert.equal(run('matches(server)'), true);
+  assert.equal(run('matches({...server,runtimeInventory:{freshness:"stale",kernel:{running_release:"6.8.0-100-generic"}}})'), false);
+  assert.equal(run('matches({...server,runtimeInventory:{freshness:"fresh",kernel:{running_release:"6.8.0-101-generic"}}})'), false);
+  run('ui.patching=false;ui.kernel="unknown"');
+  assert.equal(run('matches({os:"Ubuntu 24.04"})'), true);
+  assert.equal(run('matches({...server,runtimeInventory:{freshness:"stale",kernel:{running_release:"6.8.0-100-generic"}}})'), true);
+  assert.equal(run('matches({os:"Windows Server 2025"})'), false);
+});
