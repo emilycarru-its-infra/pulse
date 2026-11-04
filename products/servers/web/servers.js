@@ -12,7 +12,7 @@ function usage(value) {
 }
 
 const PATCH_WORD = {needs_patch:"Needs patch", restart_required:"Restart required", awaiting_vendor_fix:"Awaiting vendor fix", verified_fixed:"Verified fixed", not_affected:"Not affected", unknown:"Unknown / stale"};
-const ui = { patching:false, cve:null, patchState:null, view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
+const ui = { patching:false, cve:null, patchState:null, kernel:null, view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 let filteredList = null;
 
@@ -25,6 +25,7 @@ function readBinaryUrl(initial = false) {
   ui.cve = /^CVE-[0-9]{4}-[0-9]{4,8}$/.test(params.get("cve") || "") ? params.get("cve") : null;
   ui.patching = params.get("mode") === "patching" || Boolean(ui.cve);
   ui.patchState = Object.hasOwn(PATCH_WORD, params.get("patch")) ? params.get("patch") : null;
+  ui.kernel = params.get("kernel")?.trim().slice(0, 200) || null;
   ui.platform = params.get("platform")?.trim().slice(0, 100) || null;
   ui.os = params.get("os")?.trim().slice(0, 200) || null;
   ui.view = ["location", "service"].includes(params.get("view")) ? params.get("view") : initial ? ui.view : "location";
@@ -51,7 +52,7 @@ function binaryUrl(binary = ui.runtime, version = ui.binaryVersion, server = ui.
   const url = new URL(location.href);
   for (const [key, value] of [["binary", binary], ["version", binary ? version : null], ["server", server],
     ["mode", ui.patching ? "patching" : null], ["cve", ui.patching ? ui.cve : null], ["patch", ui.patching ? ui.patchState : null],
-    ["platform", ui.platform], ["os", ui.os], ["view", ui.view === "location" ? null : ui.view],
+    ["kernel", ui.kernel], ["platform", ui.platform], ["os", ui.os], ["view", ui.view === "location" ? null : ui.view],
     ["status", ui.filter === "all" ? null : ui.filter], ["location", ui.place], ["q", ui.query]]) {
     if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
   }
@@ -175,11 +176,37 @@ function renderOSFilters() {
 }
 
 function hasFilters() {
-  return Boolean(ui.patching || ui.platform || ui.os || ui.runtime || ui.binaryVersion || ui.place || ui.query || ui.filter !== "all");
+  return Boolean(ui.patching || ui.kernel || ui.platform || ui.os || ui.runtime || ui.binaryVersion || ui.place || ui.query || ui.filter !== "all");
 }
 function clearFilters() {
-  Object.assign(ui, {patching:false, cve:null, patchState:null, platform:null, os:null, runtime:null, binaryVersion:null, place:null, query:"", filter:"all", picked:null, pickedGroup:null, binaryOpen:{}});
+  Object.assign(ui, {patching:false, cve:null, patchState:null, kernel:null, platform:null, os:null, runtime:null, binaryVersion:null, place:null, query:"", filter:"all", picked:null, pickedGroup:null, binaryOpen:{}});
   ui.compareClosed.clear();
+}
+
+function kernelVersion(server) {
+  const inventory = server.runtimeInventory;
+  return inventory?.freshness === "fresh" ? inventory.kernel?.running_release || "unknown" : "unknown";
+}
+
+function renderKernelFilter() {
+  const versions = new Map();
+  for (const server of data.servers) {
+    if (!["Linux", "Other", "Unknown"].includes(serverPlatform(server)) && !server.runtimeInventory?.kernel) continue;
+    const version = kernelVersion(server);
+    versions.set(version, (versions.get(version) || 0) + 1);
+  }
+  if (ui.kernel && !versions.has(ui.kernel)) versions.set(ui.kernel, 0);
+  const select = document.getElementById("kernel");
+  const choices = [["", "All kernel versions"], ...[...versions].sort(([a], [b]) => a.localeCompare(b, undefined, {numeric: true}))
+    .map(([value, count]) => [value, `${value === "unknown" ? "Kernel not observed / stale" : value} · ${count}`])];
+  const signature = JSON.stringify(choices);
+  if (select.dataset.choices !== signature) {
+    select.replaceChildren(...choices.map(([value, label]) => {
+      const option = el("option", null, label); option.value = value; return option;
+    }));
+    select.dataset.choices = signature;
+  }
+  select.value = ui.kernel || "";
 }
 
 function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
@@ -188,6 +215,10 @@ function matches(s) {
     const patch = patchFor(s);
     if (patch?.applicable === false) return false;
     if (ui.patchState && (patch?.state || "unknown") !== ui.patchState) return false;
+  }
+  if (ui.kernel) {
+    if (!["Linux", "Other", "Unknown"].includes(serverPlatform(s)) && !s.runtimeInventory?.kernel) return false;
+    if (kernelVersion(s) !== ui.kernel) return false;
   }
   if (ui.platform && serverPlatform(s) !== ui.platform) return false;
   if (ui.os && serverOS(s) !== ui.os) return false;
@@ -781,10 +812,11 @@ function render() {
   renderPatching();
   renderTotal();
   renderOSFilters();
+  renderKernelFilter();
   renderRuntimes();
   renderPicture();
   renderGroups();
-  for (const id of ["platform", "os"]) PulseTech.picker(document.getElementById(id));
+  for (const id of ["platform", "os", "kernel"]) PulseTech.picker(document.getElementById(id));
 }
 
 for (const g of ["view", "filter"]) {
@@ -805,7 +837,7 @@ document.getElementById("binary").addEventListener("change", (e) => {
   writeBinaryUrl();
   render();
 });
-for (const id of ["platform", "os"]) {
+for (const id of ["platform", "os", "kernel"]) {
   document.getElementById(id).addEventListener("change", (e) => {
     ui[id] = e.target.value || null;
     if (id === "platform") ui.os = null;
