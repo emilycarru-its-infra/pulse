@@ -8,16 +8,17 @@ locals {
   custom_domain = var.custom_domain == null ? null : lower(trimsuffix(var.custom_domain, "."))
   dns_zone_rg   = coalesce(var.dns_zone_resource_group_name, var.resource_group_name)
   workspace_id  = var.log_analytics_workspace_id != null ? var.log_analytics_workspace_id : azurerm_log_analytics_workspace.this[0].id
+  uai           = var.user_assigned_identity
   function_app = var.hosting_mode == "flex" ? {
     id               = azurerm_function_app_flex_consumption.this[0].id
     name             = azurerm_function_app_flex_consumption.this[0].name
     default_hostname = azurerm_function_app_flex_consumption.this[0].default_hostname
-    principal_id     = azurerm_function_app_flex_consumption.this[0].identity[0].principal_id
+    principal_id     = local.uai != null ? local.uai.principal_id : azurerm_function_app_flex_consumption.this[0].identity[0].principal_id
     } : {
     id               = azurerm_linux_function_app.dedicated[0].id
     name             = azurerm_linux_function_app.dedicated[0].name
     default_hostname = azurerm_linux_function_app.dedicated[0].default_hostname
-    principal_id     = azurerm_linux_function_app.dedicated[0].identity[0].principal_id
+    principal_id     = local.uai != null ? local.uai.principal_id : azurerm_linux_function_app.dedicated[0].identity[0].principal_id
   }
   deployment_bucket = "${azurerm_storage_account.this.primary_blob_endpoint}${azurerm_storage_container.deployments.name}"
 
@@ -31,6 +32,12 @@ locals {
     # it fall through to AzureWebJobsStorage__accountName and the managed identity.
     AzureWebJobsStorage              = ""
     AzureWebJobsStorage__accountName = azurerm_storage_account.this.name
+    } : {}, local.uai != null ? {
+    # DefaultAzureCredential in the code and the host's own storage connection both pick the
+    # user-assigned identity by client id.
+    AZURE_CLIENT_ID                 = local.uai.client_id
+    AzureWebJobsStorage__credential = "managedidentity"
+    AzureWebJobsStorage__clientId   = local.uai.client_id
   } : {}, var.app_settings)
 }
 
@@ -115,9 +122,10 @@ resource "azurerm_function_app_flex_consumption" "this" {
   maximum_instance_count = var.maximum_instance_count
   http_concurrency       = var.http_concurrency
 
-  storage_container_type      = "blobContainer"
-  storage_container_endpoint  = local.deployment_bucket
-  storage_authentication_type = "SystemAssignedIdentity"
+  storage_container_type            = "blobContainer"
+  storage_container_endpoint        = local.deployment_bucket
+  storage_authentication_type       = local.uai != null ? "UserAssignedIdentity" : "SystemAssignedIdentity"
+  storage_user_assigned_identity_id = local.uai != null ? local.uai.id : null
 
   https_only = true
   # Required everywhere except the browser routes: on the agents' paths App Service ends
@@ -133,7 +141,8 @@ resource "azurerm_function_app_flex_consumption" "this" {
   webdeploy_publish_basic_authentication_enabled = false
 
   identity {
-    type = "SystemAssigned"
+    type         = local.uai != null ? "UserAssigned" : "SystemAssigned"
+    identity_ids = local.uai != null ? [local.uai.id] : null
   }
 
   site_config {
@@ -180,8 +189,11 @@ resource "azurerm_linux_function_app" "dedicated" {
   webdeploy_publish_basic_authentication_enabled = false
 
   identity {
-    type = "SystemAssigned"
+    type         = local.uai != null ? "UserAssigned" : "SystemAssigned"
+    identity_ids = local.uai != null ? [local.uai.id] : null
   }
+
+  key_vault_reference_identity_id = local.uai != null ? local.uai.id : null
 
   site_config {
     always_on                              = true
@@ -214,6 +226,19 @@ moved {
 moved {
   from = azurerm_function_app_flex_consumption.this
   to   = azurerm_function_app_flex_consumption.this[0]
+}
+
+# azurerm has no argument for it on Flex Consumption, so Key Vault references there resolve
+# with the user-assigned identity through the site property directly.
+resource "azapi_update_resource" "flex_key_vault_reference_identity" {
+  count       = var.hosting_mode == "flex" && local.uai != null ? 1 : 0
+  type        = "Microsoft.Web/sites@2024-04-01"
+  resource_id = azurerm_function_app_flex_consumption.this[0].id
+  body = {
+    properties = {
+      keyVaultReferenceIdentity = local.uai.id
+    }
+  }
 }
 
 resource "azurerm_role_assignment" "tables" {
