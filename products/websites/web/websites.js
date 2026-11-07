@@ -43,7 +43,7 @@ function readFilters() {
   const url = new URL(location.href);
   for (const [field, key] of [["place", "hosting"], ["network", "network"], ["php", "php"], ["wordpress", "wordpress"]])
     ui[field] = url.searchParams.get(key)?.slice(0, 200) || null;
-  ui.query = url.searchParams.get("q")?.trim().toLowerCase().slice(0, 500) || "";
+  ui.query = url.searchParams.get("q")?.trim().slice(0, 500) || "";
   const state = url.searchParams.get("status");
   ui.filter = ["up", "degraded", "down", "unknown"].includes(state) ? state : "all";
   ui.picked = url.searchParams.get("site") || new URLSearchParams(url.hash.slice(1)).get("site");
@@ -74,6 +74,84 @@ function clearFilters() {
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
 function websitePlugins(w) { return w.plugin_inventory || w.hosting?.plugin_inventory; }
+let searchCache = {query: null};
+function searchExpression() {
+  if (searchCache.query === ui.query) return searchCache;
+  try {
+    const tokens = [];
+    const pattern = /\s*(?:"([^"]+)"|([()]|[^\s()"]+))/y;
+    const query = ui.query.trim();
+    while (pattern.lastIndex < query.length) {
+      const token = pattern.exec(query);
+      if (!token) throw new Error("Close each quoted phrase.");
+      tokens.push(token[1] !== undefined ? {term: token[1].toLowerCase()} :
+        /^(AND|OR|NOT|\(|\))$/i.test(token[2]) ? token[2].toUpperCase() : {term: token[2].toLowerCase()});
+    }
+    let index = 0;
+    const unary = () => {
+      const token = tokens[index++];
+      if (token === "NOT") return {not: unary()};
+      if (token === "(") {
+        const node = or();
+        if (tokens[index++] !== ")") throw new Error("Close each parenthesis.");
+        return node;
+      }
+      if (!token || typeof token === "string") throw new Error("Add a search term after each operator.");
+      return token;
+    };
+    const and = () => {
+      let node = unary();
+      while (index < tokens.length && tokens[index] !== "OR" && tokens[index] !== ")") {
+        if (tokens[index] === "AND") index++;
+        node = {and: [node, unary()]};
+      }
+      return node;
+    };
+    const or = () => {
+      let node = and();
+      while (tokens[index] === "OR") { index++; node = {or: [node, and()]}; }
+      return node;
+    };
+    const tree = tokens.length ? or() : null;
+    if (index !== tokens.length) throw new Error("Check the search parentheses and operators.");
+    const positive = [];
+    const terms = (node, negated = false) => {
+      if (!node) return;
+      if (node.term && !negated) positive.push(node.term);
+      if (node.not) terms(node.not, !negated);
+      for (const child of node.and || node.or || []) terms(child, negated);
+    };
+    terms(tree);
+    searchCache = {query: ui.query, tree, positive};
+  } catch (error) { searchCache = {query: ui.query, error: error.message, positive: []}; }
+  return searchCache;
+}
+function searchMatches(node, hay) {
+  if (!node) return true;
+  if (node.term) return hay.includes(node.term);
+  if (node.not) return !searchMatches(node.not, hay);
+  return node.and ? node.and.every(child => searchMatches(child, hay)) : node.or.some(child => searchMatches(child, hay));
+}
+function cardPlugins(w) {
+  const findings = new Map();
+  for (const env of websitePlugins(w)?.environments || []) {
+    for (const plugin of env.plugins || []) {
+      const matched = searchExpression().positive.some(term =>
+        `${plugin.title || ""} ${plugin.slug || ""} ${plugin.version || ""}`.toLowerCase().includes(term));
+      if (plugin.is_version_vulnerable !== true && !matched) continue;
+      const key = JSON.stringify([plugin.slug, plugin.version]);
+      if (!findings.has(key)) findings.set(key, {plugin, environments: new Set(), flagged: new Set()});
+      const label = env.is_live ? "Live" : env.name || "Other environment";
+      findings.get(key).environments.add(label);
+      if (plugin.is_version_vulnerable === true) findings.get(key).flagged.add(label);
+    }
+  }
+  return [...findings.values()].sort((a, b) =>
+    (a.plugin.title || a.plugin.slug).localeCompare(b.plugin.title || b.plugin.slug));
+}
+function genericPluginAlert(alert) {
+  return /plugin or theme.*vulnerab|vulnerab.*plugin or theme/i.test(alert.text || "");
+}
 function pluginSearch(w) {
   return (websitePlugins(w)?.environments || []).flatMap(e => (e.plugins || []).map(p =>
     `${p.slug || ""} ${p.title || ""} ${p.version || ""} ${p.status || ""}`)).join(" ");
@@ -234,7 +312,8 @@ function matches(w) {
   const f = websiteFacts(w);
   const hay =
     `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""} ${pluginSearch(w)}`.toLowerCase();
-  return ui.query.split(/\s+/).every((q) => hay.includes(q));
+  const search = searchExpression();
+  return !search.error && searchMatches(search.tree, hay);
 }
 
 function hostingName(w) {
@@ -435,7 +514,19 @@ function row(w) {
   side.append(el("span", "when", w.lastCheck ? ago(w.lastCheck) :
     w.network ? "No individual check received" : "No checks received"));
   b.append(who, side);
-  for (const a of (w.alerts || []).slice(0, 2))
+  const plugins = cardPlugins(w);
+  const flagged = plugins.filter(p => p.flagged.size);
+  for (const {plugin, environments, flagged: flags} of plugins) {
+    const warning = el("span", `alert plugin-warning ${flags.size ? "warning" : ""}`);
+    warning.append(el("span", "plugin-warning-name", `${plugin.title || plugin.slug} · ${plugin.version || "Version unknown"}`));
+    warning.append(el("span", "plugin-warning-scope", `${flags.size ? "⚠ Provider flagged" : "Installed"} · ${w.hosting || w.network ? "Shared installation · " : ""}${[...(flags.size ? flags : environments)].join(" / ")}`));
+    b.append(warning);
+  }
+  const liveFlagged = new Set((websitePlugins(w)?.environments || []).filter(env => env.is_live)
+    .flatMap(env => (env.plugins || []).filter(p => p.is_version_vulnerable === true).map(p => p.slug))).size;
+  if (flagged.length && Number(f.plugins_vulnerable) > liveFlagged)
+    b.append(el("span", "alert warning", "Additional plugins or themes flagged; details unavailable"));
+  for (const a of (w.alerts || []).filter(a => !flagged.length || !genericPluginAlert(a)).slice(0, 2))
     b.append(el("span", `alert ${a.severity}`, a.text));
   b.addEventListener("click", () => pick(ui.picked === w.id ? null : w.id));
   li.append(b);
@@ -478,7 +569,7 @@ function renderGroups(anchor = null) {
     card.append(...[...next.children].slice(1));
     return card;
   });
-  if (!cards.length) cards.push(el("li", "empty-state", "No websites match these filters."));
+  if (!cards.length) cards.push(el("li", "empty-state", searchExpression().error || "No websites match these filters."));
   const retained = new Set(cards);
   for (const card of [...wrap.children]) if (!retained.has(card)) card.remove();
   cards.forEach((card, index) => {
@@ -514,6 +605,9 @@ function render() {
   document.getElementById("sample").hidden = !data.sample;
   if (document.activeElement !== document.getElementById("search")) document.getElementById("search").value = ui.query;
   document.getElementById("clear-filters").hidden = !hasFilters();
+  const error = searchExpression().error;
+  document.getElementById("search").setAttribute("aria-invalid", String(Boolean(error)));
+  document.getElementById("search-help").textContent = error || 'Use AND, OR, NOT, parentheses or "quoted phrases". Spaces mean AND.';
   renderDropdowns();
   renderPicture();
   renderGroups();
@@ -528,7 +622,7 @@ document.getElementById("filter").addEventListener("click", (e) => {
   render();
 });
 document.getElementById("search").addEventListener("input", (e) => {
-  ui.query = e.target.value.trim().toLowerCase();
+  ui.query = e.target.value.trim().slice(0, 500);
   writeFilters(true);
   render();
 });

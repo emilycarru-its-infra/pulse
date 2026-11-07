@@ -22,7 +22,7 @@
       <label class="dropdown"><span class="visually-hidden">Hosting provider</span><select id="hosting"><option value="">All hosting</option></select></label>
       <label class="dropdown"><span class="visually-hidden">Website network</span><select id="network"><option value="">All networks</option></select></label>
       <label class="search"><span class="visually-hidden">Find a website</span>
-        <input type="search" id="search" placeholder="Find website, owner, plugin or version" autocomplete="off" spellcheck="false">
+        <input type="search" id="search" aria-describedby="search-help" placeholder="Find website, owner, plugin or version" autocomplete="off" spellcheck="false">
       </label>
       <button type="button" id="clear-filters" class="clear-filters" hidden>Clear Filters</button>
       <span id="filter-link" class="filter-link"></span>
@@ -30,6 +30,8 @@
         <p class="total" id="total" aria-live="polite"></p>
       </div>
     </div>
+
+    <p id="search-help" class="search-help" role="status">Use AND, OR, NOT, parentheses or "quoted phrases". Spaces mean AND.</p>
 
     <section class="picture" aria-label="Website filters" id="picture"></section>
 
