@@ -21,6 +21,7 @@ PUBLIC = (
     "note",
     "environment",
     "network",
+    "plugin_inventory",
 )
 
 
@@ -61,6 +62,7 @@ class WebsitesService:
                     "name": parent.get("network") or parent["name"],
                     "lastCheck": parent.get("factsAt"),
                     "facts": {k: parent.get("facts", {}).get(k) for k in shared_fields},
+                    "plugin_inventory": parent.get("plugin_inventory"),
                 }
 
         def summarize(items: list[dict]) -> dict:

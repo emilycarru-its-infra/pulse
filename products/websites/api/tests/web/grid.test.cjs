@@ -139,3 +139,14 @@ test('header actions open a site safely and copy its entry link with active filt
   assert.equal(link.searchParams.get('q'), 'art');
   assert.equal(run('ui.picked'), null);
 });
+
+test('plugins are searchable with shared scope, stale evidence and unknown vulnerability status', () => {
+  const {run} = page();
+  run(`data.websites[0].plugin_inventory={environments:[{name:'live',is_live:true,status:'complete',scope:'network',collected_at:'2020-01-01T00:00:00Z',plugins:[{slug:'synthetic-forms',version:'2.0',status:'active-network',is_version_vulnerable:null}]}]}; ui.query='synthetic-forms';`);
+  assert.equal(run('visibleWebsites().length'),1);
+  const text=run('renderPlugins(data.websites[0]).textContent');
+  assert.match(text,/Stale inventory/);
+  assert.match(text,/individual subsite activation has not been collected/);
+  assert.match(text,/Vulnerability status unknown/);
+  assert.match(text,/active-network/);
+});
