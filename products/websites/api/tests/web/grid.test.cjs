@@ -173,3 +173,78 @@ test('expanded cards span two columns without overlapping neighbours and clamp o
   run('scheduleLayout()');
   assert.ok(nodes.groups.children.every(c=>c.style.gridColumn==='1 / span 1'));
 });
+
+test('collapsed cards show flagged plugin versions and deduplicate environment findings', () => {
+  const {run,nodes}=page();
+  run(`data.websites[0].plugin_inventory={environments:[
+    {name:'production',is_live:true,plugins:[{slug:'example-payments',title:'Example Payments',version:'1.2.3',is_version_vulnerable:true},{slug:'unknown',version:'9.0',is_version_vulnerable:null}]},
+    {name:'staging',is_live:false,plugins:[{slug:'example-payments',title:'Example Payments',version:'1.2.3',is_version_vulnerable:true}]}]};
+    data.websites[0].alerts=[{severity:'warning',text:'A plugin or theme with a known vulnerability is installed'},{severity:'critical',text:'HTTP check failed'}]; renderGroups();`);
+  const card=nodes.groups.children.find(c=>c.dataset.websiteId==='z');
+  assert.match(card.textContent,/Example Payments · 1.2.3/);
+  assert.match(card.textContent,/Provider flagged · Live \/ staging/);
+  assert.match(card.textContent,/HTTP check failed/);
+  assert.doesNotMatch(card.textContent,/known vulnerability|unknown · 9.0/);
+  assert.equal((card.textContent.match(/Example Payments/g)||[]).length,1);
+  assert.equal(card.firstElementChild.attributes['aria-expanded'],'false');
+});
+
+test('generic warning remains when no plugin detail is flagged', () => {
+  const {run,nodes}=page();
+  run(`data.websites[0].alerts=[{severity:'warning',text:'A plugin or theme with a known vulnerability is installed'}]; renderGroups();`);
+  assert.match(nodes.groups.children.find(c=>c.dataset.websiteId==='z').textContent,/known vulnerability/);
+});
+
+test('shared and staging-only findings keep scope and preserve unmatched provider counts', () => {
+  const {run,nodes}=page();
+  run(`data.websites[2].hosting={name:'Network',facts:{plugins_vulnerable:2},plugin_inventory:{environments:[{name:'staging',is_live:false,plugins:[{slug:'example-gallery',version:'4.0',is_version_vulnerable:true}]}]}}; renderGroups();`);
+  const card=nodes.groups.children.find(c=>c.dataset.websiteId==='path');
+  assert.match(card.textContent,/example-gallery · 4.0/);
+  assert.match(card.textContent,/Provider flagged · Shared installation · staging/);
+  assert.doesNotMatch(card.textContent,/Provider flagged · Shared installation · Live/);
+  assert.match(card.textContent,/Additional plugins or themes flagged; details unavailable/);
+});
+
+test('boolean plugin queries intersect or union websites with normal operator precedence', () => {
+  const {run}=page();
+  run(`data.websites[0].plugin_inventory={environments:[{is_live:true,plugins:[{slug:'example-search',version:'4.2'},{slug:'example-payments',version:'1.2'}]}]};
+    data.websites[1].plugin_inventory={environments:[{is_live:true,plugins:[{slug:'example-search',version:'4.3'}]}]};`);
+  for (const [query,ids] of [
+    ['example-search AND example-payments','z'],
+    ['example-search example-payments','z'],
+    ['example-search OR example-payments','a,z'],
+    ['example-search NOT example-payments','a'],
+    ['(example-search OR art) AND NOT example-payments','a,path'],
+    ['art OR example-search AND example-payments','path,z'],
+    ['example-search and example-payments','z'],
+    ['"a.example.test/Art"','path'],
+  ]) {
+    run(`ui.query=${JSON.stringify(query)}`);
+    assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),ids,query);
+  }
+});
+
+test('boolean deep link retains its expression and shows matching installed versions without inventing warnings', () => {
+  const {run,nodes,context}=page();
+  run(`data.websites[0].plugin_inventory={environments:[{name:'production',is_live:true,plugins:[
+    {slug:'example-search',title:'Example Search',version:'4.2',is_version_vulnerable:false},
+    {slug:'example-payments',title:'Example Payments',version:'1.2',is_version_vulnerable:true}]}]};
+    ui.query='Example-Search AND Example-Payments'; writeFilters(); renderGroups();`);
+  assert.equal(new URL(context.lastUrl).searchParams.get('q'),'Example-Search AND Example-Payments');
+  assert.equal(page(new URL(context.lastUrl).search).run('ui.query'),'Example-Search AND Example-Payments');
+  assert.equal(nodes.groups.children.length,1);
+  const card=nodes.groups.children[0];
+  assert.match(card.textContent,/Example Search · 4.2Installed · Live/);
+  assert.match(card.textContent,/Example Payments · 1.2⚠ Provider flagged · Live/);
+  assert.equal(card.firstElementChild.attributes['aria-expanded'],'false');
+});
+
+test('malformed boolean queries explain the error and never broaden results', () => {
+  const {run,nodes}=page();
+  for (const query of ['art AND','art OR','(art','"art','art )','AND art']) {
+    run(`ui.query=${JSON.stringify(query)}; renderGroups()`);
+    assert.equal(run('visibleWebsites().length'),0,query);
+    assert.ok(run('searchExpression().error'),query);
+    assert.match(nodes.groups.children[0].textContent,/phrase|operator|parenthes/i);
+  }
+});
