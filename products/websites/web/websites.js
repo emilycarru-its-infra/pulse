@@ -16,16 +16,16 @@ const FACTS = [
   ["plugins_vulnerable", "Vulnerable plugins and themes"],
   ["last_backup_at", "Last backup"],
   ["visits_24h", "Visits (24 hours)"],
-  ["bandwidth_bytes_24h", "Server bandwidth (bytes, 24 hours)"],
-  ["cdn_bandwidth_bytes_24h", "CDN bandwidth (bytes, 24 hours)"],
-  ["disk_bytes", "Disk usage (bytes)"],
-  ["http_4xx_24h", "4xx responses (24 hours)"],
-  ["http_5xx_24h", "5xx responses (24 hours)"],
+  ["bandwidth_bytes_24h", "Server transfer"],
+  ["cdn_bandwidth_bytes_24h", "CDN transfer"],
+  ["disk_bytes", "Disk usage"],
+  ["http_4xx_24h", "Client errors (4xx)"],
+  ["http_5xx_24h", "Server errors (5xx)"],
   ["analytics_from", "Analytics from"],
   ["analytics_to", "Analytics to"],
   ["analytics_at", "Analytics collected"],
   ["http_status", "HTTP status"],
-  ["response_ms", "Response time (ms)"],
+  ["response_ms", "Response time"],
 ];
 
 const ui = {
@@ -90,7 +90,7 @@ function renderDropdowns() {
     const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
     const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
     const choices = [["", all], ...[...counts].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
-      .map(([value, count]) => [value, `${labelOf(value)} · ${count}`])];
+      .map(([value]) => [value, labelOf(value)])];
     const signature = JSON.stringify(choices);
     if (select.dataset.choices !== signature) {
       select.replaceChildren(...choices.map(([value, label]) => {
@@ -121,7 +121,7 @@ function renderPicture() {
     const labelOf = value => id === "hosting" ? data.groups.find(g => g.id === value)?.name || value : value === "unknown" ? "Not reported" : value;
     const other = value => /^(unknown|other|not reported|host not recorded)$/i.test(labelOf(value));
     const choices = [...values].sort(([a], [b]) => Number(other(a)) - Number(other(b)) || labelOf(a).localeCompare(labelOf(b), undefined, {numeric:true}))
-      .map(([value, count]) => [value, `${value !== "unknown" && id === "php" ? "PHP " : value !== "unknown" && id === "wordpress" ? "WordPress " : ""}${labelOf(value)} · ${count}`]);
+      .map(([value]) => [value, `${value !== "unknown" && id === "php" ? "PHP " : value !== "unknown" && id === "wordpress" ? "WordPress " : ""}${labelOf(value)}`]);
     for (const [value, label] of choices) {
       const button = el("button", "website-filter-tag"); button.type = "button";
       button.dataset.field = field; button.dataset.value = value;
@@ -152,17 +152,23 @@ function scheduleLayout(position) {
     const gap = parseFloat(style.columnGap);
     const minimum = parseFloat(style.getPropertyValue("--card-min-width"));
     const columns = Math.max(1, Math.floor((list.clientWidth + gap) / (minimum + gap)));
-    // Keep row placement while measuring: clearing it moves the focused card to the top.
-    cards.forEach((card, index) => {
-      card.style.gridColumn = card.className === "empty-state" ? "1 / -1" : String(index % columns + 1);
+    let cursor = 0;
+    const placements = cards.map(card => {
+      const span = card.className === "empty-state" ? columns :
+        Math.min(columns, card.firstElementChild?.getAttribute("aria-expanded") === "true" ? 2 : 1);
+      if (cursor + span > columns) cursor = 0;
+      const column = cursor;
+      cursor = (cursor + span) % columns;
+      card.style.gridColumn = `${column + 1} / span ${span}`;
+      return {column, span};
     });
     const heights = Array(columns).fill(0);
     cards.forEach((card, index) => {
-      const column = index % columns;
+      const {column, span} = placements[index];
+      const top = Math.max(...heights.slice(column, column + span));
       const height = Math.ceil(card.getBoundingClientRect().height);
-      card.style.gridColumn = card.className === "empty-state" ? "1 / -1" : String(column + 1);
-      card.style.gridRow = `${heights[column] + 1} / span ${height}`;
-      heights[column] += height + gap;
+      card.style.gridRow = `${top + 1} / span ${height}`;
+      heights.fill(top + height + gap, column, column + span);
     });
     list.style.minHeight = "";
     if (layoutScroll) {
@@ -194,9 +200,28 @@ function ago(iso) {
 
 function fact(key, value) {
   if (value == null || value === "") return null;
-  if (key === "last_backup_at")
-    return `${new Date(value).toLocaleString()} (${ago(value)})`;
+  if (key.endsWith("_at") || ["analytics_from", "analytics_to"].includes(key))
+    return dateTime(value);
+  if (key.includes("bytes")) return dataSize(value);
+  if (["visits_24h", "http_4xx_24h", "http_5xx_24h", "plugins_vulnerable"].includes(key))
+    return Number(value).toLocaleString();
+  if (key === "response_ms") return Number(value) >= 1000 ? `${(Number(value) / 1000).toLocaleString(undefined, {maximumFractionDigits: 2})} s` : `${Number(value).toLocaleString()} ms`;
+  if (key === "account") return String(value).replace(/_/g, " ");
   return String(value);
+}
+
+function dateTime(value) {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "Not reported";
+  return date.toLocaleString(undefined, {year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
+}
+
+function dataSize(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return "Not reported";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const index = bytes > 0 ? Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1000))) : 0;
+  return `${(bytes / 1000 ** index).toLocaleString(undefined, {maximumFractionDigits: index ? 1 : 0})} ${units[index]}`;
 }
 
 function matches(w) {
@@ -239,14 +264,30 @@ function renderDetails(w) {
   add("Owner", w.owner);
   add("Network", w.network);
   add("Hosting", hostingName(w));
-  for (const [key, label] of FACTS) add(label, fact(key, (w.facts || {})[key]));
-  add(
-    "Last heard",
-    w.lastCheck
-      ? `${new Date(w.lastCheck).toLocaleString()} (${ago(w.lastCheck)})`
-      : "Nothing yet",
-  );
+  box.append(el("h4", null, "Website and hosting"));
+  for (const [key, label] of FACTS)
+    if (!key.endsWith("_24h") && !key.startsWith("analytics_") && !["http_status", "response_ms"].includes(key) &&
+        !(key === "host" && String(w.facts?.host || "").toLowerCase() === hostingName(w).toLowerCase()))
+      add(label, fact(key, (w.facts || {})[key]));
   box.append(dl);
+  const traffic = FACTS.filter(([key]) => key.endsWith("_24h") && w.facts?.[key] != null);
+  if (traffic.length) {
+    box.append(el("h4", null, "Traffic · past 24 hours"));
+    const metrics = el("dl", "traffic-metrics");
+    for (const [key, label] of traffic)
+      metrics.append(el("dt", null, label.replace(" (24 hours)", "")), el("dd", null, fact(key, w.facts[key])));
+    box.append(metrics);
+    if (w.facts.analytics_from && w.facts.analytics_to)
+      box.append(el("p", "observation-time", `${dateTime(w.facts.analytics_from)} – ${dateTime(w.facts.analytics_to)}`));
+    if (w.facts.analytics_at)
+      box.append(el("p", "observation-time", `Collected ${dateTime(w.facts.analytics_at)}`));
+  }
+  box.append(el("h4", null, "Latest check"));
+  const checked = el("dl");
+  for (const [key, label] of [["http_status", "HTTP status"], ["response_ms", "Response time"]])
+    if (w.facts?.[key] != null) checked.append(el("dt", null, label), el("dd", null, fact(key, w.facts[key])));
+  checked.append(el("dt", null, "Checked"), el("dd", null, w.lastCheck ? `${dateTime(w.lastCheck)} · ${ago(w.lastCheck)}` : "No check received"));
+  box.append(checked);
   box.append(renderPlugins(w));
   if (w.hosting) {
     box.append(el("h4", null, `Shared ${w.hosting.name} hosting`));
@@ -321,25 +362,38 @@ function renderPlugins(w) {
   for (const env of environments) {
     const fresh = env.collected_at && Number.isFinite(Date.parse(env.collected_at)) && Date.now() - Date.parse(env.collected_at) <= 30 * 3600000;
     const label = env.status === "complete" && fresh ? "Collected" : env.status === "complete" ? "Stale inventory" : "Incomplete inventory";
-    section.append(el("h4", null, `${env.name}${env.is_live ? " · live" : ""} · ${(env.plugins || []).length} plugins`));
-    section.append(el("p", null, `${label}${env.collected_at ? ` · ${new Date(env.collected_at).toLocaleString()}` : " · no collection time"}`));
+    const environmentName = env.name === "live" ? "Live" : env.name;
+    section.append(el("h4", null, `${environmentName}${env.is_live && env.name !== "live" ? " · live" : ""} · ${(env.plugins || []).length} plugin${(env.plugins || []).length === 1 ? "" : "s"}`));
+    section.append(el("p", "observation-time", `${label}${env.collected_at ? ` · ${dateTime(env.collected_at)}` : " · no collection time"}`));
     const providerAt = Date.parse(env.provider_scanned_at);
     const providerValid = Number.isFinite(providerAt) && providerAt > 0;
-    section.append(el("p", null, providerValid ? `Provider vulnerability observations: ${new Date(providerAt).toLocaleString()}${Date.now() - providerAt > 30 * 3600000 ? " · stale" : ""}.` : "Provider vulnerability observations unavailable."));
-    const list = el("ul", "plugin-list");
-    for (const p of env.plugins || []) {
-      const item = el("li");
-      item.append(el("span", "plugin-name", p.title || p.slug));
-      if (p.title && p.title !== p.slug) item.append(el("span", "plugin-slug", p.slug));
-      item.append(el("span", null, `${p.version || "Version unknown"} · ${p.status || "Status unknown"}`));
-      if (p.update_version) item.append(el("span", null, `Update: ${p.update_version}`));
-      item.append(el("span", p.is_version_vulnerable === true ? "plugin-flag" : "plugin-vulnerability",
-        p.is_version_vulnerable === true ? "Provider flagged vulnerability" : p.is_version_vulnerable === false ? "No provider flag in dated observation" : "Vulnerability status unknown"));
-      list.append(item);
+    section.append(el("p", "observation-time", providerValid ? `Provider check: ${dateTime(providerAt)}${Date.now() - providerAt > 30 * 3600000 ? " · stale" : ""}` : "Provider security check unavailable"));
+    const table = el("table", "plugin-table");
+    table.setAttribute("aria-label", `${environmentName} installed plugins`);
+    const head = el("thead");
+    const headings = el("tr");
+    for (const name of ["Plugin", "Version", "Activation", "Security"]) {
+      const th = el("th", null, name); th.setAttribute("scope", "col"); headings.append(th);
     }
-    section.append(list);
+    head.append(headings); table.append(head);
+    const body = el("tbody");
+    const statusLabels = {active: "Active", inactive: "Inactive", "active-network": "Network active", "must-use": "Must-use", dropin: "Drop-in"};
+    for (const p of [...(env.plugins || [])].sort((a,b) => (a.title || a.slug).localeCompare(b.title || b.slug))) {
+      const row = el("tr", p.is_version_vulnerable === true ? "plugin-flagged" : "");
+      const name = el("td", "plugin-title");
+      name.append(el("span", "plugin-name", p.title || p.slug));
+      if (p.title && p.title !== p.slug) name.append(el("span", "plugin-slug", p.slug));
+      row.append(name, el("td", "plugin-version", p.version || "Unknown"));
+      const activation = el("td");
+      activation.append(el("span", `plugin-activation ${p.status === "inactive" ? "inactive" : ""}`, statusLabels[p.status] || "Unknown"));
+      row.append(activation);
+      row.append(el("td", p.is_version_vulnerable === true ? "plugin-flag" : "plugin-vulnerability",
+        p.is_version_vulnerable === true ? "⚠ Flagged" : p.is_version_vulnerable === false ? "No flag" : "Not assessed"));
+      body.append(row);
+    }
+    table.append(body); section.append(table);
+    section.append(el("p", "observation-time", "Flagged means the provider reports a vulnerability in the installed version. Not assessed means no matching provider result."));
   }
-  section.append(el("p", null, "Plugin inventory cannot rule out standalone or externally embedded applications."));
   return section;
 }
 
@@ -380,7 +434,7 @@ function row(w) {
     side.append(el("span", null, `${w.facts.visits_24h.toLocaleString()} visits · 24 h`));
   side.append(el("span", "when", w.lastCheck ? ago(w.lastCheck) :
     w.network ? "No individual check received" : "No checks received"));
-  b.append(who, el("span", "disclosure", open ? "−" : "+"), side);
+  b.append(who, side);
   for (const a of (w.alerts || []).slice(0, 2))
     b.append(el("span", `alert ${a.severity}`, a.text));
   b.addEventListener("click", () => pick(ui.picked === w.id ? null : w.id));
