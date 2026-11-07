@@ -765,7 +765,7 @@ function patchDetails(server) {
   section.append(el("p", `patch-status patch-${p.state}`, PATCH_WORD[p.state] || PATCH_WORD.unknown));
   section.append(el("p", null, p.reason));
   const list = el("dl");
-  for (const [name, value] of (p.category === "application" ? [["Application", p.component || "Not recorded"], ["Assessment", p.assessment_scope === "installed_package" ? "Vendor package match; configuration and reachability are separate" : "Application configuration"], ["Vendor fixed package", p.fixed_version || "Not established"], ["Observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"], ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]] : [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
+  for (const [name, value] of (p.category === "application" ? [["Application", p.component || "Not recorded"], ["Scope", p.scope === "host" ? "Host processes; container namespaces need separate evidence" : p.scope || "Not recorded"], ["Assessment", p.assessment_scope === "installed_package" ? "Vendor package match; configuration and reachability are separate" : "Application configuration"], ["Vendor fixed package", p.fixed_version || "Not established"], ["Observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"], ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]] : [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
     ["Running package", p.running_package ? `${p.running_package.name} ${p.running_package.version}` : null],
     ["Vendor status", p.vendor_state], ["Fixed package", p.fixed_version], ["Source package", p.source_package],
     ["IPv4 TCP listeners", p.tcp4_listener_count ?? "Not assessed"], ["MPTCP listeners", p.mptcp_listener_count ?? "Not assessed"],
@@ -797,7 +797,8 @@ function renderPatching() {
   const section = document.getElementById("patching-overview"); section.hidden = !ui.patching;
   if (!ui.patching) return;
   const scope = data.servers.filter(s => patchFor(s)?.applicable !== false);
-  section.replaceChildren(el("h2", null, `${select.value || "Kernel"} · Patching`));
+  const application = (data.patching?.application_cves || []).includes(select.value);
+  section.replaceChildren(el("h2", null, `${select.value || "Advisory"} · ${application ? "Host applications" : "Kernel patching"}`));
   const counts = el("div", "patch-counts");
   for (const [state, label] of Object.entries(PATCH_WORD)) {
     const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
@@ -805,7 +806,7 @@ function renderPatching() {
     b.setAttribute("aria-pressed", String(ui.patchState === state));
     b.addEventListener("click", () => {ui.patchState=ui.patchState===state?null:state;writeBinaryUrl();render();});counts.append(b);
   }
-  section.append(counts, el("p", "muted", `${scope.length} servers in scope. Advisory evidence is independent of uptime. Missing or stale observations remain unknown. A vendor package match does not establish exploitability or network exposure.`));
+  section.append(counts, el("p", "muted", `${scope.length} servers in scope. ${application ? "Assessments cover host applications; container and isolated namespaces require separate evidence. " : ""}Advisory evidence is independent of uptime. Missing or stale observations remain unknown. A vendor package match does not establish exploitability or network exposure.`));
 }
 
 function render() {

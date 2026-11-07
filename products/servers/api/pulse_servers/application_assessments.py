@@ -20,7 +20,7 @@ def assessments(inventory, cves, now):
         for entry in entries:
             state = entry.get("state") if entry.get("state") in STATES else "unknown"
             result = {k: entry.get(k) for k in (
-                "cve", "component", "vendor", "fixed_version", "package_name", "package_version",
+                "cve", "component", "scope", "vendor", "fixed_version", "package_name", "package_version",
                 "assessment_scope", "source_updated_at", "advisory_observed_at", "advisory_id", "advisory_url",
             )}
             result.update(category="application", applicable=True, state=state,

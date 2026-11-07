@@ -11,7 +11,7 @@ CVE = "CVE-2026-12345"
 
 def inventory(state="verified_fixed"):
     return {"freshness": "fresh", "observed_at": NOW.isoformat(), "advisories": [{
-        "cve": CVE, "component": "OpenSSH", "state": state, "reason": "Reviewed application evidence",
+        "cve": CVE, "component": "OpenSSH", "scope": "host", "state": state, "reason": "Reviewed application evidence",
         "advisory_observed_at": NOW.isoformat(), "assessment_scope": "application_configuration",
     }]}
 
@@ -20,6 +20,7 @@ def test_application_assessment_is_independent_of_kernel_and_uptime():
     value = inventory("needs_patch")
     result = assessments(value, [CVE], NOW)[0]
     assert result["state"] == "needs_patch" and result["category"] == "application"
+    assert result["scope"] == "host"
     assert "kernel" not in result
     value["freshness"] = "stale"
     result = assessments(value, [CVE], NOW)[0]
