@@ -12,6 +12,7 @@ import re
 from datetime import UTC, datetime, timedelta
 
 from pulse_servers.patches import assessments
+from pulse_servers.application_assessments import assessments as application_assessments
 from pulse_servers.runtimes import time, view
 
 STATES = ["up", "degraded", "down", "stopped", "unknown"]
@@ -42,6 +43,10 @@ class ServersService:
             if re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,8}", v.strip())
         ]
         self.inventory_store = inventory_store
+        self.application_cves = [
+            value.strip() for value in os.environ.get("PULSE_APPLICATION_CVES", "").split(",")
+            if re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,8}", value.strip())
+        ][:16]
         self.runtime_store = runtime_store
         self.catalog = catalog
         self.source = source
@@ -66,6 +71,14 @@ class ServersService:
                 "Inventory projection storage unavailable"
             )
             inventory_rows, inventory_error = {}, True
+        catalog_ids = {server["id"] for server in self.catalog.get("servers", [])}
+        discovered_cves = sorted({
+            row.get("cve") for sid, value in runtime_rows.items() if sid in catalog_ids
+            for row in (value.get("success", {}).get("facts", {}).get("advisories") or [])
+            if isinstance(row, dict) and re.fullmatch(r"CVE-[0-9]{4}-[0-9]{4,8}", str(row.get("cve", "")))
+        })
+        application_cves = list(dict.fromkeys(self.application_cves + discovered_cves))[:256]
+        application_cves = [cve for cve in application_cves if cve not in self.patch_cves]
         servers = []
         for server in self.catalog.get("servers", []):
             location = self.locations.get(server.get("location"), {})
@@ -80,7 +93,7 @@ class ServersService:
                 **server,
                 **health,
                 "runtimeInventory": runtime,
-                "patches": assessments(server, runtime, self.patch_cves, now),
+                "patches": assessments(server, runtime, self.patch_cves, now) + application_assessments(runtime, application_cves, now),
             }
             if self.inventory_store is not None:
                 row.pop("service_group", None)
@@ -146,7 +159,8 @@ class ServersService:
                     }
                 )
         return {
-            "patching": {"cves": self.patch_cves},
+            "patching": {"cves": self.patch_cves + application_cves, "application_cves": application_cves,
+                         "kernel_cves": self.patch_cves, "omitted_cves": max(0, len(discovered_cves) - 256)},
             "serviceGroups": service_groups,
             "generatedAt": _iso(now),
             "sample": bool(self.catalog.get("sample", False)),
