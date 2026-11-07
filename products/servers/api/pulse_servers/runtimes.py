@@ -1,6 +1,7 @@
 """Read-only projection of canonical active-runtime observations, independent of health."""
 
 import json
+import re
 import threading
 from datetime import datetime, timedelta
 from uuid import UUID
@@ -34,13 +35,18 @@ def parse(body, now):
         try:
             for key in ("item_id", "reference_id", "observation_id"):
                 UUID(row[key])
-            iid = row["key"]["aws_instance_id"]
+            hybrid = set(row["key"]) == {"aws_ssm_node_id"}
+            if set(row["key"]) not in ({"aws_instance_id"}, {"aws_ssm_node_id"}):
+                raise ValueError()
+            iid = row["key"]["aws_ssm_node_id" if hybrid else "aws_instance_id"]
             if (
                 not isinstance(iid, str)
-                or not iid.startswith("i-")
+                or not iid.startswith("mi-" if hybrid else "i-")
                 or len(iid) > 25
                 or iid in seen
             ):
+                raise ValueError()
+            if hybrid and not re.fullmatch(r"mi-[0-9a-f]{17}", iid):
                 raise ValueError()
             seen.add(iid)
             if row["outcome"] not in {"accepted", "collection_failed"}:
@@ -54,6 +60,14 @@ def parse(body, now):
             ):
                 raise ValueError()
             kernel = facts.get("kernel")
+            advisories = facts.get("advisories", [])
+            if not isinstance(advisories, list) or len(advisories) > 16:
+                raise ValueError()
+            for advisory in advisories:
+                if not isinstance(advisory, dict) or advisory.get("state") not in {
+                    "unknown", "candidate", "needs_patch", "restart_required", "verified_fixed", "not_affected"
+                } or not isinstance(advisory.get("cve"), str):
+                    raise ValueError()
             if kernel is not None:
                 if (not isinstance(kernel, dict) or kernel.get("contract") != "linux-kernel-evidence/1"
                         or not isinstance(kernel.get("running_release"), str)
@@ -195,7 +209,10 @@ def record(store, catalog, rows):
         ids.setdefault(server.get("aws_instance_id"), []).append(server["id"])
     matched = unmatched = 0
     for row in rows:
-        matches = ids.get(row["key"]["aws_instance_id"], [])
+        if "aws_ssm_node_id" in row["key"]:
+            matches = [s["id"] for s in catalog.get("servers", []) if s.get("ssm_node_id") == row["key"]["aws_ssm_node_id"] and s.get("cellarum_item_id") == row["item_id"]]
+        else:
+            matches = ids.get(row["key"]["aws_instance_id"], [])
         if len(matches) != 1:
             unmatched += 1
             continue
@@ -225,9 +242,10 @@ def view(row, now):
             "gaps": ["Collection unavailable"],
         }
     fresh = now - time(success["observed_at"]) <= MAX_AGE
+    facts = {key: value for key, value in success["facts"].items() if key != "openssh"}
     return {
         **result,
-        **success["facts"],
+        **facts,
         "observed_at": success["observed_at"],
         "freshness": "fresh" if fresh and attempt["outcome"] == "accepted" else "stale",
         "item_id": success["item_id"],

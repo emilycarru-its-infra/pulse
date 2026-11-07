@@ -122,3 +122,14 @@ def test_installed_evidence_requires_explicit_kind_and_zero_processes():
         invalid["servers"][0]["facts"]["components"][1].update(change)
         with pytest.raises(runtime.ContractError):
             runtime.parse(invalid, NOW)
+
+
+def test_hybrid_projection_requires_reviewed_node_and_canonical_item():
+    incoming = row()
+    incoming["key"] = {"aws_ssm_node_id": "mi-0123456789abcdef0"}
+    incoming["facts"]["instance_id"] = incoming["key"]["aws_ssm_node_id"]
+    runtime.parse({"contract": runtime.CONTRACT, "servers": [incoming]}, NOW)
+    catalog = {"servers": [{"id": "example", "ssm_node_id": "mi-0123456789abcdef0", "cellarum_item_id": incoming["item_id"]}]}
+    assert runtime.record(runtime.Store(), catalog, [incoming]) == {"matched": 1, "unmatched": 0}
+    catalog["servers"][0]["cellarum_item_id"] = "another-item"
+    assert runtime.record(runtime.Store(), catalog, [incoming])["unmatched"] == 1

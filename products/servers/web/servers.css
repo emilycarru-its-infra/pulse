@@ -302,3 +302,5 @@ button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band)
 .binary-filter-tag:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
 
 .runtime-state.historical { color: var(--text-secondary); border-color: var(--hair); border-style: dashed; font-weight: 500; }
+
+.patch-candidate { color: var(--warning, #9a6700); }

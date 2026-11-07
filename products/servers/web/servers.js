@@ -11,7 +11,7 @@ function usage(value) {
   return { value: v, level: v >= 90 ? "critical" : v >= 80 ? "warning" : "normal" };
 }
 
-const PATCH_WORD = {needs_patch:"Needs patch", restart_required:"Restart required", awaiting_vendor_fix:"Awaiting vendor fix", verified_fixed:"Verified fixed", not_affected:"Not affected", unknown:"Unknown / stale"};
+const PATCH_WORD = {candidate:"Review applicability", needs_patch:"Needs patch", restart_required:"Restart required", awaiting_vendor_fix:"Awaiting vendor fix", verified_fixed:"Verified fixed", not_affected:"Not affected", unknown:"Unknown / stale"};
 const ui = { patching:false, cve:null, patchState:null, kernel:null, view: "location", filter: "all", place: null, query: "", picked: null, pickedGroup: null, runtime: null, binaryVersion: null, platform: null, os: null, binaryOpen: {}, compareClosed: new Set() };
 let data = null;
 let filteredList = null;
@@ -209,6 +209,13 @@ function renderKernelFilter() {
   select.value = ui.kernel || "";
 }
 
+function advisoryUrl(p) {
+  try {
+    const url = new URL(p.advisory_url);
+    if (url.protocol === "https:" && !url.username && !url.password) return url.href;
+  } catch {}
+  return p.vendor === "Ubuntu" ? `https://ubuntu.com/security/${p.cve}` : `https://www.cve.org/CVERecord?id=${encodeURIComponent(p.cve || "")}`;
+}
 function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
 function matches(s) {
   if (ui.patching) {
@@ -754,22 +761,22 @@ function renderTotal() {
 function patchDetails(server) {
   const p = patchFor(server) || {state:"unknown", reason:"Kernel not observed"};
   const section = el("section", "patch-detail");
-  section.append(el("h4", null, `Kernel patching · ${ui.cve || data.patching?.cves?.[0] || "No advisory configured"}`));
+  section.append(el("h4", null, `${p.category === "application" ? "Application advisory" : "Kernel patching"} · ${ui.cve || data.patching?.cves?.[0] || "No advisory configured"}`));
   section.append(el("p", `patch-status patch-${p.state}`, PATCH_WORD[p.state] || PATCH_WORD.unknown));
   section.append(el("p", null, p.reason));
   const list = el("dl");
-  for (const [name, value] of [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
+  for (const [name, value] of (p.category === "application" ? [["Application", p.component || "Not recorded"], ["Scope", p.scope === "host" ? "Host processes; container namespaces need separate evidence" : p.scope || "Not recorded"], ["Assessment", p.assessment_scope === "installed_package" ? "Vendor package match; configuration and reachability are separate" : "Application configuration"], ["Vendor fixed package", p.fixed_version || "Not established"], ["Observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"], ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]] : [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
     ["Running package", p.running_package ? `${p.running_package.name} ${p.running_package.version}` : null],
     ["Vendor status", p.vendor_state], ["Fixed package", p.fixed_version], ["Source package", p.source_package],
     ["IPv4 TCP listeners", p.tcp4_listener_count ?? "Not assessed"], ["MPTCP listeners", p.mptcp_listener_count ?? "Not assessed"],
     ["Network exposure", p.exposure === "unassessed" ? "Not assessed" : p.exposure],
     ["Kernel observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"],
-    ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]]) {
+    ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]])) {
     if (value !== undefined && value !== null) list.append(el("dt", null, name), el("dd", null, String(value)));
   }
   section.append(list);
   const advisory = el("a", null, "Vendor advisory");
-  advisory.href = p.vendor === "Ubuntu" ? `https://ubuntu.com/security/${p.cve}` : `https://www.cve.org/CVERecord?id=${encodeURIComponent(p.cve || ui.cve || "")}`;
+  advisory.href = advisoryUrl(p);
   advisory.target = "_blank"; advisory.rel = "noopener noreferrer"; section.append(advisory);
   for (const gap of p.gaps || []) section.append(el("p", "muted", gap));
   return section;
@@ -790,7 +797,8 @@ function renderPatching() {
   const section = document.getElementById("patching-overview"); section.hidden = !ui.patching;
   if (!ui.patching) return;
   const scope = data.servers.filter(s => patchFor(s)?.applicable !== false);
-  section.replaceChildren(el("h2", null, `${select.value || "Kernel"} · Patching`));
+  const application = (data.patching?.application_cves || []).includes(select.value);
+  section.replaceChildren(el("h2", null, `${select.value || "Advisory"} · ${application ? "Host applications" : "Kernel patching"}`));
   const counts = el("div", "patch-counts");
   for (const [state, label] of Object.entries(PATCH_WORD)) {
     const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
@@ -798,7 +806,7 @@ function renderPatching() {
     b.setAttribute("aria-pressed", String(ui.patchState === state));
     b.addEventListener("click", () => {ui.patchState=ui.patchState===state?null:state;writeBinaryUrl();render();});counts.append(b);
   }
-  section.append(counts, el("p", "muted", `${scope.length} Linux or platform-unverified servers. Kernel and vendor evidence are independent of uptime. Missing or stale observations stay unknown; network exposure and livepatch coverage require their own evidence.`));
+  section.append(counts, el("p", "muted", `${scope.length} servers in scope. ${application ? "Assessments cover host applications; container and isolated namespaces require separate evidence. " : ""}Advisory evidence is independent of uptime. Missing or stale observations remain unknown. A vendor package match does not establish exploitability or network exposure.`));
 }
 
 function render() {

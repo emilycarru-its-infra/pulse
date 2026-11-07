@@ -132,3 +132,25 @@ test('kernel filtering uses fresh running evidence and intersects patch status',
   assert.equal(run('matches({...server,runtimeInventory:{freshness:"stale",kernel:{running_release:"6.8.0-100-generic"}}})'), true);
   assert.equal(run('matches({os:"Windows Server 2025"})'), false);
 });
+
+
+test('application CVE applicability links preserve consumer filters', () => {
+  const {run} = page('https://status.example/?mode=patching&cve=CVE-2026-123158&patch=candidate&platform=Linux');
+  run('data={serviceNames:{}}');
+  assert.equal(run('ui.cve'), 'CVE-2026-123158');
+  assert.equal(run('ui.patchState'), 'candidate');
+  assert.equal(run('matches({os:"Alpine Linux",patches:[{cve:"CVE-2026-123158",category:"application",state:"candidate",applicable:true}]})'), true);
+  assert.equal(run('matches({os:"Alpine Linux",patches:[{cve:"CVE-2026-123158",category:"application",state:"verified_fixed",applicable:true}]})'), false);
+  run('writeBinaryUrl()');
+  const restored = page(run('location.href'));
+  assert.equal(restored.run('ui.patchState'), 'candidate');
+  assert.equal(restored.run('ui.cve'), 'CVE-2026-123158');
+  assert.equal(restored.run('ui.platform'), 'Linux');
+});
+
+
+test('advisory links retain reviewed vendor provenance and reject executable URLs', () => {
+  const {run} = page();
+  assert.equal(run('advisoryUrl({advisory_url:"https://osv.dev/vulnerability/EXAMPLE-1"})'), 'https://osv.dev/vulnerability/EXAMPLE-1');
+  assert.equal(run('advisoryUrl({cve:"CVE-2026-12345",advisory_url:"javascript:alert(1)"})'), 'https://www.cve.org/CVERecord?id=CVE-2026-12345');
+});
