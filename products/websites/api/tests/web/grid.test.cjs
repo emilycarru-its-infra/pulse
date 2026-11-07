@@ -73,10 +73,10 @@ test('network tags remain searchable and missing checks are explained', () => {
   assert.match(nodes.groups.children[0].textContent, /https:\/\/a.example.test\/Art\//);
 });
 
-test('dropdown includes counted networks and intersects them with hosting and health', () => {
+test('dropdown omits counts and intersects networks with hosting and health', () => {
   const {run,nodes} = page();
   run('data.websites[0].network="Network"; data.websites[2].network="Network"; renderDropdowns()');
-  const button = nodes.network.children.find(b => b.textContent === 'Network · 2');
+  const button = nodes.network.children.find(b => b.textContent === 'Network');
   assert.ok(button);
   assert.equal(button.value, 'Network');
   run('ui.network="Network"; renderDropdowns(); renderGroups()');
@@ -147,6 +147,29 @@ test('plugins are searchable with shared scope, stale evidence and unknown vulne
   const text=run('renderPlugins(data.websites[0]).textContent');
   assert.match(text,/Stale inventory/);
   assert.match(text,/individual subsite activation has not been collected/);
-  assert.match(text,/Vulnerability status unknown/);
-  assert.match(text,/active-network/);
+  assert.match(text,/Not assessed/);
+  assert.match(text,/Network active/);
+});
+
+test('details format sizes, durations, counts and dates for readers', () => {
+  const {run}=page();
+  assert.equal(run('fact("bandwidth_bytes_24h",134723654)'), '134.7 MB');
+  assert.equal(run('fact("disk_bytes",2046342988)'), '2 GB');
+  assert.equal(run('fact("response_ms",1150)'), '1.15 s');
+  assert.equal(run('fact("http_4xx_24h",3590)'), '3,590');
+  assert.doesNotMatch(run('fact("analytics_at","2026-11-07T17:26:29+00:00")'), /T17:|\+00:00/);
+});
+
+test('expanded cards span two columns without overlapping neighbours and clamp on narrow screens', () => {
+  const {run,nodes}=page('#site=a');
+  run('renderGroups(); requestAnimationFrame=fn=>{fn();return 1;}; cancelAnimationFrame=()=>{}; getComputedStyle=()=>({columnGap:"12px",getPropertyValue:()=>"320px"});');
+  nodes.groups.clientWidth=1000;
+  nodes.groups.children.forEach(card=>{card.getBoundingClientRect=()=>({height:100});});
+  run('scheduleLayout()');
+  assert.equal(nodes.groups.children[0].style.gridColumn,'1 / span 2');
+  assert.equal(nodes.groups.children[1].style.gridColumn,'3 / span 1');
+  assert.equal(nodes.groups.children[2].style.gridRow,'113 / span 100');
+  nodes.groups.clientWidth=400;
+  run('scheduleLayout()');
+  assert.ok(nodes.groups.children.every(c=>c.style.gridColumn==='1 / span 1'));
 });
