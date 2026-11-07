@@ -49,6 +49,7 @@ class WebsitesService:
         by_id = {w["id"]: w for w in websites}
         shared_fields = (
             "host",
+            "account",
             "php_version",
             "wordpress_version",
             "plugins_vulnerable",
@@ -60,6 +61,7 @@ class WebsitesService:
                 entry["hosting"] = {
                     "website_id": parent["id"],
                     "name": parent.get("network") or parent["name"],
+                    "hostname": parent.get("hostname"),
                     "lastCheck": parent.get("factsAt"),
                     "facts": {k: parent.get("facts", {}).get(k) for k in shared_fields},
                     "plugin_inventory": parent.get("plugin_inventory"),

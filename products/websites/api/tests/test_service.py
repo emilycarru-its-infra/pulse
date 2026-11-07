@@ -44,7 +44,7 @@ def test_simulation_is_stable():
 def test_shared_hosting_context_does_not_copy_uptime_or_analytics():
     catalog = {
         "websites": [
-            {"id": "root", "name": "Network", "network": "Network"},
+            {"id": "root", "name": "Network", "network": "Network", "hostname": "network.example.test"},
             {"id": "child", "name": "Art", "hosting_parent": "root"},
         ]
     }
@@ -52,7 +52,7 @@ def test_shared_hosting_context_does_not_copy_uptime_or_analytics():
     def source(w, group, now):
         return {
             "state": "up" if w["id"] == "root" else "unknown",
-            "facts": {"php_version": "8.3", "visits_24h": 100}
+            "facts": {"php_version": "8.3", "visits_24h": 100, "account": "EXAMPLE_ACCOUNT"}
             if w["id"] == "root"
             else {},
             "factsAt": NOW.isoformat(),
@@ -64,3 +64,6 @@ def test_shared_hosting_context_does_not_copy_uptime_or_analytics():
     assert "visits_24h" not in child["hosting"]["facts"]
     assert "visits_24h" not in child["facts"]
     assert child["hosting"]["website_id"] == root["id"]
+
+    assert child["hosting"]["hostname"] == "network.example.test"
+    assert child["hosting"]["facts"]["account"] == "EXAMPLE_ACCOUNT"

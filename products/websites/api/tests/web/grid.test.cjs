@@ -248,3 +248,14 @@ test('malformed boolean queries explain the error and never broaden results', ()
     assert.match(nodes.groups.children[0].textContent,/phrase|operator|parenthes/i);
   }
 });
+
+test('patching provenance distinguishes the parent installation, account and collection source', () => {
+  const {run,nodes}=page('#site=path');
+  run(`data.websites[2].hosting={name:'Network',hostname:'network.example.test',facts:{account:'EXAMPLE_ACCOUNT'},plugin_inventory:{environments:[{name:'staging',is_live:false,source:'kinsta-wp-cli',scope:'network',plugins:[{slug:'example-forms',version:'3.2',is_version_vulnerable:true}]}]}}; renderGroups();`);
+  const card=nodes.groups.children.find(c=>c.dataset.websiteId==='path');
+  assert.match(card.firstElementChild.textContent,/WordPress plugins · Provider A · Account EXAMPLE ACCOUNT · Installation network.example.test/);
+  assert.match(card.textContent,/Installed WordPress plugins/);
+  assert.match(card.textContent,/Source: Kinsta WP-CLI · Shared WordPress network/);
+  assert.match(card.textContent,/Provider flagged · Shared installation · staging/);
+  assert.match(card.textContent,/individual subsite activation has not been collected/);
+});
