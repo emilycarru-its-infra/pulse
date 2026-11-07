@@ -73,6 +73,11 @@ function clearFilters() {
   Object.assign(ui, {place:null, network:null, php:null, wordpress:null, query:"", filter:"all", picked:null});
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
+function websitePlugins(w) { return w.plugin_inventory || w.hosting?.plugin_inventory; }
+function pluginSearch(w) {
+  return (websitePlugins(w)?.environments || []).flatMap(e => (e.plugins || []).map(p =>
+    `${p.slug || ""} ${p.title || ""} ${p.version || ""} ${p.status || ""}`)).join(" ");
+}
 function renderDropdowns() {
   for (const [id, field, all, valueOf] of [["hosting", "place", "All hosting", w => w.group],
     ["network", "network", "All networks", w => w.network || "unknown"]]) {
@@ -203,7 +208,7 @@ function matches(w) {
   if (!ui.query) return true;
   const f = websiteFacts(w);
   const hay =
-    `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""}`.toLowerCase();
+    `${w.name} ${w.network || ""} ${w.hostname || ""} ${w.url || ""} ${w.owner || ""} ${f.php_version || ""} php${f.php_version || ""} ${f.wordpress_version || ""} ${f.account || ""} ${pluginSearch(w)}`.toLowerCase();
   return ui.query.split(/\s+/).every((q) => hay.includes(q));
 }
 
@@ -242,6 +247,7 @@ function renderDetails(w) {
       : "Nothing yet",
   );
   box.append(dl);
+  box.append(renderPlugins(w));
   if (w.hosting) {
     box.append(el("h4", null, `Shared ${w.hosting.name} hosting`));
     const shared = el("dl");
@@ -300,6 +306,41 @@ function renderDetails(w) {
     box.append(ul);
   }
   return box;
+}
+
+function renderPlugins(w) {
+  const section = el("section", "plugin-inventory");
+  section.append(el("h4", null, w.hosting ? "Shared installation plugins" : "Installed plugins"));
+  const environments = websitePlugins(w)?.environments || [];
+  if (!environments.length) {
+    section.append(el("p", null, "Plugin inventory unavailable."));
+    return section;
+  }
+  if (w.hosting || environments.some(e => e.scope === "network"))
+    section.append(el("p", null, "Shared network inventory. Activation shown is network or main-site status; individual subsite activation has not been collected."));
+  for (const env of environments) {
+    const fresh = env.collected_at && Number.isFinite(Date.parse(env.collected_at)) && Date.now() - Date.parse(env.collected_at) <= 30 * 3600000;
+    const label = env.status === "complete" && fresh ? "Collected" : env.status === "complete" ? "Stale inventory" : "Incomplete inventory";
+    section.append(el("h4", null, `${env.name}${env.is_live ? " · live" : ""} · ${(env.plugins || []).length} plugins`));
+    section.append(el("p", null, `${label}${env.collected_at ? ` · ${new Date(env.collected_at).toLocaleString()}` : " · no collection time"}`));
+    const providerAt = Date.parse(env.provider_scanned_at);
+    const providerValid = Number.isFinite(providerAt) && providerAt > 0;
+    section.append(el("p", null, providerValid ? `Provider vulnerability observations: ${new Date(providerAt).toLocaleString()}${Date.now() - providerAt > 30 * 3600000 ? " · stale" : ""}.` : "Provider vulnerability observations unavailable."));
+    const list = el("ul", "plugin-list");
+    for (const p of env.plugins || []) {
+      const item = el("li");
+      item.append(el("span", "plugin-name", p.title || p.slug));
+      if (p.title && p.title !== p.slug) item.append(el("span", "plugin-slug", p.slug));
+      item.append(el("span", null, `${p.version || "Version unknown"} · ${p.status || "Status unknown"}`));
+      if (p.update_version) item.append(el("span", null, `Update: ${p.update_version}`));
+      item.append(el("span", p.is_version_vulnerable === true ? "plugin-flag" : "plugin-vulnerability",
+        p.is_version_vulnerable === true ? "Provider flagged vulnerability" : p.is_version_vulnerable === false ? "No provider flag in dated observation" : "Vulnerability status unknown"));
+      list.append(item);
+    }
+    section.append(list);
+  }
+  section.append(el("p", null, "Plugin inventory cannot rule out standalone or externally embedded applications."));
+  return section;
 }
 
 function row(w) {
