@@ -74,6 +74,11 @@ function clearFilters() {
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
 function websitePlugins(w) { return w.plugin_inventory || w.hosting?.plugin_inventory; }
+function pluginLocation(w) {
+  const f = websiteFacts(w);
+  return [hostingName(w), f.account ? `Account ${fact("account", f.account)}` : "Account not reported",
+    `Installation ${w.hosting?.hostname || (w.hosting ? w.hosting.name : w.hostname) || "not reported"}`].join(" · ");
+}
 let searchCache = {query: null};
 function searchExpression() {
   if (searchCache.query === ui.query) return searchCache;
@@ -436,6 +441,7 @@ function renderPlugins(w) {
     section.append(el("p", null, "Plugin inventory unavailable."));
     return section;
   }
+  section.append(el("p", "plugin-location", `Installed WordPress plugins · ${pluginLocation(w)}`));
   if (w.hosting || environments.some(e => e.scope === "network"))
     section.append(el("p", null, "Shared network inventory. Activation shown is network or main-site status; individual subsite activation has not been collected."));
   for (const env of environments) {
@@ -443,6 +449,8 @@ function renderPlugins(w) {
     const label = env.status === "complete" && fresh ? "Collected" : env.status === "complete" ? "Stale inventory" : "Incomplete inventory";
     const environmentName = env.name === "live" ? "Live" : env.name;
     section.append(el("h4", null, `${environmentName}${env.is_live && env.name !== "live" ? " · live" : ""} · ${(env.plugins || []).length} plugin${(env.plugins || []).length === 1 ? "" : "s"}`));
+    const source = {"kinsta-wp-cli": "Kinsta WP-CLI", "kinsta-api": "Kinsta API"}[env.source] || env.source || "Not reported";
+    section.append(el("p", "observation-time", `Source: ${source} · ${env.scope === "network" ? "Shared WordPress network" : env.scope === "installation" ? "WordPress installation" : "Scope not reported"}`));
     section.append(el("p", "observation-time", `${label}${env.collected_at ? ` · ${dateTime(env.collected_at)}` : " · no collection time"}`));
     const providerAt = Date.parse(env.provider_scanned_at);
     const providerValid = Number.isFinite(providerAt) && providerAt > 0;
@@ -515,6 +523,7 @@ function row(w) {
     w.network ? "No individual check received" : "No checks received"));
   b.append(who, side);
   const plugins = cardPlugins(w);
+  if (plugins.length) b.append(el("span", "alert plugin-location", `WordPress plugins · ${pluginLocation(w)}`));
   const flagged = plugins.filter(p => p.flagged.size);
   for (const {plugin, environments, flagged: flags} of plugins) {
     const warning = el("span", `alert plugin-warning ${flags.size ? "warning" : ""}`);
