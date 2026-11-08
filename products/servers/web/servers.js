@@ -687,6 +687,7 @@ function renderRuntimes() {
   select.value = ui.runtime || "";
   const tags = document.getElementById("binary-filters");
   const focused = document.activeElement?.closest(".binary-filter-tag")?.dataset.value;
+  tags.hidden = hasFilters();
   tags.replaceChildren(...choices.filter(([value]) => value).map(([value, label]) => {
     const button = el("button", "binary-filter-tag"); button.type = "button"; button.dataset.value = value;
     button.setAttribute("aria-pressed", String((ui.runtime || "") === value));
@@ -698,7 +699,10 @@ function renderRuntimes() {
     });
     return button;
   }));
-  if (focused !== undefined) [...tags.children].find(button => button.dataset.value === focused)?.focus({preventScroll: true});
+  if (focused !== undefined) {
+    if (tags.hidden) document.getElementById("clear-filters").focus({preventScroll: true});
+    else [...tags.children].find(button => button.dataset.value === focused)?.focus({preventScroll: true});
+  }
 }
 
 function pick(id, groupKey = ui.pickedGroup, trigger = null) {
@@ -806,7 +810,7 @@ function renderPatching() {
     b.setAttribute("aria-pressed", String(ui.patchState === state));
     b.addEventListener("click", () => {ui.patchState=ui.patchState===state?null:state;writeBinaryUrl();render();});counts.append(b);
   }
-  section.append(counts, el("p", "muted", `${scope.length} servers in scope. ${application ? "Assessments cover host applications; container and isolated namespaces require separate evidence. " : ""}Advisory evidence is independent of uptime. Missing or stale observations remain unknown. A vendor package match does not establish exploitability or network exposure.`));
+  section.append(counts);
 }
 
 function render() {

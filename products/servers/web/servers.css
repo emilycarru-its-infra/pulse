@@ -111,10 +111,12 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .legend li { display: flex; align-items: center; gap: 6px; }
 .legend .tag { width: 18px; height: 18px; font-size: 11px; }
 .legend .tag.down::after { font-size: 13px; }
-.filter-meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-bottom: 18px; }
-.status-meta { flex: 0 1 auto; max-width: 100%; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px 24px; margin: 0 0 0 auto; }
-.status-meta .legend { justify-content: flex-end; }
-.status-meta #updated { margin: 0; white-space: nowrap; }
+.toolbar-end #updated { margin: 4px 0 0; text-align: right; font-size: 12px; }
+.results-footer { margin-top: 24px; padding: 12px 0; border-top: 1px solid var(--hair); }
+.status-legend { font-size: 13px; color: var(--text-secondary); }
+.status-legend summary { width: fit-content; padding: 6px 0; cursor: pointer; }
+.status-legend summary:focus-visible { outline: 2px solid var(--accent-band); outline-offset: 3px; }
+.status-legend .legend { margin-top: 10px; }
 .empty-state { padding: 24px; color: var(--text-secondary); }
 
 /* --- Inline details --------------------------------------------------------------- */
@@ -236,7 +238,22 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .patch-counts { display: flex; gap: 8px; flex-wrap: wrap; }
 .patch-status { display: inline-block; width: fit-content; margin-top: 5px; padding: 4px 8px; border: 1px solid var(--hair); border-radius: 4px; font-size: 12px; background: var(--surface-2); color: var(--text-primary); }
 button.patch-status { font: inherit; font-size: 12px; cursor: pointer; }
-button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band); outline-offset: 2px; }
+button.patch-status {
+  --patch-tone: var(--text-muted);
+  background: color-mix(in srgb, var(--patch-tone) 10%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--patch-tone) 45%, var(--surface-1));
+  color: var(--text-primary); padding: 7px 10px; margin-top: 0;
+}
+button.patch-status.patch-candidate, button.patch-status.patch-restart_required,
+button.patch-status.patch-awaiting_vendor_fix { --patch-tone: var(--warn); }
+button.patch-status.patch-needs_patch { --patch-tone: var(--bad); }
+button.patch-status.patch-verified_fixed, button.patch-status.patch-not_affected { --patch-tone: var(--ok); }
+button.patch-status[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--patch-tone) 20%, var(--surface-1));
+  border-color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--text-primary); font-weight: 700;
+}
+button.patch-status:hover { border-color: var(--text-primary); }
+button.patch-status:focus-visible { outline: 2px solid var(--accent-band); outline-offset: 3px; }
 .patch-needs_patch { border-color: #d64545; }
 .patch-restart_required, .patch-awaiting_vendor_fix { border-color: #d78c22; }
 .patch-verified_fixed, .patch-not_affected { border-color: #318653; }
@@ -295,7 +312,8 @@ button.patch-status[aria-pressed="true"] { outline: 2px solid var(--accent-band)
   .runtime-table td:nth-child(2) { padding-left: 1px; padding-right: 1px; }
 }
 
-.binary-filter-tags { flex: 0 1 auto; max-width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
+.binary-filter-tags[hidden] { display: none; }
+.binary-filter-tags { margin-bottom: 18px; flex: 0 1 auto; max-width: 100%; display: flex; flex-wrap: wrap; gap: 8px; }
 .binary-filter-tag { border: 0; padding: 0; border-radius: 5px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .binary-filter-tag .tech-badge { padding: 5px 8px; }
 .binary-filter-tag[aria-pressed="true"] .tech-badge { outline: 2px solid var(--accent-band); outline-offset: 1px; font-weight: 700; }

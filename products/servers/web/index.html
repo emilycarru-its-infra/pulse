@@ -43,22 +43,11 @@
       <span id="filter-link" class="filter-link"></span>
       <div class="toolbar-end">
         <p class="total" id="total" aria-live="polite"></p>
-      </div>
-    </div>
-
-    <div class="filter-meta-row">
-      <div id="binary-filters" class="binary-filter-tags" role="group" aria-label="Filter by binary"></div>
-      <div class="status-meta">
-        <ul class="legend" aria-label="Legend">
-          <li><span class="tag up"></span>Up</li>
-          <li><span class="tag degraded"></span>Warning</li>
-          <li><span class="tag down"></span>Error</li>
-          <li><span class="tag stopped"></span>Stopped on purpose</li>
-          <li><span class="tag unknown"></span>Not reporting</li>
-        </ul>
         <p class="fine" id="updated"></p>
       </div>
     </div>
+
+    <div id="binary-filters" class="binary-filter-tags" role="group" aria-label="Filter by binary"></div>
 
     <section id="patching-overview" class="patching-overview" hidden aria-label="Advisory coverage"></section>
 
@@ -70,7 +59,18 @@
       <div class="groups" id="groups"></div>
     </div>
 
-
+    <footer class="results-footer">
+      <details class="status-legend">
+        <summary>Status legend</summary>
+        <ul class="legend" aria-label="Server health states">
+          <li><span class="tag up" aria-hidden="true"></span>Up</li>
+          <li><span class="tag degraded" aria-hidden="true"></span>Warning</li>
+          <li><span class="tag down" aria-hidden="true"></span>Error</li>
+          <li><span class="tag stopped" aria-hidden="true"></span>Stopped on purpose</li>
+          <li><span class="tag unknown" aria-hidden="true"></span>Not reporting</li>
+        </ul>
+      </details>
+    </footer>
   </main>
   <script src="/core/shell.js"></script>
   <script src="/core/technologies.js"></script>
