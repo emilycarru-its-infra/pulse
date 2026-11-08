@@ -359,6 +359,7 @@ function entryUrl(id) {
   url.searchParams.set("view", "websites");
   return url.href;
 }
+function websiteName(w) { return w.matchingWebsites ? w.hostname || w.name : w.name; }
 function visibleWebsites() {
   const matching = data.websites.filter(matches);
   let members = matching;
@@ -378,7 +379,7 @@ function visibleWebsites() {
   if (picked && matching.some(w => w.id === picked.id) && !members.some(w => w.id === picked.id))
     members.push(picked);
   return members.sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) || a.id.localeCompare(b.id));
+    websiteName(a).localeCompare(websiteName(b), undefined, { sensitivity: "base", numeric: true }) || a.id.localeCompare(b.id));
 }
 function renderRelationships(w) {
   const section = el("section", "installation-relationships");
@@ -571,7 +572,7 @@ function row(w) {
   b.append(el("span", `tag ${w.state}`));
   b.lastChild.setAttribute("aria-label", WORD[w.state]);
   const who = el("span", "who");
-  who.append(el("span", "name", w.matchingWebsites ? w.hostname || w.name : w.name));
+  who.append(el("span", "name", websiteName(w)));
   const hosting = el("span", "hosting-meta");
   hosting.append(PulseTech.badge(hostingName(w)));
   if (w.network) hosting.append(PulseTech.badge(w.network));
