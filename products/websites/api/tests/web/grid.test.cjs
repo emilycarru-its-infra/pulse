@@ -323,3 +323,9 @@ test('missing parent records never erase a matching subsite and explicit subsite
   run('ui.picked=null; data.websites=data.websites.filter(w=>w.id!=="root")');
   assert.equal(run('visibleWebsites().some(w=>w.id==="child")'),true);
 });
+
+test('patching targets sort by the installation address displayed on the card', () => {
+  const {run}=networkPage();
+  run('ui.query="shared-search"; data.websites[0].hostname="z.example.test"; data.websites[2].hostname="a.example.test"');
+  assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'other,root');
+});
