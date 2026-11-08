@@ -259,3 +259,67 @@ test('patching provenance distinguishes the parent installation, account and col
   assert.match(card.textContent,/Provider flagged · Shared installation · staging/);
   assert.match(card.textContent,/individual subsite activation has not been collected/);
 });
+
+function networkPage() {
+  const p = page();
+  p.run(`data.websites = [
+    {id:'root',name:'Main site',hostname:'network.example.test',url:'https://network.example.test/',group:'host-a',network:'Network',state:'degraded',facts:{php_version:'8.3',wordpress_version:'7.1'},plugin_inventory:{environments:[{name:'live',is_live:true,scope:'network',plugins:[{slug:'shared-search',version:'4.2',is_version_vulnerable:true},{slug:'shared-payments',version:'1.2'}]}]}},
+    {id:'child',name:'Art',hostname:'network.example.test',url:'https://network.example.test/art/',group:'host-a',network:'Network',state:'up',hosting:{website_id:'root',name:'Network',hostname:'network.example.test',facts:{php_version:'8.3',wordpress_version:'7.1'},plugin_inventory:{environments:[{name:'live',is_live:true,scope:'network',plugins:[{slug:'shared-search',version:'4.2',is_version_vulnerable:true},{slug:'shared-payments',version:'1.2'}]}]}}},
+    {id:'other',name:'Other',hostname:'other.example.test',group:'host-a',state:'up',plugin_inventory:{environments:[{name:'staging',plugins:[{slug:'shared-search',version:'4.3'}]}]}}
+  ];`);
+  return p;
+}
+test('plugin boolean searches return explicit installation patch targets with matching scope', () => {
+  const {run,nodes} = networkPage();
+  run('ui.query="shared-search AND shared-payments"; renderGroups()');
+  assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'root');
+  assert.equal(nodes.total.textContent,'1 patching target · 2 matching websites');
+  assert.match(nodes.groups.textContent,/WordPress installation/);
+  assert.match(nodes.groups.textContent,/1 subsite · Patch shared files at this installation/);
+  assert.match(nodes.groups.textContent,/shared-search · 4.2/);
+  assert.doesNotMatch(nodes.groups.textContent,/4.3/);
+  run('pick("root")');
+  assert.match(nodes.groups.textContent,/WordPress subsites · 1/);
+  assert.match(nodes.groups.textContent,/https:\/\/network.example.test\/art\//);
+  assert.match(nodes.groups.textContent,/same environment/);
+});
+test('website browsing and explicit individual results retain subsite identity and parent links', () => {
+  const {run,nodes} = networkPage();
+  run('ui.query="art"; renderGroups(); pick("child")');
+  assert.equal(run('installationView()'),false);
+  assert.match(nodes.groups.textContent,/WordPress subsite/);
+  assert.match(nodes.groups.textContent,/Patch parent: network.example.test/);
+  assert.match(nodes.groups.textContent,/staging is patched separately/);
+  run('ui.query="shared-search"; ui.view="websites"; ui.picked=null; renderGroups()');
+  assert.equal(run('visibleWebsites().length'),3);
+});
+test('grouping preserves boolean predicates on each website instead of combining different subsites', () => {
+  const {run,nodes} = networkPage();
+  run('ui.query="art AND shared-payments"; renderGroups()');
+  assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'root');
+  assert.equal(nodes.total.textContent,'1 patching target · 1 matching website');
+  run('ui.query="art AND Main"; renderGroups()');
+  assert.equal(run('visibleWebsites().length'),0);
+});
+test('PHP and WordPress filters group shared installations and keep unrelated installations separate', () => {
+  const {run} = networkPage();
+  run('ui.php="8.3"');
+  assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'root');
+  run('ui.php=null; ui.query="shared-search"; data.websites[2].hostname="network.example.test"');
+  assert.equal(run('visibleWebsites().map(w=>w.id).sort().join(",")'),'other,root');
+});
+test('explicit patching view and override round-trip in links and clear with other filters', () => {
+  const {run,context} = networkPage();
+  run('ui.view="installations"; ui.query="art"; writeFilters()');
+  const restored=page(new URL(context.lastUrl).search);
+  assert.equal(restored.run('ui.view'),'installations');
+  restored.run('clearFilters();writeFilters()');
+  assert.equal(new URL(restored.context.lastUrl).searchParams.has('view'),false);
+});
+test('missing parent records never erase a matching subsite and explicit subsite links remain reviewable', () => {
+  const {run} = networkPage();
+  run('ui.query="shared-search"; ui.picked="child"');
+  assert.equal(run('visibleWebsites().some(w=>w.id==="child")'),true);
+  run('ui.picked=null; data.websites=data.websites.filter(w=>w.id!=="root")');
+  assert.equal(run('visibleWebsites().some(w=>w.id==="child")'),true);
+});

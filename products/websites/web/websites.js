@@ -35,6 +35,7 @@ const ui = {
   php: null,
   wordpress: null,
   query: "",
+  view: "auto",
   picked: new URLSearchParams(location.hash.slice(1)).get("site"),
 };
 let data = null;
@@ -44,6 +45,7 @@ function readFilters() {
   for (const [field, key] of [["place", "hosting"], ["network", "network"], ["php", "php"], ["wordpress", "wordpress"]])
     ui[field] = url.searchParams.get(key)?.slice(0, 200) || null;
   ui.query = url.searchParams.get("q")?.trim().slice(0, 500) || "";
+  ui.view = ["websites", "installations"].includes(url.searchParams.get("view")) ? url.searchParams.get("view") : "auto";
   const state = url.searchParams.get("status");
   ui.filter = ["up", "degraded", "down", "unknown"].includes(state) ? state : "all";
   ui.picked = url.searchParams.get("site") || new URLSearchParams(url.hash.slice(1)).get("site");
@@ -55,7 +57,7 @@ readFilters();
 function websiteUrl() {
   const url = new URL(location.href);
   for (const [key, value] of [["hosting", ui.place], ["network", ui.network], ["php", ui.php], ["wordpress", ui.wordpress],
-    ["status", ui.filter === "all" ? null : ui.filter], ["q", ui.query], ["site", ui.picked]]) {
+    ["view", ui.view === "auto" ? null : ui.view], ["status", ui.filter === "all" ? null : ui.filter], ["q", ui.query], ["site", ui.picked]]) {
     if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
   }
   const legacy = new URLSearchParams(url.hash.slice(1));
@@ -67,10 +69,10 @@ function writeFilters(replace = false) {
   if (url.href !== location.href) history[replace ? "replaceState" : "pushState"](null, "", url.href);
 }
 function hasFilters() {
-  return Boolean(ui.place || ui.network || ui.php || ui.wordpress || ui.query || ui.filter !== "all");
+  return Boolean(ui.place || ui.network || ui.php || ui.wordpress || ui.query || ui.view !== "auto" || ui.filter !== "all");
 }
 function clearFilters() {
-  Object.assign(ui, {place:null, network:null, php:null, wordpress:null, query:"", filter:"all", picked:null});
+  Object.assign(ui, {place:null, network:null, php:null, wordpress:null, query:"", view:"auto", filter:"all", picked:null});
 }
 function websiteFacts(w) { return {...(w.hosting?.facts || {}), ...(w.facts || {})}; }
 function websitePlugins(w) { return w.plugin_inventory || w.hosting?.plugin_inventory; }
@@ -325,11 +327,82 @@ function hostingName(w) {
   return data.groups.find((g) => g.id === w.group)?.name || w.facts?.host || "Host not recorded";
 }
 
+function installationView() {
+  if (ui.view !== "auto") return ui.view === "installations";
+  if (ui.php || ui.wordpress) return true;
+  const terms = [];
+  const visit = node => {
+    if (!node) return;
+    if (node.term) terms.push(node.term);
+    if (node.not) visit(node.not);
+    for (const child of node.and || node.or || []) visit(child);
+  };
+  visit(searchExpression().tree);
+  return terms.some(term => data.websites.some(w =>
+    pluginSearch(w).toLowerCase().includes(term) ||
+    [`php ${websiteFacts(w).php_version || ""}`, `php${websiteFacts(w).php_version || ""}`,
+      `wordpress ${websiteFacts(w).wordpress_version || ""}`].some(version => version.includes(term))));
+}
+function subsites(w) {
+  return data.websites.filter(child => child.hosting?.website_id === w.id && child.id !== w.id);
+}
+function websiteKind(w) {
+  if (w.hosting) return "WordPress subsite";
+  if (subsites(w).length || websitePlugins(w)?.environments?.length || websiteFacts(w).wordpress_version)
+    return "WordPress installation";
+  return "Website";
+}
+function entryUrl(id) {
+  const url = new URL(location.href);
+  url.search = ""; url.hash = "";
+  url.searchParams.set("site", id);
+  url.searchParams.set("view", "websites");
+  return url.href;
+}
 function visibleWebsites() {
-  return data.websites.filter(matches).sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) ||
-    a.id.localeCompare(b.id),
-  );
+  const matching = data.websites.filter(matches);
+  let members = matching;
+  if (installationView()) {
+    const byId = new Map(data.websites.map(w => [w.id, w]));
+    const targets = new Map();
+    for (const w of matching) {
+      // Only an explicit installation relationship can combine patch targets.
+      const parent = byId.get(w.hosting?.website_id) || w;
+      if (!targets.has(parent.id)) targets.set(parent.id, {...parent, matchingWebsites: []});
+      targets.get(parent.id).matchingWebsites.push(w);
+    }
+    members = [...targets.values()];
+  }
+  // Keep explicit subsite deep links reviewable, including in installation search results.
+  const picked = data.websites.find(w => w.id === ui.picked);
+  if (picked && matching.some(w => w.id === picked.id) && !members.some(w => w.id === picked.id))
+    members.push(picked);
+  return members.sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true }) || a.id.localeCompare(b.id));
+}
+function renderRelationships(w) {
+  const section = el("section", "installation-relationships");
+  if (w.hosting) {
+    section.append(el("h4", null, "Parent installation"));
+    const parent = el("a", null, w.hosting.hostname || w.hosting.name);
+    parent.href = entryUrl(w.hosting.website_id);
+    section.append(parent, el("p", null, "Patch shared plugin files at this parent installation in the affected environment. Subsite activation can differ; staging is patched separately."));
+  } else {
+    const children = subsites(w);
+    if (!children.length) return section;
+    section.append(el("h4", null, `WordPress subsites · ${children.length}`),
+      el("p", null, "These websites share this installation’s WordPress and plugin files. Updating those files here applies to its subsites in the same environment; individual activation and exposure may differ."));
+    const list = el("ul");
+    for (const child of children) {
+      const item = el("li");
+      const link = el("a", null, `${child.name} · ${child.url || child.hostname}`);
+      link.href = entryUrl(child.id); item.append(link); list.append(item);
+    }
+    const disclosure = el("details", "subsite-list");
+    disclosure.append(el("summary", null, "Show subsite addresses"), list);
+    section.append(disclosure);
+  }
+  return section;
 }
 
 function renderDetails(w) {
@@ -345,6 +418,7 @@ function renderDetails(w) {
     }
   };
   add("Address", w.url || w.hostname);
+  add("Type", websiteKind(w));
   add("Owner", w.owner);
   add("Network", w.network);
   add("Hosting", hostingName(w));
@@ -354,6 +428,7 @@ function renderDetails(w) {
         !(key === "host" && String(w.facts?.host || "").toLowerCase() === hostingName(w).toLowerCase()))
       add(label, fact(key, (w.facts || {})[key]));
   box.append(dl);
+  box.append(renderRelationships(w));
   const traffic = FACTS.filter(([key]) => key.endsWith("_24h") && w.facts?.[key] != null);
   if (traffic.length) {
     box.append(el("h4", null, "Traffic · past 24 hours"));
@@ -496,11 +571,12 @@ function row(w) {
   b.append(el("span", `tag ${w.state}`));
   b.lastChild.setAttribute("aria-label", WORD[w.state]);
   const who = el("span", "who");
-  who.append(el("span", "name", w.name));
+  who.append(el("span", "name", w.matchingWebsites ? w.hostname || w.name : w.name));
   const hosting = el("span", "hosting-meta");
   hosting.append(PulseTech.badge(hostingName(w)));
   if (w.network) hosting.append(PulseTech.badge(w.network));
   who.append(hosting);
+  who.append(el("span", "website-kind", websiteKind(w)));
   const side = el("span", "side");
   const f = websiteFacts(w);
   const versions = [
@@ -522,6 +598,10 @@ function row(w) {
   side.append(el("span", "when", w.lastCheck ? ago(w.lastCheck) :
     w.network ? "No individual check received" : "No checks received"));
   b.append(who, side);
+  const children = subsites(w);
+  if (children.length) b.append(el("span", "alert installation-scope", `${children.length} subsite${children.length === 1 ? "" : "s"} · Patch shared files at this installation`));
+  if (w.matchingWebsites) b.append(el("span", "alert installation-scope", `${w.matchingWebsites.length} matching website${w.matchingWebsites.length === 1 ? "" : "s"} · Status shown is the installation’s own check`));
+  if (w.hosting) b.append(el("span", "alert installation-scope", `Patch parent: ${w.hosting.hostname || w.hosting.name}`));
   const plugins = cardPlugins(w);
   if (plugins.length) b.append(el("span", "alert plugin-location", `WordPress plugins · ${pluginLocation(w)}`));
   const flagged = plugins.filter(p => p.flagged.size);
@@ -598,6 +678,13 @@ function pick(id) {
 
 function renderTotal(members = visibleWebsites()) {
   const total = document.getElementById("total");
+  if (installationView()) {
+    const targets = members.filter(w => w.matchingWebsites);
+    const matched = data.websites.filter(matches).length;
+    total.replaceChildren(el("b", null, `${targets.length} patching target${targets.length === 1 ? "" : "s"}`),
+      document.createTextNode(` · ${matched} matching website${matched === 1 ? "" : "s"}`));
+    return;
+  }
   const count = members.length === data.websites.length
     ? `${data.websites.length} websites`
     : `${members.length} of ${data.websites.length} websites`;
@@ -617,10 +704,12 @@ function render() {
   const error = searchExpression().error;
   document.getElementById("search").setAttribute("aria-invalid", String(Boolean(error)));
   document.getElementById("search-help").textContent = error || 'Use AND, OR, NOT, parentheses or "quoted phrases". Spaces mean AND.';
+  document.getElementById("view").value = ui.view;
   renderDropdowns();
   renderPicture();
   renderGroups();
-  for (const id of ["hosting", "network"]) PulseTech.picker(document.getElementById(id));
+  if (installationView() && !error) document.getElementById("search-help").textContent += " Showing installation patching targets; expand for subsites and environment details.";
+  for (const id of ["hosting", "network", "view"]) PulseTech.picker(document.getElementById(id));
 }
 
 document.getElementById("filter").addEventListener("click", (e) => {
@@ -638,6 +727,7 @@ document.getElementById("search").addEventListener("input", (e) => {
 for (const event of ["popstate", "hashchange"]) window.addEventListener(event, () => { readFilters(); if (data) render(); });
 for (const [id, field] of [["hosting", "place"], ["network", "network"]])
   document.getElementById(id).addEventListener("change", e => { ui[field] = e.target.value || null; writeFilters(); render(); });
+document.getElementById("view").addEventListener("change", e => { ui.view = e.target.value; writeFilters(); render(); });
 document.getElementById("clear-filters").addEventListener("click", () => { clearFilters(); writeFilters(); render(); });
 document.getElementById("filter-link").append(Pulse.copyLink(() => websiteUrl().href, "filtered websites"));
 new ResizeObserver(scheduleLayout).observe(document.getElementById("groups"));

@@ -121,3 +121,9 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
   .toolbar .search { min-width: 0; flex: 1 1 100%; }
   .search input { width: 100%; }
 }
+
+.website-kind { display: block; color: var(--text-secondary); font-size: 12px; font-weight: 400; margin-top: 3px; }
+.installation-scope { color: var(--text-secondary); font-size: 12px; }
+.installation-relationships p { color: var(--text-secondary); line-height: 1.5; }
+.installation-relationships ul { padding-left: 20px; }
+.installation-relationships li { margin: 6px 0; overflow-wrap: anywhere; }
