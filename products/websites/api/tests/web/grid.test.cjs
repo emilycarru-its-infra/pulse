@@ -329,3 +329,51 @@ test('patching targets sort by the installation address displayed on the card', 
   run('ui.query="shared-search"; data.websites[0].hostname="z.example.test"; data.websites[2].hostname="a.example.test"');
   assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'other,root');
 });
+
+function advisoryPlugin(extra = {}) {
+  return {slug:'example-payments',title:'Example Payments',version:'1.2.3',status:'active',update_version:'1.3',is_version_vulnerable:true,is_update_version_vulnerable:true,
+    advisory_context:JSON.stringify({contract:'wordpress.plugin-security/1',source:'WPVulnerability',status:'matched',version:'1.2.3',retrieved_at:'2026-11-08T12:00:00Z',advisories:[{
+      title:'Example Payments stored XSS',cves:['CVE-2026-12345'],range:{max_version:'1.2.3',max_operator:'le'},unfixed:true,fixed_version:null,
+      ratings:[{version:'3.1',score:'7.1',severity:'high',vector:'CVSS:3.1/AV:N/PR:N/UI:R'}],weaknesses:[{id:'79',name:'Cross-site scripting'}],
+      references:[{id:'CVE-2026-12345',name:'CVE',url:'https://www.cve.org/CVERecord?id=CVE-2026-12345'},{name:'bad',url:'javascript:alert(1)'},{name:'lookalike',url:'https://wordfence.com.evil.example/'}]
+    }]}),...extra};
+}
+test('CVE search uses version-matched advisories and preserves parent grouping', () => {
+  const {run,nodes,context}=networkPage();
+  context.syntheticAdvisory=advisoryPlugin();
+  run('data.websites[0].plugin_inventory.environments[0].plugins=[syntheticAdvisory];data.websites[1].hosting.plugin_inventory=data.websites[0].plugin_inventory;ui.query="CVE-2026-12345";renderGroups()');
+  assert.equal(run('visibleWebsites().map(w=>w.id).join(",")'),'root');
+  assert.equal(nodes.total.textContent,'1 patching target · 2 matching websites');
+  assert.match(nodes.groups.textContent,/CVE-2026-12345 · high · CVSS 3.1 7.1 · WPVulnerability/);
+  assert.match(nodes.groups.textContent,/No patch reported for this advisory/);
+  assert.match(nodes.groups.textContent,/offered update also Kinsta-flagged/);
+});
+test('expanded findings show ranges, source rating conditions, activation and safe references', () => {
+  const {run,context}=page(); context.syntheticAdvisory=advisoryPlugin();
+  const cell=run('renderPluginSecurity(syntheticAdvisory)');
+  assert.match(cell.textContent,/Affected versions: ≤ 1.2.3/);
+  assert.match(cell.textContent,/Privileges: none · User interaction: required/);
+  const detail=cell.children.find(c=>c.tag==='details');
+  const references=detail.children.find(c=>c.className==='advisory-references').children;
+  assert.equal(references.length,1);
+  assert.equal(references[0].rel,'noopener noreferrer');
+  assert.equal(references[0].target,'_blank');
+});
+test('missing or version-mismatched advisory evidence is never interpreted as safety', () => {
+  const {run,context}=page(); context.syntheticAdvisory=advisoryPlugin({version:'9.0'});
+  assert.equal(run('pluginSecurity(syntheticAdvisory)'),null);
+  assert.match(run('renderPluginSecurity(syntheticAdvisory).textContent'),/Advisory details not collected/);
+  for (const [status,label] of [['unmapped','not mapped'],['unavailable','unavailable'],['unassessed','needs review'],['no_matching_advisory','not a clean scan']]) {
+    context.syntheticAdvisory=advisoryPlugin({advisory_context:JSON.stringify({contract:'wordpress.plugin-security/1',source:'WPVulnerability',status,version:'1.2.3',advisories:[]})});
+    assert.match(run('renderPluginSecurity(syntheticAdvisory).textContent'),new RegExp(label));
+  }
+});
+test('available updates and fix boundaries remain separate from provider and advisory assessments', () => {
+  const {run,context}=page();context.syntheticAdvisory=advisoryPlugin({is_update_version_vulnerable:null});
+  assert.match(run('updateLabel(syntheticAdvisory)'),/update security not assessed/);
+  context.syntheticAdvisory=advisoryPlugin({is_update_version_vulnerable:false});
+  assert.match(run('updateLabel(syntheticAdvisory)'),/Kinsta does not flag offered update/);
+  assert.doesNotMatch(run('updateLabel(syntheticAdvisory)'),/safe|fixed|patched/i);
+  context.syntheticAdvisory=advisoryPlugin({update_version:null});
+  assert.equal(run('updateLabel(syntheticAdvisory)'),'No update version reported');
+});

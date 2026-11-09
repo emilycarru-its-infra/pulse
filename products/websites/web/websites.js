@@ -144,12 +144,13 @@ function cardPlugins(w) {
   for (const env of websitePlugins(w)?.environments || []) {
     for (const plugin of env.plugins || []) {
       const matched = searchExpression().positive.some(term =>
-        `${plugin.title || ""} ${plugin.slug || ""} ${plugin.version || ""}`.toLowerCase().includes(term));
-      if (plugin.is_version_vulnerable !== true && !matched) continue;
+        pluginText(plugin).toLowerCase().includes(term));
+      if (plugin.is_version_vulnerable !== true && !pluginSecurity(plugin)?.advisories.length && !matched) continue;
       const key = JSON.stringify([plugin.slug, plugin.version]);
-      if (!findings.has(key)) findings.set(key, {plugin, environments: new Set(), flagged: new Set()});
+      if (!findings.has(key)) findings.set(key, {plugin, environments: new Set(), flagged: new Set(), observations: []});
       const label = env.is_live ? "Live" : env.name || "Other environment";
       findings.get(key).environments.add(label);
+      findings.get(key).observations.push({plugin, label});
       if (plugin.is_version_vulnerable === true) findings.get(key).flagged.add(label);
     }
   }
@@ -159,10 +160,100 @@ function cardPlugins(w) {
 function genericPluginAlert(alert) {
   return /plugin or theme.*vulnerab|vulnerab.*plugin or theme/i.test(alert.text || "");
 }
-function pluginSearch(w) {
-  return (websitePlugins(w)?.environments || []).flatMap(e => (e.plugins || []).map(p =>
-    `${p.slug || ""} ${p.title || ""} ${p.version || ""} ${p.status || ""}`)).join(" ");
+const securityCache = new WeakMap();
+function pluginSecurity(p) {
+  if (securityCache.has(p)) return securityCache.get(p);
+  let result = null;
+  try {
+    const raw = p.advisory_context;
+    const doc = typeof raw === "string" && raw.length <= 200000 ? JSON.parse(raw) : null;
+    if (doc?.contract === "wordpress.plugin-security/1" && doc.version === p.version && doc.source === "WPVulnerability" &&
+        ["matched", "no_matching_advisory", "unassessed", "unmapped", "unavailable"].includes(doc.status) && Array.isArray(doc.advisories) && doc.advisories.length <= 256) {
+      result = {...doc, advisories: doc.advisories.filter(a => a && typeof a === "object" && a.range && Array.isArray(a.references) && Array.isArray(a.ratings))};
+    }
+  } catch (_) { /* Missing or malformed evidence remains unknown. */ }
+  securityCache.set(p, result);
+  return result;
 }
+function pluginText(p) {
+  const findings = pluginSecurity(p)?.advisories || [];
+  return `${p.slug || ""} ${p.title || ""} ${p.version || ""} ${p.status || ""} ${findings.flatMap(a => [a.title || "", ...(a.cves || []), ...(a.weaknesses || []).map(c => c.name || "")]).join(" ")}`;
+}
+function pluginSearch(w) {
+  return (websitePlugins(w)?.environments || []).flatMap(e => (e.plugins || []).map(pluginText)).join(" ");
+}
+function activationLabel(p) {
+  return {active: "Active", inactive: "Inactive", "active-network": "Network active", "must-use": "Must-use", dropin: "Drop-in"}[p.status] || "Activation unknown";
+}
+function updateLabel(p) {
+  if (!p.update_version) return "No update version reported";
+  const risk = p.is_update_version_vulnerable === true ? "offered update also Kinsta-flagged" :
+    p.is_update_version_vulnerable === false ? "Kinsta does not flag offered update" : "update security not assessed";
+  return `Update ${p.update_version} available · ${risk}`;
+}
+function ratingLabel(a) {
+  const rating = a.ratings.find(r => String(r.version || "").startsWith("4")) || a.ratings.find(r => String(r.version || "").startsWith("3")) || a.ratings[0];
+  const score = Number(rating?.score);
+  const severity = /^(critical|high|medium|low)$/i.test(rating?.severity || "") ? rating.severity : "Severity not reported";
+  return `${severity}${rating?.score != null && Number.isFinite(score) && score >= 0 && score <= 10 ? ` · CVSS ${rating.version || ""} ${score}` : ""}`;
+}
+function affectedRange(a) {
+  const symbols = {lt:"<",le:"≤",gt:">",ge:"≥",eq:"=",ne:"≠"};
+  return ["min", "max"].filter(k => a.range[k + "_version"]).map(k => `${symbols[a.range[k + "_operator"]] || "?"} ${a.range[k + "_version"]}`).join(" and ") || "Range not reported";
+}
+function advisoryURL(value) {
+  try {
+    const u = new URL(value);
+    const domains = ["wordfence.com", "patchstack.com", "cve.org", "nvd.nist.gov", "euvd.enisa.europa.eu", "wpscan.com", "jvn.jp", "jvndb.jvn.jp"];
+    return u.protocol === "https:" && !u.username && !u.password && (!u.port || u.port === "443") && domains.some(d => u.hostname === d || u.hostname.endsWith("." + d)) ? u.href : null;
+  } catch (_) { return null; }
+}
+function advisorySummary(a) {
+  const ids = (a.cves || []).filter(id => /^CVE-\d{4}-\d{4,19}$/.test(id)).join(" / ");
+  return `${ids || a.title || "Advisory match"} · ${ratingLabel(a)}`;
+}
+function renderPluginSecurity(p) {
+  const box = el("div", "plugin-security");
+  box.append(el("span", p.is_version_vulnerable === true ? "plugin-flag" : "plugin-vulnerability",
+    p.is_version_vulnerable === true ? "⚠ Kinsta flagged installed version" : p.is_version_vulnerable === false ? "No Kinsta flag" : "Kinsta assessment unavailable"));
+  const context = pluginSecurity(p);
+  for (const a of context?.advisories || []) {
+    const finding = el("details", "plugin-advisory");
+    finding.append(el("summary", null, advisorySummary(a)));
+    if (a.title) finding.append(el("p", null, a.title));
+    for (const c of a.weaknesses || []) if (c.name) finding.append(el("p", null, `${c.id ? `${String(c.id).startsWith("CWE-") ? c.id : `CWE-${c.id}`} · ` : ""}${c.name}`));
+    finding.append(el("p", null, `Affected versions: ${affectedRange(a)}`));
+    finding.append(el("p", "advisory-action", a.unfixed ? "No patch reported for this advisory" : a.fixed_version ? `Reported fix boundary: ${a.fixed_version} · verify against the linked advisory` : "Fixed version not reported"));
+    for (const rating of a.ratings) {
+      if (!rating.vector) continue;
+      finding.append(el("p", "observation-time", `WPVulnerability CVSS ${rating.version || ""}: ${rating.vector}`));
+      const privilege = /(?:^|\/)PR:([NLH])(?:\/|$)/.exec(rating.vector)?.[1];
+      const interaction = /(?:^|\/)UI:([NR])(?:\/|$)/.exec(rating.vector)?.[1];
+      const conditions = [privilege && `Privileges: ${{N:"none",L:"low",H:"high"}[privilege]}`, interaction && `User interaction: ${interaction === "R" ? "required" : "not required"}`].filter(Boolean);
+      if (conditions.length) finding.append(el("p", null, conditions.join(" · ")));
+    }
+    const references = el("div", "advisory-references");
+    for (const ref of a.references) {
+      const href = advisoryURL(ref.url);
+      if (!href) continue;
+      const link = el("a", null, ref.id?.startsWith("CVE-") ? ref.id : ref.name || new URL(href).hostname);
+      link.href = href; link.target = "_blank"; link.rel = "noopener noreferrer"; references.append(link);
+    }
+    finding.append(references); box.append(finding);
+  }
+  const assessment = context?.status === "no_matching_advisory" ? "No version-matched advisory in this source; not a clean scan" :
+    context?.status === "unmapped" ? "Plugin not mapped by advisory source" : context?.status === "unassessed" ? "Version or affected range needs review" :
+    context?.status === "unavailable" ? "Advisory source unavailable" : !context ? "Advisory details not collected" : null;
+  if (assessment) box.append(el("span", "observation-time", assessment));
+  if (context) {
+    const at = Date.parse(context.retrieved_at);
+    box.append(el("span", "observation-time", `Advisories: WPVulnerability · ${Number.isFinite(at) ? `${dateTime(at)}${Date.now() - at > 30 * 3600000 ? " · stale" : ""}` : "collection time unknown"}`));
+    const updated = /^\d{9,13}$/.test(String(context.source_updated_at)) ? Number(context.source_updated_at) * (Number(context.source_updated_at) < 1e12 ? 1000 : 1) : Date.parse(context.source_updated_at);
+    if (Number.isFinite(updated) && updated > 0) box.append(el("span", "observation-time", `Source dataset updated: ${dateTime(updated)}`));
+  }
+  return box;
+}
+
 function renderDropdowns() {
   for (const [id, field, all, valueOf] of [["hosting", "place", "All hosting", w => w.group],
     ["network", "network", "All networks", w => w.network || "unknown"]]) {
@@ -546,19 +637,24 @@ function renderPlugins(w) {
       const name = el("td", "plugin-title");
       name.append(el("span", "plugin-name", p.title || p.slug));
       if (p.title && p.title !== p.slug) name.append(el("span", "plugin-slug", p.slug));
-      row.append(name, el("td", "plugin-version", p.version || "Unknown"));
+      const version = el("td", "plugin-version");
+      version.append(el("span", null, p.version || "Unknown"), el("span", "plugin-update", updateLabel(p)));
+      row.append(name, version);
       const activation = el("td");
       activation.append(el("span", `plugin-activation ${p.status === "inactive" ? "inactive" : ""}`, statusLabels[p.status] || "Unknown"));
       row.append(activation);
-      row.append(el("td", p.is_version_vulnerable === true ? "plugin-flag" : "plugin-vulnerability",
-        p.is_version_vulnerable === true ? "⚠ Flagged" : p.is_version_vulnerable === false ? "No flag" : "Not assessed"));
+      row.append(renderSecurityCell(p));
       body.append(row);
     }
     table.append(body); section.append(table);
+    const attribution = el("a", "observation-time", "Advisory data: WPVulnerability (CC0)"); attribution.href = "https://www.wpvulnerability.com/"; attribution.target = "_blank"; attribution.rel = "noopener noreferrer"; section.append(attribution);
+    section.append(el("p", "observation-time", "Advisory matches concern the recorded version; activation, exposure and source ratings can differ. An available update is not a verified fix."));
     section.append(el("p", "observation-time", "Flagged means the provider reports a vulnerability in the installed version. Not assessed means no matching provider result."));
   }
   return section;
 }
+
+function renderSecurityCell(p) { const cell = el("td"); cell.append(renderPluginSecurity(p)); return cell; }
 
 function row(w) {
   const li = el("li", "website-card");
@@ -606,10 +702,18 @@ function row(w) {
   const plugins = cardPlugins(w);
   if (plugins.length) b.append(el("span", "alert plugin-location", `WordPress plugins · ${pluginLocation(w)}`));
   const flagged = plugins.filter(p => p.flagged.size);
-  for (const {plugin, environments, flagged: flags} of plugins) {
-    const warning = el("span", `alert plugin-warning ${flags.size ? "warning" : ""}`);
+  for (const {plugin, environments, flagged: flags, observations} of plugins) {
+    const hasAdvisories = Boolean(pluginSecurity(plugin)?.advisories.length);
+    const warning = el("span", `alert plugin-warning ${flags.size || hasAdvisories ? "warning" : ""}`);
     warning.append(el("span", "plugin-warning-name", `${plugin.title || plugin.slug} · ${plugin.version || "Version unknown"}`));
-    warning.append(el("span", "plugin-warning-scope", `${flags.size ? "⚠ Provider flagged" : "Installed"} · ${w.hosting || w.network ? "Shared installation · " : ""}${[...(flags.size ? flags : environments)].join(" / ")}`));
+    warning.append(el("span", "plugin-warning-scope", `${flags.size ? "⚠ Provider flagged" : hasAdvisories ? "⚠ Advisory version match" : "Installed"} · ${w.hosting || w.network ? "Shared installation · " : ""}${[...(flags.size ? flags : environments)].join(" / ")}`));
+    const context = pluginSecurity(plugin);
+    for (const advisory of context?.advisories || []) {
+      warning.append(el("span", "advisory-summary", `${advisorySummary(advisory)} · WPVulnerability`));
+      if (advisory.unfixed) warning.append(el("span", "plugin-warning-scope", "No patch reported for this advisory"));
+      else if (advisory.fixed_version) warning.append(el("span", "plugin-warning-scope", `Advisory fix boundary: ${advisory.fixed_version}`));
+    }
+    for (const {plugin: observed, label} of observations) warning.append(el("span", "plugin-warning-scope", `${label}: ${activationLabel(observed)} · ${updateLabel(observed)}`));
     b.append(warning);
   }
   const liveFlagged = new Set((websitePlugins(w)?.environments || []).filter(env => env.is_live)

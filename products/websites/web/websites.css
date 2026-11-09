@@ -127,3 +127,14 @@ main.doc.wide > * { width: auto; margin-left: 24px; margin-right: 24px; }
 .installation-relationships p { color: var(--text-secondary); line-height: 1.5; }
 .installation-relationships ul { padding-left: 20px; }
 .installation-relationships li { margin: 6px 0; overflow-wrap: anywhere; }
+
+.plugin-security { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.plugin-advisory { border: 1px solid var(--hair); border-radius: 4px; padding: 8px; margin-top: 3px; }
+.plugin-advisory summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.plugin-advisory p { margin: 7px 0; font-size: 12px; line-height: 1.45; }
+.plugin-update { display: block; white-space: normal; font-size: 11px; color: var(--text-secondary); margin-top: 5px; line-height: 1.4; }
+.advisory-summary { display: block; font-size: 11px; font-weight: 600; margin-top: 3px; overflow-wrap: anywhere; }
+.advisory-references { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 11px; }
+.plugin-advisory .advisory-action { font-weight: 600; }
+.plugin-table th:first-child, .plugin-table td:first-child { width: 30%; }
+.plugin-table .plugin-version { width: 20%; }
