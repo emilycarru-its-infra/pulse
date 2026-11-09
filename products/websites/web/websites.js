@@ -169,7 +169,18 @@ function pluginSecurity(p) {
     const doc = typeof raw === "string" && raw.length <= 200000 ? JSON.parse(raw) : null;
     if (doc?.contract === "wordpress.plugin-security/1" && doc.version === p.version && doc.source === "WPVulnerability" &&
         ["matched", "no_matching_advisory", "unassessed", "unmapped", "unavailable"].includes(doc.status) && Array.isArray(doc.advisories) && doc.advisories.length <= 256) {
-      result = {...doc, advisories: doc.advisories.filter(a => a && typeof a === "object" && a.range && Array.isArray(a.references) && Array.isArray(a.ratings))};
+      const objects = (value, limit) => Array.isArray(value) ? value.filter(v => v && typeof v === "object" && !Array.isArray(v)).slice(0, limit) : [];
+      const small = (value, limit = 500) => typeof value === "string" ? value.slice(0, limit) : null;
+      const advisories = objects(doc.advisories, 256).filter(a => a.range && typeof a.range === "object").map(a => ({
+        id: small(a.id, 128), title: small(a.title),
+        cves: Array.isArray(a.cves) ? a.cves.filter(v => typeof v === "string" && /^CVE-\d{4}-\d{4,19}$/.test(v)).slice(0, 24) : [],
+        range: Object.fromEntries(["min_version", "min_operator", "max_version", "max_operator"].map(k => [k, small(a.range[k], 100)])),
+        fixed_version: small(a.fixed_version, 100), unfixed: a.unfixed === true,
+        ratings: objects(a.ratings, 4).map(r => ({version: small(r.version, 20), score: typeof r.score === "number" ? r.score : small(r.score, 20), severity: small(r.severity, 40), vector: small(r.vector, 200)})),
+        references: objects(a.references, 24).map(r => ({id: small(r.id, 128), name: small(r.name, 100), url: small(r.url, 2048)})),
+        weaknesses: objects(a.weaknesses, 12).map(c => ({id: small(c.id, 40), name: small(c.name, 200)})),
+      }));
+      result = {...doc, status: doc.status === "matched" && !advisories.length ? "unassessed" : doc.status, advisories};
     }
   } catch (_) { /* Missing or malformed evidence remains unknown. */ }
   securityCache.set(p, result);

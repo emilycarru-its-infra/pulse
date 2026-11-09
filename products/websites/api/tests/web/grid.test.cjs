@@ -377,3 +377,10 @@ test('available updates and fix boundaries remain separate from provider and adv
   context.syntheticAdvisory=advisoryPlugin({update_version:null});
   assert.equal(run('updateLabel(syntheticAdvisory)'),'No update version reported');
 });
+
+test('malformed nested advisory fields fail safely and never break rendering', () => {
+  const {run,context}=page();
+  context.syntheticAdvisory=advisoryPlugin({advisory_context:JSON.stringify({contract:'wordpress.plugin-security/1',source:'WPVulnerability',status:'matched',version:'1.2.3',advisories:[{range:{},cves:'invalid',ratings:[null,42],references:[null,'invalid'],weaknesses:{}}]})});
+  assert.doesNotThrow(()=>run('renderPluginSecurity(syntheticAdvisory)'));
+  assert.equal(run('pluginSecurity(syntheticAdvisory).advisories[0].ratings.length'),0);
+});
