@@ -6,7 +6,8 @@ in use, locked or free, and never who is using it.
 - `managedpresencebeacon` is the agent. A LaunchDaemon runs `managedpresencebeacon run`, which looks at the
   console every 15 seconds and sends at once when someone signs in or out or the screen
   locks or unlocks, and a heartbeat every 60 seconds otherwise. A failed send is dropped;
-  the next heartbeat brings the seat up to date. On shutdown it sends `shutdown`.
+  the next heartbeat brings the seat up to date. On shutdown it sends `shutdown`; as the Mac sleeps it sends `sleep`, so the
+  seat shows free rather than missing, and `wake` when it wakes.
 - **Managed Presence Beacon.app** in /Applications/Utilities is the Prefs / Run / Logs
   window. A privileged helper inside it writes the machine-level settings and runs
   `managedpresencebeacon send` for Send Now; it trusts only an app signed by its own team.

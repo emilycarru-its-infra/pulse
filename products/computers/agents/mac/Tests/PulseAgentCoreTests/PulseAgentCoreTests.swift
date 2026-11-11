@@ -97,3 +97,10 @@ import Testing
     #expect(LaunchdJob.make(label: "x", title: "x", plist: plist, printed: nil).state == "Not loaded")
     #expect(LaunchdJob.schedule(["MachServices": ["x": true]]) == "On demand, when the app connects")
 }
+
+@Test func powerMessagesBecomeSleepAndWake() {
+    #expect(PowerWatcher.kind(0xE000_0280) == .sleep)
+    #expect(PowerWatcher.kind(0xE000_0300) == .wake)
+    #expect(PowerWatcher.kind(0xE000_0270) == nil)
+    #expect(PulseEvent.Kind(rawValue: "sleep") == .sleep)
+}

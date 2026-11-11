@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from pulse_core.state import LastSeen, SeatState, seat_state
+from pulse_core.state import LastSeen, SeatState, asleep, seat_state
 
 NOW = datetime(2027, 1, 4, 17, 0, tzinfo=timezone.utc)
 
@@ -36,3 +36,16 @@ def test_idle_does_not_override_offline_or_out_of_service():
     assert seat_state(seen(ago=301, idle=900), NOW) is SeatState.OFFLINE
     assert seat_state(seen(event="shutdown", idle=900), NOW) is SeatState.OFFLINE
     assert seat_state(seen(locked=True, idle=900), NOW, out_of_service=True) is SeatState.OUT_OF_SERVICE
+
+
+def test_asleep_counts_as_available_until_the_window_ends():
+    assert seat_state(seen(ago=3600, event="sleep", active=True), NOW) is SeatState.AVAILABLE
+    assert seat_state(seen(ago=3 * 86400, event="sleep"), NOW) is SeatState.AVAILABLE
+    assert seat_state(seen(ago=3 * 86400 + 1, event="sleep"), NOW) is SeatState.OFFLINE
+    assert seat_state(seen(event="sleep"), NOW, out_of_service=True) is SeatState.OUT_OF_SERVICE
+    assert asleep(seen(ago=3600, event="sleep"), NOW) and not asleep(seen(ago=3600), NOW)
+
+
+def test_wake_is_an_ordinary_report():
+    assert seat_state(seen(event="wake", active=False), NOW) is SeatState.AVAILABLE
+    assert seat_state(seen(ago=301, event="wake"), NOW) is SeatState.OFFLINE

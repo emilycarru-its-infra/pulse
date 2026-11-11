@@ -197,3 +197,9 @@ def test_unrecovered_drop_expires_quietly_into_the_digest():
     later = NOW + timedelta(hours=25)
     result, sent = drop_run(state, heard(NOW - timedelta(minutes=20)), now=later)
     assert not state["drop"]["active"] and not any("reporting again" in str(c) for c in sent)
+
+
+def test_asleep_is_not_missing_until_the_sleep_window_ends():
+    state = State()
+    assert run(state, observed(NOW - timedelta(days=2), kind="sleep"))[0]["missing"] == 0
+    assert run(State(), observed(NOW - timedelta(days=4), kind="sleep"))[0]["missing"] == 1

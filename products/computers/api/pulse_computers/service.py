@@ -6,7 +6,7 @@ from pathlib import Path
 
 import jsonschema
 
-from pulse_core.state import LastSeen, SeatState, seat_state
+from pulse_core.state import LastSeen, SeatState, asleep, seat_state
 
 from .store import Store
 
@@ -74,6 +74,7 @@ class ComputersService:
                     **({"mobile": seat["mobile"]} if "mobile" in seat else {}),
                     "platform": seat["platform"],
                     "state": state.value,
+                    **({"asleep": True} if state is SeatState.AVAILABLE and asleep(last, now) else {}),
                     "lastSeen": event["receivedAt"] if event else None,
                     **({"x": seat["x"], "y": seat["y"]} if "x" in seat else {}),
                 })

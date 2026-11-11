@@ -10,6 +10,11 @@ def stamp(now):
     return now.astimezone(timezone.utc).isoformat()
 
 
+# A seat that reported going to sleep is free, not missing, for this long (pulse_core.state.ASLEEP_FOR).
+ASLEEP_FOR = timedelta(days=3)
+OFF_TYPES = ("shutdown", "sleep")
+
+
 def parse(value):
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -141,14 +146,15 @@ class Monitor:
             if heard:
                 heard_at[key] = last
                 session = event.get("session") or {}
-                if (event.get("type") != "shutdown" and session.get("active")
+                if (event.get("type") not in OFF_TYPES and session.get("active")
                         and int(session.get("idleSeconds") or 0) < self.policy.drop_idle_seconds
                         and now - timedelta(hours=self.policy.silence_hours) < last <= drop_cutoff):
                     quiet.append(item)
-            if last <= cutoff and due and previous.get("digestDay") != day:
+            sleeping = heard and event.get("type") == "sleep" and now - last <= ASLEEP_FOR
+            if last <= cutoff and not sleeping and due and previous.get("digestDay") != day:
                 missing.append(item)
             elif (previous.get("alerted") and heard and last > fresh_cutoff
-                  and event.get("type") != "shutdown"):
+                  and event.get("type") not in OFF_TYPES):
                 recovered.append(item)
             if not self.policy.dry_run and not self.state.get(key):
                 self.state.put(key, previous)

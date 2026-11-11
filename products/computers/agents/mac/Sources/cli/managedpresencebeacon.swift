@@ -100,7 +100,28 @@ struct ManagedPresenceBeaconCLI {
         }
         term.resume()
 
+        // Report sleep before the Mac sleeps, so the seat shows free rather than missing. The
+        // send is bounded: sleep waits for it, and a lost one only leaves the seat offline.
+        let power = PowerWatcher(
+            onSleep: {
+                let done = DispatchSemaphore(value: 0)
+                Task {
+                    _ = await agent.send(.sleep)
+                    done.signal()
+                }
+                _ = done.wait(timeout: .now() + 5)
+            },
+            onWake: {
+                Task {
+                    // Give the network a moment to come back before reporting.
+                    try? await Task.sleep(for: .seconds(5))
+                    _ = await agent.send(.wake)
+                }
+            })
+        if power == nil { log.warn("Could not register for sleep and wake notifications; sleep will not be reported") }
+
         while true {
+            withExtendedLifetime(power) {}
             await agent.tick()
             let wait = await agent.interval()
             try? await Task.sleep(for: .seconds(wait))
