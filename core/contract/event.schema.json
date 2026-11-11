@@ -9,8 +9,8 @@
   "properties": {
     "v": { "const": 1, "description": "Contract version." },
     "type": {
-      "enum": ["heartbeat", "login", "logout", "lock", "unlock", "boot", "shutdown"],
-      "description": "heartbeat is sent every 60 seconds; the others are sent as they happen."
+      "enum": ["heartbeat", "login", "logout", "lock", "unlock", "boot", "shutdown", "sleep", "wake"],
+      "description": "heartbeat is sent every 60 seconds; the others are sent as they happen. sleep is sent as the computer goes to sleep, wake as it wakes."
     },
     "ts": { "type": "string", "format": "date-time", "description": "When the agent observed the event, in UTC." },
     "device": {

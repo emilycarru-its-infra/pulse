@@ -9,6 +9,16 @@ public class EventTests
     private static readonly SessionSnapshot InUse = new(true, false, 42, 3, "helper");
 
     [Fact]
+    public void PowerBroadcastsMapToSleepAndOneWake()
+    {
+        Assert.Equal("sleep", PowerEvents.Kind(0x4));
+        Assert.Equal("wake", PowerEvents.Kind(0x12));
+        Assert.Null(PowerEvents.Kind(0x7));
+        Assert.Contains("sleep", PulseEvent.Types);
+        Assert.Contains("wake", PulseEvent.Types);
+    }
+
+    [Fact]
     public void EventMatchesTheContract()
     {
         var json = PulseEvent.Create("heartbeat", InUse, "LAB-PC-01", "EXAMPLE-SERIAL",

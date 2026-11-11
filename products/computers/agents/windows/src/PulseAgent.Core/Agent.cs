@@ -31,15 +31,19 @@ public sealed class Agent
         WriteStatus();
 
         using var shutdown = PosixSignalRegistration.Create(PosixSignal.SIGTERM, _ => SendShutdown());
+        // Sleep is reported before the computer sleeps, so the seat shows free rather than missing.
+        // Wake is sent from the loop, where the network has had a moment to come back.
+        using var resumed = new AutoResetEvent(false);
+        using var power = PowerEvents.Register(SendSleep, () => resumed.Set());
         using var sendNow = OpenSendNowEvent();
-        var handles = sendNow is null ? new[] { cancel.WaitHandle } : new[] { cancel.WaitHandle, sendNow };
+        var handles = sendNow is null ? new WaitHandle[] { cancel.WaitHandle, resumed } : new WaitHandle[] { cancel.WaitHandle, resumed, sendNow };
 
         while (!cancel.IsCancellationRequested)
         {
             var woke = WaitHandle.WaitAny(handles, TimeSpan.FromSeconds(settings.CheckIntervalSeconds));
             if (cancel.IsCancellationRequested) break;
             // Any signed-in user may signal Send now, so it is honoured at most every 10 seconds.
-            var forced = woke == 1 && DateTimeOffset.UtcNow - lastSentAt >= TimeSpan.FromSeconds(10);
+            var forced = woke == 2 && DateTimeOffset.UtcNow - lastSentAt >= TimeSpan.FromSeconds(10);
             if (forced) AgentLog.Info("Send now requested");
 
             var fresh = SettingsStore.Load();
@@ -47,6 +51,7 @@ public sealed class Agent
 
             var now = SessionProbe.Read();
             var events = Transitions.Between(last, now);
+            if (woke == 1) events = ["wake", .. events];
             foreach (var type in events) await SendAsync(type, now, cancel);
             if (events.Count == 0 && (forced || DateTimeOffset.UtcNow - lastSentAt >= TimeSpan.FromSeconds(settings.HeartbeatIntervalSeconds)))
                 await SendAsync("heartbeat", now, cancel);
@@ -91,12 +96,17 @@ public sealed class Agent
         return result;
     }
 
-    private void SendShutdown()
+    private void SendShutdown() => SendBeforeOff("shutdown", TimeSpan.FromSeconds(3));
+
+    // Windows allows the suspend callback about two seconds before it sleeps anyway.
+    private void SendSleep() => SendBeforeOff("sleep", TimeSpan.FromMilliseconds(1800));
+
+    private void SendBeforeOff(string type, TimeSpan limit)
     {
         try
         {
-            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            SendAsync("shutdown", last, timeout.Token).GetAwaiter().GetResult();
+            using var timeout = new CancellationTokenSource(limit);
+            SendAsync(type, last, timeout.Token).GetAwaiter().GetResult();
         }
         catch
         {

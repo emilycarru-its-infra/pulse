@@ -13,7 +13,7 @@ public sealed record PulseEvent(
     [property: JsonPropertyName("session")] PulseEvent.SessionInfo Session,
     [property: JsonPropertyName("agent")] PulseEvent.AgentInfo Agent)
 {
-    public static readonly string[] Types = ["heartbeat", "login", "logout", "lock", "unlock", "boot", "shutdown"];
+    public static readonly string[] Types = ["heartbeat", "login", "logout", "lock", "unlock", "boot", "shutdown", "sleep", "wake"];
 
     public sealed record DeviceInfo(
         [property: JsonPropertyName("hostname")] string Hostname,

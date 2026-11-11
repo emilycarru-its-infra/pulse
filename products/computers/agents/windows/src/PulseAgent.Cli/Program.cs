@@ -38,7 +38,7 @@ switch (command)
         return 0;
     case "--help" or "-h" or "help":
         Console.WriteLine($"{Identity.GuiName} agent {Identity.VersionDisplay}");
-        Console.WriteLine($"usage: {cli} [run | status [--json] | send [--type heartbeat|login|logout|lock|unlock|boot|shutdown] | --version]");
+        Console.WriteLine($"usage: {cli} [run | status [--json] | send [--type heartbeat|login|logout|lock|unlock|boot|shutdown|sleep|wake] | --version]");
         return 0;
     default:
         Console.Error.WriteLine($"{cli}: unknown command '{command}'; try {cli} --help");

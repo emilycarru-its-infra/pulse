@@ -7,7 +7,7 @@ implements the parts of it that are logic rather than data.
 
 A ComputersPulse agent sends one JSON event to `POST /api/ingest` every 60 seconds
 (`heartbeat`) and whenever something changes (`login`, `logout`, `lock`, `unlock`,
-`boot`, `shutdown`). The shape is [`contract/event.schema.json`](contract/event.schema.json);
+`boot`, `shutdown`, `sleep`, `wake`). The shape is [`contract/event.schema.json`](contract/event.schema.json);
 [`contract/examples/heartbeat.json`](contract/examples/heartbeat.json) is a full example.
 
 An event never carries a username or anything else about the person at the machine.
@@ -21,7 +21,7 @@ The schema rejects unknown fields, so adding one is a contract change, not a qui
 |---|---|
 | `out_of_service` | The site config marks the seat out of service |
 | `offline` | No event for 5 minutes, never seen, or the last event was `shutdown` |
-| `available` | Nobody is signed in, or no input for at least 15 minutes, including locked sessions |
+| `available` | Nobody is signed in, no input for at least 15 minutes (locked sessions included), or the last event was `sleep` within 3 days |
 | `in_use` | Someone is signed in with input in the last 15 minutes, including a brief lock |
 
 Available means likely unattended; it does not guarantee that the previous session has

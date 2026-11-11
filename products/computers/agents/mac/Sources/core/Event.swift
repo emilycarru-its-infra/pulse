@@ -3,7 +3,7 @@ import Foundation
 /// One event, exactly as core/contract/event.schema.json defines it.
 public struct PulseEvent: Codable, Equatable, Sendable {
     public enum Kind: String, Codable, Sendable {
-        case heartbeat, login, logout, lock, unlock, boot, shutdown
+        case heartbeat, login, logout, lock, unlock, boot, shutdown, sleep, wake
     }
 
     public struct Device: Codable, Equatable, Sendable { public var hostname: String; public var serial: String }
