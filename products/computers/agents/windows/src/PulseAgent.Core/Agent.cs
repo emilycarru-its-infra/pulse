@@ -32,7 +32,7 @@ public sealed class Agent
 
         using var shutdown = PosixSignalRegistration.Create(PosixSignal.SIGTERM, _ => SendShutdown());
         // Sleep is reported before the computer sleeps, so the seat shows free rather than missing.
-        // Wake is sent from the loop, where the network has had a moment to come back.
+        // Wake is sent from the loop and retried until the network is back after resume.
         using var resumed = new AutoResetEvent(false);
         using var power = PowerEvents.Register(SendSleep, () => resumed.Set());
         using var sendNow = OpenSendNowEvent();
@@ -51,7 +51,8 @@ public sealed class Agent
 
             var now = SessionProbe.Read();
             var events = Transitions.Between(last, now);
-            if (woke == 1) events = ["wake", .. events];
+            if (woke == 1) await SendWakeAsync(now, cancel);
+            if (cancel.IsCancellationRequested) break;
             foreach (var type in events) await SendAsync(type, now, cancel);
             if (events.Count == 0 && (forced || DateTimeOffset.UtcNow - lastSentAt >= TimeSpan.FromSeconds(settings.HeartbeatIntervalSeconds)))
                 await SendAsync("heartbeat", now, cancel);
@@ -93,6 +94,25 @@ public sealed class Agent
         var line = $"{type}: active={session.Active} locked={session.Locked} idle={session.IdleSeconds}s ({session.IdleSource}) -> {result}";
         if (result.Ok) AgentLog.Info(line); else AgentLog.Warn(line);
         AgentLog.Debug(pulse.ToJson());
+        return result;
+    }
+
+    private Task<SendResult> SendWakeAsync(SessionSnapshot session, CancellationToken cancel) =>
+        RetryUnreachable(() => SendAsync("wake", session, cancel), 6, () => Task.Delay(TimeSpan.FromSeconds(5), cancel));
+
+    /// <summary>
+    /// Sends, and while the server could not be reached at all, waits and sends again, up to
+    /// <paramref name="attempts"/> times. A reply from the server, even an error, is final.
+    /// </summary>
+    public static async Task<SendResult> RetryUnreachable(Func<Task<SendResult>> send, int attempts, Func<Task> wait)
+    {
+        var result = await send();
+        for (var tries = 1; tries < attempts && !result.Ok && result.Status is null; tries++)
+        {
+            try { await wait(); }
+            catch (OperationCanceledException) { break; }
+            result = await send();
+        }
         return result;
     }
 

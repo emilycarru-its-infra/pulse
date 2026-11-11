@@ -113,9 +113,9 @@ struct ManagedPresenceBeaconCLI {
             },
             onWake: {
                 Task {
-                    // Give the network a moment to come back before reporting.
+                    // Give the network a moment to come back, then retry until it has.
                     try? await Task.sleep(for: .seconds(5))
-                    _ = await agent.send(.wake)
+                    await agent.sendWake()
                 }
             })
         if power == nil { log.warn("Could not register for sleep and wake notifications; sleep will not be reported") }

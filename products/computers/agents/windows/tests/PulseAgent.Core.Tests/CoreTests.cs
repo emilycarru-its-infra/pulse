@@ -9,6 +9,25 @@ public class EventTests
     private static readonly SessionSnapshot InUse = new(true, false, 42, 3, "helper");
 
     [Fact]
+    public async Task RetriesOnlyWhileTheServerIsUnreachable()
+    {
+        var replies = new Queue<SendResult>([new(null, "No such host is known."), new(null, "No such host is known."), new(202, null)]);
+        var sends = 0;
+        var result = await Agent.RetryUnreachable(() => { sends++; return Task.FromResult(replies.Dequeue()); }, 6, () => Task.CompletedTask);
+        Assert.True(result.Ok);
+        Assert.Equal(3, sends);
+
+        sends = 0;
+        result = await Agent.RetryUnreachable(() => { sends++; return Task.FromResult(new SendResult(403, "forbidden")); }, 6, () => Task.CompletedTask);
+        Assert.Equal(1, sends);
+
+        sends = 0;
+        result = await Agent.RetryUnreachable(() => { sends++; return Task.FromResult(new SendResult(null, "offline")); }, 6, () => Task.CompletedTask);
+        Assert.False(result.Ok);
+        Assert.Equal(6, sends);
+    }
+
+    [Fact]
     public void PowerBroadcastsMapToSleepAndOneWake()
     {
         Assert.Equal("sleep", PowerEvents.Kind(0x4));

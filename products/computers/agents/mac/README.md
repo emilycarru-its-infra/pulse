@@ -7,7 +7,7 @@ in use, locked or free, and never who is using it.
   console every 15 seconds and sends at once when someone signs in or out or the screen
   locks or unlocks, and a heartbeat every 60 seconds otherwise. A failed send is dropped;
   the next heartbeat brings the seat up to date. On shutdown it sends `shutdown`; as the Mac sleeps it sends `sleep`, so the
-  seat shows free rather than missing, and `wake` when it wakes.
+  seat shows free rather than missing, and `wake` when it wakes, retried for about 30 seconds while the network comes back.
 - **Managed Presence Beacon.app** in /Applications/Utilities is the Prefs / Run / Logs
   window. A privileged helper inside it writes the machine-level settings and runs
   `managedpresencebeacon send` for Send Now; it trusts only an app signed by its own team.
