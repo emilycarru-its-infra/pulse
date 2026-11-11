@@ -104,3 +104,21 @@ import Testing
     #expect(PowerWatcher.kind(0xE000_0270) == nil)
     #expect(PulseEvent.Kind(rawValue: "sleep") == .sleep)
 }
+
+@Test func wakeRetriesOnlyWhileTheServerIsUnreachable() async {
+    func reply(_ status: Int?) -> SendResult { SendResult(at: "", type: "wake", status: status, error: status == nil ? "offline" : nil) }
+    var replies = [reply(nil), reply(nil), reply(202)]
+    var sends = 0
+    var result = await Agent.retryUnreachable(attempts: 6, send: { sends += 1; return replies.removeFirst() }, wait: {})
+    #expect(result.ok)
+    #expect(sends == 3)
+
+    sends = 0
+    result = await Agent.retryUnreachable(attempts: 6, send: { sends += 1; return reply(403) }, wait: {})
+    #expect(sends == 1)
+
+    sends = 0
+    result = await Agent.retryUnreachable(attempts: 6, send: { sends += 1; return reply(nil) }, wait: {})
+    #expect(!result.ok)
+    #expect(sends == 6)
+}

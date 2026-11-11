@@ -52,5 +52,24 @@ public actor Agent {
         return result
     }
 
+    /// Sends wake, retrying while the network is still coming back after resume.
+    @discardableResult
+    public func sendWake() async -> SendResult {
+        await Agent.retryUnreachable(attempts: 6, send: { await self.send(.wake) }, wait: { try? await Task.sleep(for: .seconds(5)) })
+    }
+
+    /// Sends, and while the server could not be reached at all, waits and sends again, up to
+    /// `attempts` times. A reply from the server, even an error, is final.
+    nonisolated(nonsending) public static func retryUnreachable(attempts: Int, send: () async -> SendResult, wait: () async -> Void) async -> SendResult {
+        var result = await send()
+        var tries = 1
+        while tries < attempts, !result.ok, result.status == nil {
+            await wait()
+            result = await send()
+            tries += 1
+        }
+        return result
+    }
+
     public func interval() -> Int { settings.checkInterval }
 }

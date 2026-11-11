@@ -81,7 +81,7 @@ signed-in user may add and change only their own report in `idle\`. It then regi
 tasks (the agent, the idle helper, and a shutdown sender triggered by event 1074) and starts the
 agent. `uninstall.ps1` removes the tasks and the install folder and keeps the logs. The agent
 reads its settings only from HKLM. The agent also sends `sleep` as the computer
-sleeps, so the seat shows free rather than missing, and `wake` when it resumes.
+sleeps, so the seat shows free rather than missing, and `wake` when it resumes, retried for about 30 seconds while the network comes back.
 
 ## Commands
 
