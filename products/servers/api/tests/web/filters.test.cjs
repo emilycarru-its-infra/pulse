@@ -39,8 +39,9 @@ test('OS, binary, status, location and search filters intersect', () => {
     Object.assign(ui, {platform: 'Linux', os: 'Ubuntu 24.04', runtime: 'Python', binaryVersion: '3.12', filter: 'degraded', place: 'cloud', query: 'worker'});
     globalThis.server = {os: 'Ubuntu 24.04', state: 'degraded', location: 'cloud', name: 'Worker', id: 'worker-1', runtimeInventory: {freshness: 'fresh', components: [{name: 'Python', version: '3.12'}]}};`);
   assert.equal(run('matches(server)'), true);
+  assert.equal(run(`matches({...server, runtimeInventory: {freshness: 'stale', components: [{name: 'Python', version: '3.12'}]}})`), true);
   for (const patch of [{os: 'Ubuntu 22.04'}, {state: 'up'}, {location: 'rack'}, {name: 'Web', id: 'web-1'},
-    {runtimeInventory: {freshness: 'stale', components: [{name: 'Python', version: '3.12'}]}}]) {
+    {runtimeInventory: {freshness: 'fresh', components: [{name: 'Python', version: '3.11'}]}}]) {
     assert.equal(run(`matches({...server, ...${JSON.stringify(patch)}})`), false);
   }
 });
