@@ -14,6 +14,7 @@ comes from a source, chosen with `PULSE_SOURCE`:
 - `api/pulse_printers/catalog.py`: builds the catalog from the inventory: printers in service, their kind (colour, inkjet), audience, queues and place on the plans.
 - `api/pulse_printers/service.py`: status and summary from a catalog and a source; the sample generator.
 - `api/pulse_printers/live.py`: the `live` source, the push parser, queue matching and the store.
+- `api/pulse_printers/alerts.py`: printer alerts. An alert opens when a printer stays in a fault (attention, error, offline) for `PULSE_ALERT_HOLD_SECONDS` (default 300) and closes once it is healthy for `PULSE_ALERT_CLEAR_SECONDS` (default 120). A stale or unknown report changes nothing.
 - `api/pulse_printers/auth.py`: the push token check.
 - `api/function_app.py`: the Azure Functions host; `api/pack.sh` builds its package.
 - `api/pulse_printers/devserver.py`: the page and the API on one local port.
@@ -25,6 +26,7 @@ comes from a source, chosen with `PULSE_SOURCE`:
 |---|---|---|
 | `GET /api/status` | The page, every 15 seconds | Every printer with its state, detail, supplies, trays, queue and jobs today |
 | `GET /api/summary` | The hub | One line, a level (`ok`, `warn`, `bad`, `idle`) and the counts |
+| `GET /api/alerts` | The page, with each status refresh | Open printer alerts, worst and oldest first, and alerts closed in the last day |
 | `POST /api/GetRoles` | The Static Web App's sign-in | The Static Web App roles for the user's app roles |
 | `POST /api/ingest/health` | The print server's poller, directly on the Function App host | `202` with the queues matched and unmatched |
 

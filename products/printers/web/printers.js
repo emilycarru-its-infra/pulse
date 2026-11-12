@@ -398,6 +398,30 @@ svg.addEventListener("keydown", (e) => {
   if (e.key === "Escape") pick(null, null, false);
 });
 
+// Open alerts: a printer in a fault long enough to need a person, and what recovered today.
+// Alerts are optional: a deployment without the route, or a failed read, just hides the panel.
+function renderAlerts(data) {
+  const box = document.getElementById("alerts");
+  const open = data?.open || [], recent = data?.recent || [];
+  box.hidden = !data || (!open.length && !recent.length);
+  if (box.hidden) return;
+  document.getElementById("alerts-title").textContent = open.length
+    ? `${open.length} printer${open.length === 1 ? "" : "s"} need${open.length === 1 ? "s" : ""} attention`
+    : "No printer needs attention";
+  const list = document.getElementById("alerts-open"); list.replaceChildren();
+  for (const a of open) {
+    const li = document.createElement("li"); li.className = `alert ${a.state}`;
+    const name = document.createElement("b"); name.textContent = a.name; li.append(name);
+    const where = [a.location || a.room].filter(Boolean).join("");
+    const what = a.detail && a.detail !== WORD[a.state] ? `${WORD[a.state]}: ${a.detail}` : WORD[a.state];
+    li.append(` ${where ? `· ${where} ` : ""}— ${what}, started ${Pulse.ago(a.since)}${a.recovering ? " (recovering)" : ""}`);
+    list.append(li);
+  }
+  const done = document.getElementById("alerts-recent");
+  done.hidden = !recent.length;
+  done.textContent = recent.length ? `Recovered in the last day: ${recent.map((a) => a.name).join(", ")}` : "";
+}
+
 (async () => {
   readView();
   await Pulse.shell({ current: "printers", compact: true, title: "Printer Status", context: "Printers across campus" });
@@ -406,6 +430,7 @@ svg.addEventListener("keydown", (e) => {
   Pulse.poll(async () => {
     state.status = await fetch("api/status").then((r) => r.json());
     render();
+    fetch("api/alerts").then((r) => (r.ok ? r.json() : null)).then(renderAlerts, () => renderAlerts(null));
     if (first && state.picked) requestAnimationFrame(() => pick(state.picked, state.printer, true, false));
     if (first) { recordView(false); if (state.mode === "list") document.querySelector("#list-view .printer-row.picked")?.scrollIntoView({ block: "nearest" }); }
     first = false;
