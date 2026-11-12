@@ -6,6 +6,7 @@ Routes, under the default /api prefix:
     GET  /api/summary         the hub, through the Static Web App
     POST /api/GetRoles        the Static Web App's sign-in (auth.rolesSource)
     POST /api/ingest/health   the print server's state push (contract pulse.printer-health/1)
+    GET  /api/alerts          open and recently closed printer alerts, through the Static Web App
 
 Every route is anonymous at the Functions level. The read routes answer only through the Static
 Web App and its sign-in. The ingest route is reached directly and authenticates its caller
@@ -23,6 +24,8 @@ App settings:
     PULSE_STALE_SECONDS     how old a printer's latest report may be before it is unknown (default 600)
     PULSE_TENANT_ID         the Entra tenant the push token comes from
     PULSE_INGEST_AUDIENCES  comma-separated audiences the push token may carry
+    PULSE_ALERT_HOLD_SECONDS   how long a printer stays in a fault before an alert opens (default 300)
+    PULSE_ALERT_CLEAR_SECONDS  how long it stays healthy before the alert closes (default 120)
 """
 
 import json
@@ -33,7 +36,9 @@ from pathlib import Path
 
 import azure.functions as func
 
-from pulse_printers import auth, live
+import logging
+
+from pulse_printers import alerts, auth, live
 from pulse_printers.service import PrintersService
 
 HERE = Path(__file__).resolve().parent
@@ -53,6 +58,22 @@ def store() -> live.Store:
     if not account:
         return live.MemoryStore()
     return live.TableStore.from_account(account, os.environ.get("PULSE_STATE_TABLE", "state"))
+
+
+@lru_cache(maxsize=1)
+def alert_store() -> alerts.AlertStore:
+    account = os.environ.get("PULSE_STORAGE_ACCOUNT")
+    if not account:
+        return alerts.MemoryAlertStore()
+    return alerts.TableAlertStore.from_account(account, os.environ.get("PULSE_STATE_TABLE", "state"))
+
+
+@lru_cache(maxsize=1)
+def alert_policy() -> alerts.Policy:
+    return alerts.Policy(
+        hold=timedelta(seconds=int(os.environ.get("PULSE_ALERT_HOLD_SECONDS") or 300)),
+        clear=timedelta(seconds=int(os.environ.get("PULSE_ALERT_CLEAR_SECONDS") or 120)),
+    )
 
 
 @lru_cache(maxsize=1)
@@ -122,7 +143,20 @@ def ingest_health(req: func.HttpRequest) -> func.HttpResponse:
         entries = live.parse_push(body, datetime.now(timezone.utc))
     except live.ContractError as e:
         return _json(400, {"error": str(e)})
-    return _json(202, live.record_push(store(), matcher(), entries))
+    result = live.record_push(store(), matcher(), entries)
+    # Alerts follow the state that was just stored. A failure here is logged and the push
+    # still succeeds: the page's state must never wait on alert bookkeeping.
+    try:
+        events = alerts.record_alerts(alert_store(), matcher(), entries, policy=alert_policy())
+        for e in events:
+            logging.info("printer alert %s %s %s", e["event"], e["printer"], e["state"])
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("printer alert update failed: %s", type(exc).__name__)
+    return _json(202, result)
+
+
+def alert_list(req: func.HttpRequest) -> func.HttpResponse:
+    return _json(200, alerts.listing(alert_store(), catalog(), policy=alert_policy()))
 
 
 # Registered without rebinding the names, so tests call the plain functions.
@@ -130,3 +164,4 @@ app.route(route="GetRoles", methods=["POST"])(get_roles)
 app.route(route="status", methods=["GET"])(status)
 app.route(route="summary", methods=["GET"])(summary)
 app.route(route="ingest/health", methods=["POST"])(ingest_health)
+app.route(route="alerts", methods=["GET"])(alert_list)

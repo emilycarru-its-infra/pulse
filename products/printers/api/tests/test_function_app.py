@@ -60,10 +60,12 @@ def live_app(tmp_path, monkeypatch):
     monkeypatch.setenv("PULSE_INGEST_AUDIENCES", f"other, {AUD}")
     monkeypatch.delenv("PULSE_STORAGE_ACCOUNT", raising=False)
     monkeypatch.setattr(auth, "_jwks", lambda tenant: _Keys())
-    for cached in (function_app.service, function_app.catalog, function_app.matcher, function_app.store):
+    for cached in (function_app.service, function_app.catalog, function_app.matcher, function_app.store,
+                   function_app.alert_store, function_app.alert_policy):
         cached.cache_clear()
     yield
-    for cached in (function_app.service, function_app.catalog, function_app.matcher, function_app.store):
+    for cached in (function_app.service, function_app.catalog, function_app.matcher, function_app.store,
+                   function_app.alert_store, function_app.alert_policy):
         cached.cache_clear()
 
 
@@ -133,3 +135,21 @@ def test_an_unknown_source_is_refused(monkeypatch):
     with pytest.raises(ValueError):
         function_app.service()
     function_app.service.cache_clear()
+
+
+def test_a_fault_push_opens_an_alert_the_page_can_list(live_app, monkeypatch):
+    monkeypatch.setenv("PULSE_ALERT_HOLD_SECONDS", "0")
+    function_app.alert_policy.cache_clear()
+    r = ingest(bearer(auth.INGEST_ROLE), body())
+    assert r.status_code == 202 and json.loads(r.get_body()) == {"matched": 1, "unmatched": 0, "printers": 1}
+    out = json.loads(function_app.alert_list(func.HttpRequest("GET", "/api/alerts", body=b"")).get_body())
+    assert [(a["id"], a["state"], a["detail"]) for a in out["open"]] == [("p", "attention", "Low toner (0%)")]
+    assert out["recent"] == []
+
+
+def test_an_alert_failure_never_fails_the_push(live_app, monkeypatch):
+    def broken(*a, **k):
+        raise RuntimeError("table down")
+    monkeypatch.setattr(function_app.alerts, "record_alerts", broken)
+    r = ingest(bearer(auth.INGEST_ROLE), body())
+    assert r.status_code == 202

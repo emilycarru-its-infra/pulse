@@ -293,3 +293,11 @@ body.app main.doc.wide > .mock { margin-bottom: 12px; }
   .legend-short { display: inline; }
   .total { margin-left: auto; }
 }
+
+/* Printer alerts */
+.alerts { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--surface-2); background: var(--surface-1); }
+.alerts h2 { margin: 0 0 6px; font-size: 1rem; }
+.alerts ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.alerts .alert { padding-left: 10px; border-left: 3px solid var(--warn); }
+.alerts .alert.offline, .alerts .alert.error { border-left-color: var(--bad); }
+.alerts-recent { margin: 6px 0 0; opacity: 0.8; font-size: 0.9rem; }
