@@ -229,7 +229,7 @@ function matches(s) {
   }
   if (ui.platform && serverPlatform(s) !== ui.platform) return false;
   if (ui.os && serverOS(s) !== ui.os) return false;
-  if (ui.runtime && !(s.runtimeInventory?.freshness === "fresh" && (s.runtimeInventory.components || []).some((c) => c.name === ui.runtime && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))) return false;
+  if (ui.runtime && !((s.runtimeInventory?.components || []).some((c) => c.name === ui.runtime && (!ui.binaryVersion || runtimeVersion(c) === ui.binaryVersion)))) return false;
   if (ui.place && s.location !== ui.place) return false;
   if (ui.filter !== "all" && s.state !== ui.filter) return false;
   if (!ui.query) return true;
@@ -654,7 +654,8 @@ function renderVersionSummary(section, fresh) {
 
 function renderRuntimes() {
   const section = document.getElementById("runtime-overview");
-  const fresh = data.servers.filter((s) => s.runtimeInventory?.freshness === "fresh");
+  // Binaries change slowly, so the last known list counts even when it is stale.
+  const fresh = data.servers.filter((s) => (s.runtimeInventory?.components || []).length);
   section.replaceChildren();
   section.hidden = !ui.runtime;
   const counts = new Map();
