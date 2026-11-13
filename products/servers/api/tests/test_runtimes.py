@@ -133,3 +133,29 @@ def test_hybrid_projection_requires_reviewed_node_and_canonical_item():
     assert runtime.record(runtime.Store(), catalog, [incoming]) == {"matched": 1, "unmatched": 0}
     catalog["servers"][0]["cellarum_item_id"] = "another-item"
     assert runtime.record(runtime.Store(), catalog, [incoming])["unmatched"] == 1
+
+
+def test_managed_device_projection_joins_by_serial_and_canonical_item():
+    incoming = row()
+    incoming["key"] = {"reportmate_serial": "SERIAL0001"}
+    incoming["facts"].pop("instance_id")
+    incoming["facts"]["serial"] = "SERIAL0001"
+    incoming["facts"]["components"] = [
+        {"name": "Apache", "version": "2.4.67", "running": True, "scope": "host",
+         "evidence_kind": "macos_release_httpd_map"},
+        {"name": "Apache", "version": "2.4.66", "running": False, "scope": "host", "pids": [],
+         "process_count": 0, "executable": "/opt/homebrew/Cellar/httpd/", "evidence_kind": "installed_homebrew_package_inventory"},
+    ]
+    runtime.parse({"contract": runtime.CONTRACT, "servers": [incoming]}, NOW)
+    catalog = {"servers": [{"id": "example", "reportmate_serial": "SERIAL0001", "cellarum_item_id": incoming["item_id"]}]}
+    assert runtime.record(runtime.Store(), catalog, [incoming]) == {"matched": 1, "unmatched": 0}
+    catalog["servers"][0]["cellarum_item_id"] = "another-item"
+    assert runtime.record(runtime.Store(), catalog, [incoming])["unmatched"] == 1
+    mismatched = deepcopy(incoming)
+    mismatched["facts"]["serial"] = "SERIAL0002"
+    with pytest.raises(runtime.ContractError):
+        runtime.parse({"contract": runtime.CONTRACT, "servers": [mismatched]}, NOW)
+    bad = deepcopy(incoming)
+    bad["key"] = {"reportmate_serial": "bad serial!"}
+    with pytest.raises(runtime.ContractError):
+        runtime.parse({"contract": runtime.CONTRACT, "servers": [bad]}, NOW)
