@@ -1,11 +1,24 @@
 """A minimized view of accepted application assessments; no host scanning or CVE inference."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from pulse_servers.runtimes import time
 
 STATES = {"unknown", "candidate", "needs_patch", "restart_required", "verified_fixed", "not_affected"}
 PRIORITY = {"needs_patch": 0, "restart_required": 1, "candidate": 2, "unknown": 3, "verified_fixed": 4, "not_affected": 5}
+
+SEVERITIES = ("critical", "high", "medium", "low", "negligible")
+
+
+def advisory_dates(entry):
+    """Vendor publication time and severity, kept only when they are well formed."""
+    published = entry.get("published_at")
+    try:
+        published = published if isinstance(published, str) and datetime.fromisoformat(published).tzinfo else None
+    except ValueError:
+        published = None
+    severity = entry.get("severity")
+    return {"published_at": published, "severity": severity if severity in SEVERITIES else None}
 
 
 def assessments(inventory, cves, now):
@@ -23,6 +36,7 @@ def assessments(inventory, cves, now):
                 "cve", "component", "scope", "vendor", "fixed_version", "package_name", "package_version",
                 "assessment_scope", "source_updated_at", "advisory_observed_at", "advisory_id", "advisory_url",
             )}
+            result.update(advisory_dates(entry))
             result.update(category="application", applicable=True, state=state,
                           reason=str(entry.get("reason") or "Assessment incomplete")[:1000],
                           observed_at=inventory.get("observed_at"))
