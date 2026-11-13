@@ -155,3 +155,32 @@ test('advisory links retain reviewed vendor provenance and reject executable URL
   assert.equal(run('advisoryUrl({advisory_url:"https://osv.dev/vulnerability/EXAMPLE-1"})'), 'https://osv.dev/vulnerability/EXAMPLE-1');
   assert.equal(run('advisoryUrl({cve:"CVE-2026-12345",advisory_url:"javascript:alert(1)"})'), 'https://www.cve.org/CVERecord?id=CVE-2026-12345');
 });
+
+test('CVE finder pins advisories that affect the fleet, matches id, software and title, and flags unknown ids', () => {
+  const { run } = page();
+  const out = JSON.parse(run(`JSON.stringify((() => {
+    const patch = (cve, state, extra = {}) => ({ cve, state, applicable: true, ...extra });
+    const servers = [
+      { patches: [patch('CVE-2026-100000', 'needs_patch', { category: 'application', component: 'Apache' }), patch('CVE-2025-5', 'verified_fixed', { category: 'application', component: 'nginx' }), patch('CVE-2026-90000', 'restart_required')] },
+      { patches: [patch('CVE-2026-100000', 'verified_fixed', { category: 'application', component: 'Apache' }), patch('CVE-2026-90000', 'not_affected', { applicable: false })] },
+    ];
+    const ids = ['CVE-2025-5', 'CVE-2026-90000', 'CVE-2026-100000', 'CVE-2007-2243'];
+    const all = cveSummaries(servers, ids);
+    return {
+      all: all.map(s => [s.id, s.title, s.affected, s.needs]),
+      empty: (({ active, clear, untracked }) => ({ active: active.map(s => s.id), clear: clear.map(s => s.id), untracked }))(cveChoices(all, '')),
+      byFamily: cveChoices(all, 'apache').active.map(s => s.id),
+      byPartialId: cveChoices(all, '2026-9').active.map(s => s.id),
+      byKernel: cveChoices(all, 'linux kernel').active.map(s => s.id),
+      unknown: cveChoices(all, 'cve-2026-119618').untracked,
+      known: cveChoices(all, 'CVE-2026-100000').untracked,
+    };
+  })())`));
+  assert.deepEqual(out.all, [['CVE-2025-5', 'nginx', 0, 0], ['CVE-2026-90000', 'Linux kernel', 1, 1], ['CVE-2026-100000', 'Apache', 1, 1], ['CVE-2007-2243', 'No server assessed', 0, 0]]);
+  assert.deepEqual(out.empty, { active: ['CVE-2026-100000', 'CVE-2026-90000'], clear: ['CVE-2025-5', 'CVE-2007-2243'], untracked: null });
+  assert.deepEqual(out.byFamily, ['CVE-2026-100000']);
+  assert.deepEqual(out.byPartialId, ['CVE-2026-90000']);
+  assert.deepEqual(out.byKernel, ['CVE-2026-90000']);
+  assert.equal(out.unknown, 'CVE-2026-119618');
+  assert.equal(out.known, null);
+});

@@ -19,7 +19,12 @@
         <button type="button" data-v="service" aria-pressed="false">By service</button>
       </div>
       <button type="button" id="patching-toggle" aria-pressed="false">Patching</button>
-      <label class="runtime-filter patch-filter" hidden><span class="visually-hidden">Advisory</span><select id="cve"></select></label>
+      <div class="cve-finder patch-filter" hidden>
+        <label class="visually-hidden" for="cve">Advisory: search by CVE id, software or title</label>
+        <input id="cve" type="text" role="combobox" aria-expanded="false" aria-controls="cve-list" aria-autocomplete="list" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Find a CVE, software or title">
+        <ul id="cve-list" role="listbox" aria-label="Advisories" hidden></ul>
+        <button type="button" id="cve-copy" title="Copy a link to this advisory">Copy link</button>
+      </div>
       <label class="runtime-filter patch-filter" hidden><span class="visually-hidden">Patch status</span><select id="patch-state"><option value="">All patch states</option><option value="candidate">Review applicability</option><option value="needs_patch">Needs patch</option><option value="restart_required">Restart required</option><option value="awaiting_vendor_fix">Awaiting vendor fix</option><option value="verified_fixed">Verified fixed</option><option value="not_affected">Not affected</option><option value="unknown">Unknown / stale</option></select></label>
       <div class="segmented" role="group" aria-label="Show" id="filter">
         <button type="button" data-v="degraded" aria-pressed="false">Warning</button>
