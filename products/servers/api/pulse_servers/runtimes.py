@@ -36,18 +36,26 @@ def parse(body, now):
             for key in ("item_id", "reference_id", "observation_id"):
                 UUID(row[key])
             hybrid = set(row["key"]) == {"aws_ssm_node_id"}
-            if set(row["key"]) not in ({"aws_instance_id"}, {"aws_ssm_node_id"}):
-                raise ValueError()
-            iid = row["key"]["aws_ssm_node_id" if hybrid else "aws_instance_id"]
-            if (
-                not isinstance(iid, str)
-                or not iid.startswith("mi-" if hybrid else "i-")
-                or len(iid) > 25
-                or iid in seen
+            managed = set(row["key"]) == {"reportmate_serial"}
+            if set(row["key"]) not in (
+                {"aws_instance_id"}, {"aws_ssm_node_id"}, {"reportmate_serial"}
             ):
                 raise ValueError()
-            if hybrid and not re.fullmatch(r"mi-[0-9a-f]{17}", iid):
-                raise ValueError()
+            if managed:
+                iid = row["key"]["reportmate_serial"]
+                if not isinstance(iid, str) or not re.fullmatch(r"[A-Za-z0-9]{6,32}", iid) or iid in seen:
+                    raise ValueError()
+            else:
+                iid = row["key"]["aws_ssm_node_id" if hybrid else "aws_instance_id"]
+                if (
+                    not isinstance(iid, str)
+                    or not iid.startswith("mi-" if hybrid else "i-")
+                    or len(iid) > 25
+                    or iid in seen
+                ):
+                    raise ValueError()
+                if hybrid and not re.fullmatch(r"mi-[0-9a-f]{17}", iid):
+                    raise ValueError()
             seen.add(iid)
             if row["outcome"] not in {"accepted", "collection_failed"}:
                 raise ValueError()
@@ -56,7 +64,7 @@ def parse(body, now):
             facts = row["facts"]
             if (
                 facts["contract"] != "server-live-runtimes/1"
-                or facts["instance_id"] != iid
+                or facts["serial" if managed else "instance_id"] != iid
             ):
                 raise ValueError()
             kernel = facts.get("kernel")
@@ -94,7 +102,8 @@ def parse(body, now):
                 ):
                     raise ValueError()
                 installed_kind = component.get("evidence_kind") in {
-                    "installed_executable_self_report", "installed_executable_unverified", "installed_binary_file_metadata"
+                    "installed_executable_self_report", "installed_executable_unverified", "installed_binary_file_metadata",
+                    "installed_homebrew_package_inventory",
                 }
                 if installed_kind != (component["running"] is False):
                     raise ValueError()
@@ -209,7 +218,9 @@ def record(store, catalog, rows):
         ids.setdefault(server.get("aws_instance_id"), []).append(server["id"])
     matched = unmatched = 0
     for row in rows:
-        if "aws_ssm_node_id" in row["key"]:
+        if "reportmate_serial" in row["key"]:
+            matches = [s["id"] for s in catalog.get("servers", []) if s.get("reportmate_serial") == row["key"]["reportmate_serial"] and s.get("cellarum_item_id") == row["item_id"]]
+        elif "aws_ssm_node_id" in row["key"]:
             matches = [s["id"] for s in catalog.get("servers", []) if s.get("ssm_node_id") == row["key"]["aws_ssm_node_id"] and s.get("cellarum_item_id") == row["item_id"]]
         else:
             matches = ids.get(row["key"]["aws_instance_id"], [])
