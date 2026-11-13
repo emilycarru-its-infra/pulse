@@ -59,3 +59,15 @@ def test_configured_and_discovered_application_cves_get_unknown_rows_for_missing
     status = service.status(NOW)
     assert status["patching"]["application_cves"] == [CVE]
     assert status["servers"][0]["patches"][0]["state"] == "unknown"
+
+
+def test_publication_time_and_severity_pass_through_only_when_well_formed():
+    value = inventory("needs_patch")
+    value["advisories"][0].update(published_at="2026-01-03T00:00:00+00:00", severity="critical")
+    result = assessments(value, [CVE], NOW)[0]
+    assert (result["published_at"], result["severity"]) == ("2026-01-03T00:00:00+00:00", "critical")
+    value["advisories"][0].update(published_at="yesterday", severity="<b>bad</b>")
+    result = assessments(value, [CVE], NOW)[0]
+    assert (result["published_at"], result["severity"]) == (None, None)
+    value["advisories"][0].update(published_at="2026-01-03T00:00:00", severity=None)
+    assert assessments(value, [CVE], NOW)[0]["published_at"] is None

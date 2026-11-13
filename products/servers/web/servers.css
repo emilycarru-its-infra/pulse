@@ -337,3 +337,8 @@ button.patch-status:focus-visible { outline: 2px solid var(--accent-band); outli
 .cve-option[aria-selected="true"] b::after { content: " ✓"; }
 .cve-empty { padding: 10px 8px; font-size: 13px; color: var(--text-secondary); }
 @media (max-width: 700px) { .cve-finder { flex: 1 1 100%; max-width: none; } .cve-finder input { font-size: 16px; } }
+.cve-tags { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; }
+.cve-tag { padding: 1px 7px; border: 1px solid var(--hair); border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-primary); background: var(--surface-2); }
+.cve-sev-critical { border-color: var(--error, #e5484d); }
+.cve-sev-high { border-color: var(--warn); }
+.cve-new { border-color: var(--brand-yellow, #bed600); }

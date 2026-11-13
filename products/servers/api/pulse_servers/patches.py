@@ -3,6 +3,7 @@
 import re
 from datetime import timedelta
 
+from pulse_servers.application_assessments import advisory_dates
 from pulse_servers.runtimes import time
 
 STATES = {
@@ -69,6 +70,7 @@ def assessments(server, inventory, cves, now):
                     "advisory_observed_at",
                 ):
                     result[key] = match.get(key)
+                result.update(advisory_dates(match))
                 state = match.get("state")
                 result.update(
                     state=state if state in STATES else "unknown",

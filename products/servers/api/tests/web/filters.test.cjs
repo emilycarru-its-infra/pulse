@@ -184,3 +184,19 @@ test('CVE finder pins advisories that affect the fleet, matches id, software and
   assert.equal(out.unknown, 'CVE-2026-119618');
   assert.equal(out.known, null);
 });
+
+test('CVE finder ranks by severity then publication and badges advisories published in the last week', () => {
+  const { run } = page();
+  const out = JSON.parse(run(`JSON.stringify((() => {
+    const day = 24 * 3600 * 1000, now = Date.parse('2026-11-13T12:00:00Z');
+    const patch = (cve, severity, published_at) => ({ cve, state: 'needs_patch', applicable: true, severity, published_at, category: 'application', component: 'Apache' });
+    const servers = [{ patches: [patch('CVE-2026-1001', 'medium', '2026-11-12T00:00:00Z'), patch('CVE-2026-1002', 'critical', '2026-10-01T00:00:00Z'),
+      patch('CVE-2026-1003', 'critical', '2026-11-11T00:00:00Z'), patch('CVE-2026-1004', null, '2026-11-13T00:00:00Z'), patch('CVE-2026-1005', 'bogus', 'nonsense')] }];
+    const all = cveSummaries(servers, ['CVE-2026-1001', 'CVE-2026-1002', 'CVE-2026-1003', 'CVE-2026-1004', 'CVE-2026-1005']);
+    return { order: cveChoices(all, '').active.map(s => s.id), recent: all.filter(s => cveRecent(s, now)).map(s => s.id),
+      sev: Object.fromEntries(all.map(s => [s.id, s.severity])) };
+  })())`));
+  assert.deepEqual(out.order, ['CVE-2026-1003', 'CVE-2026-1002', 'CVE-2026-1001', 'CVE-2026-1004', 'CVE-2026-1005']);
+  assert.deepEqual(out.recent, ['CVE-2026-1001', 'CVE-2026-1003', 'CVE-2026-1004']);
+  assert.equal(out.sev['CVE-2026-1005'], null);
+});
