@@ -216,6 +216,35 @@ function advisoryUrl(p) {
   } catch {}
   return p.vendor === "Ubuntu" ? `https://ubuntu.com/security/${p.cve}` : `https://www.cve.org/CVERecord?id=${encodeURIComponent(p.cve || "")}`;
 }
+const CVE_ID = /^CVE-[0-9]{4}-[0-9]{4,8}$/;
+const PATCH_NEEDS = new Set(["needs_patch", "restart_required", "awaiting_vendor_fix"]);
+const PATCH_CLEAR = new Set(["not_affected", "verified_fixed"]);
+function cveOrder(a, b) {
+  const [ya, na] = a.split("-").slice(1).map(Number), [yb, nb] = b.split("-").slice(1).map(Number);
+  return yb - ya || nb - na || (a < b ? -1 : a > b ? 1 : 0);
+}
+function cveSummaries(servers, ids) {
+  const found = new Map((ids || []).map(id => [id, { id, software: new Set(), kernel: false, servers: 0, affected: 0, needs: 0, fixed: 0 }]));
+  for (const server of servers || []) for (const p of server.patches || []) {
+    const row = found.get(p.cve); if (!row || p.applicable === false) continue;
+    if (p.category === "application") row.software.add(p.component || "Application"); else row.kernel = true;
+    row.servers += 1;
+    if (PATCH_NEEDS.has(p.state)) row.needs += 1;
+    if (p.state === "verified_fixed") row.fixed += 1;
+    if (!PATCH_CLEAR.has(p.state)) row.affected += 1;
+  }
+  return [...found.values()].map(r => ({ ...r, software: [...r.software].sort(),
+    title: [...(r.kernel ? ["Linux kernel"] : []), ...[...r.software].sort()].join(", ") || "No server assessed" }));
+}
+function cveChoices(summaries, query) {
+  const text = String(query || "").trim().toLowerCase();
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const hit = s => tokens.every(t => `${s.id} ${s.title}`.toLowerCase().includes(t));
+  const shown = summaries.filter(hit).sort((a, b) => cveOrder(a.id, b.id));
+  const id = text.toUpperCase();
+  return { active: shown.filter(s => s.affected > 0), clear: shown.filter(s => s.affected === 0),
+    untracked: CVE_ID.test(id) && !summaries.some(s => s.id === id) ? id : null };
+}
 function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
 function matches(s) {
   if (ui.patching) {
@@ -786,24 +815,71 @@ function patchDetails(server) {
   for (const gap of p.gaps || []) section.append(el("p", "muted", gap));
   return section;
 }
+
+const cveUi = { open: false, active: -1, query: "", options: [] };
+function chooseCve(id) {
+  closeCveList();
+  ui.cve = id || null; ui.patchState = null; ui.picked = null;
+  document.getElementById("cve").value = id || "";
+  writeBinaryUrl(); render();
+}
+function closeCveList() {
+  cveUi.open = false; cveUi.active = -1;
+  const input = document.getElementById("cve");
+  input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant");
+  document.getElementById("cve-list").hidden = true;
+}
+function openCveList() { cveUi.open = true; document.getElementById("cve").setAttribute("aria-expanded", "true"); renderCveList(); }
+function renderCveList() {
+  const list = document.getElementById("cve-list"), input = document.getElementById("cve");
+  list.hidden = !cveUi.open; if (!cveUi.open) return;
+  const choices = cveChoices(cveSummaries(data?.servers, data?.patching?.cves), cveUi.query);
+  const rows = [];
+  list.replaceChildren();
+  const group = (label, items) => {
+    if (!items.length) return;
+    { const g = el("li", "cve-group", label); g.setAttribute("role", "presentation"); list.append(g); }
+    for (const s of items) {
+      const li = el("li", "cve-option"); li.id = `cve-option-${rows.length}`; li.setAttribute("role", "option");
+      li.setAttribute("aria-selected", String(s.id === ui.cve)); li.dataset.id = s.id;
+      li.append(el("b", null, s.id), el("span", "cve-title", s.title));
+      li.append(el("span", "cve-counts", s.affected ? `${s.affected} affected · ${s.needs} need patch` : s.servers ? `${s.servers} assessed · all clear` : "not assessed"));
+      li.addEventListener("mousedown", e => { e.preventDefault(); chooseCve(s.id); });
+      list.append(li); rows.push(s.id);
+    }
+  };
+  group("Affecting this fleet", choices.active);
+  group("Not affecting this fleet", choices.clear);
+  if (choices.untracked) {
+    const li = el("li", "cve-option cve-untracked"); li.id = `cve-option-${rows.length}`; li.setAttribute("role", "option");
+    li.dataset.id = choices.untracked; li.append(el("b", null, choices.untracked), el("span", "cve-title", "Not tracked yet — open it anyway"));
+    li.addEventListener("mousedown", e => { e.preventDefault(); chooseCve(choices.untracked); });
+    list.append(li); rows.push(choices.untracked);
+  }
+  if (!rows.length) { const n = el("li", "cve-empty", "No advisory matches. Paste a full CVE id to open one that is not tracked yet."); n.setAttribute("role", "presentation"); list.append(n); }
+  cveUi.options = rows;
+  cveUi.active = Math.min(cveUi.active, rows.length - 1);
+  list.querySelectorAll("[role=option]").forEach((li, i) => li.classList.toggle("active", i === cveUi.active));
+  if (cveUi.active >= 0) input.setAttribute("aria-activedescendant", `cve-option-${cveUi.active}`); else input.removeAttribute("aria-activedescendant");
+  list.querySelector(".active")?.scrollIntoView?.({ block: "nearest" });
+}
 function renderPatching() {
   const choices = data.patching?.cves || [];
   document.getElementById("patching-toggle").hidden = !choices.length && !ui.patching;
   document.getElementById("patching-toggle").setAttribute("aria-pressed", String(ui.patching));
   for (const filter of document.querySelectorAll(".patch-filter")) filter.hidden = !ui.patching;
-  const select = document.getElementById("cve");
-  const values = [...new Set([...(ui.cve ? [ui.cve] : []), ...choices])];
-  if (select.dataset.choices !== values.join(',')) {
-    select.replaceChildren(...values.map(v => { const o=el("option", null, v); o.value=v; return o; }));
-    select.dataset.choices = values.join(',');
-  }
-  select.value = ui.cve || choices[0] || "";
+  const input = document.getElementById("cve");
+  const current = ui.cve || choices[0] || "";
+  if (document.activeElement !== input) input.value = current;
+  renderCveList();
   document.getElementById("patch-state").value = ui.patchState || "";
   const section = document.getElementById("patching-overview"); section.hidden = !ui.patching;
   if (!ui.patching) return;
   const scope = data.servers.filter(s => patchFor(s)?.applicable !== false);
-  const application = (data.patching?.application_cves || []).includes(select.value);
-  section.replaceChildren(el("h2", null, `${select.value || "Advisory"} · ${application ? "Host applications" : "Kernel patching"}`));
+  const application = (data.patching?.application_cves || []).includes(current);
+  const tracked = choices.includes(current);
+  section.replaceChildren(el("h2", null, `${current || "Advisory"} · ${!tracked && current ? "Not tracked yet" : application ? "Host applications" : "Kernel patching"}`));
+  if (current && !tracked) section.append(el("p", "muted", "No server has been assessed against this advisory yet. Pulse lists an advisory once a vendor feed or a reviewed record covers it; check back after the next collection."));
   const counts = el("div", "patch-counts");
   for (const [state, label] of Object.entries(PATCH_WORD)) {
     const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
@@ -893,6 +969,37 @@ document.getElementById("patching-toggle").addEventListener("click", () => {
   ui.patching = !ui.patching; ui.cve = ui.patching ? data.patching?.cves?.[0] || null : null;
   ui.patchState = null; ui.picked = null; writeBinaryUrl(); render();
 });
-for (const [id, field] of [["cve", "cve"], ["patch-state", "patchState"]]) document.getElementById(id).addEventListener("change", e => {
-  ui[field] = e.target.value || null; ui.picked = null; writeBinaryUrl(); render();
+document.getElementById("patch-state").addEventListener("change", e => {
+  ui.patchState = e.target.value || null; ui.picked = null; writeBinaryUrl(); render();
 });
+{
+  const input = document.getElementById("cve");
+  input.addEventListener("focus", () => { cveUi.query = ""; input.select(); openCveList(); });
+  input.addEventListener("blur", () => { closeCveList(); input.value = ui.cve || data?.patching?.cves?.[0] || ""; });
+  input.addEventListener("input", () => { cveUi.query = input.value; cveUi.active = -1; openCveList(); });
+  input.addEventListener("paste", e => {
+    const id = (e.clipboardData?.getData("text") || "").trim().toUpperCase();
+    if (CVE_ID.test(id)) { e.preventDefault(); chooseCve(id); input.blur(); }
+  });
+  input.addEventListener("keydown", e => {
+    const last = cveUi.options.length - 1;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); if (!cveUi.open) openCveList();
+      cveUi.active = e.key === "ArrowDown" ? (cveUi.active >= last ? 0 : cveUi.active + 1) : (cveUi.active <= 0 ? last : cveUi.active - 1);
+      renderCveList();
+    } else if (e.key === "Home" && cveUi.open) { e.preventDefault(); cveUi.active = 0; renderCveList(); }
+    else if (e.key === "End" && cveUi.open) { e.preventDefault(); cveUi.active = last; renderCveList(); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      const typed = input.value.trim().toUpperCase();
+      const id = cveUi.active >= 0 ? cveUi.options[cveUi.active] : CVE_ID.test(typed) ? typed : cveUi.options.length === 1 ? cveUi.options[0] : null;
+      if (id) { chooseCve(id); input.blur(); }
+    } else if (e.key === "Escape") { closeCveList(); input.value = ui.cve || ""; input.blur(); }
+  });
+  document.getElementById("cve-copy").addEventListener("click", async e => {
+    const button = e.currentTarget, url = binaryUrl();
+    try { await navigator.clipboard.writeText(url); button.textContent = "Link copied"; }
+    catch { window.prompt?.("Copy this link", url); }
+    setTimeout(() => { button.textContent = "Copy link"; }, 2000);
+  });
+}
