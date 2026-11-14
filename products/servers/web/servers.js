@@ -625,7 +625,6 @@ function runtimeDetails(inventory, serverId, only = null) {
   section.append(list);
   if (!components.length) section.append(el("p", "muted", "No binaries recorded. Installed coverage may be incomplete."));
   if (inventory.collection_state === "partial" || inventory.components_omitted) section.append(el("p", "stale", "Partial collection — additional components may be missing."));
-  for (const gap of inventory.gaps || []) section.append(el("p", "runtime-evidence", gap));
   return section;
 }
 
