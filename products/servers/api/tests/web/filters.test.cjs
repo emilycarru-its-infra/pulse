@@ -176,8 +176,8 @@ test('CVE finder pins advisories that affect the fleet, matches id, software and
       known: cveChoices(all, 'CVE-2026-100000').untracked,
     };
   })())`));
-  assert.deepEqual(out.all, [['CVE-2025-5', 'nginx', 0, 0], ['CVE-2026-90000', 'Linux kernel', 1, 1], ['CVE-2026-100000', 'Apache', 1, 1], ['CVE-2007-2243', 'No server assessed', 0, 0]]);
-  assert.deepEqual(out.empty, { active: ['CVE-2026-100000', 'CVE-2026-90000'], clear: ['CVE-2025-5'], untracked: null });
+  assert.deepEqual(out.all, [['CVE-2025-5', 'nginx', 0, 0], ['CVE-2026-90000', 'Linux kernel', 1, 1], ['CVE-2026-100000', 'Apache', 1, 1], ['CVE-2007-2243', 'No assessment received', 0, 0]]);
+  assert.deepEqual(out.empty, { active: ['CVE-2026-100000', 'CVE-2026-90000'], clear: [], untracked: null });
   assert.deepEqual(out.byFamily, ['CVE-2026-100000']);
   assert.deepEqual(out.byPartialId, ['CVE-2026-90000']);
   assert.deepEqual(out.byKernel, ['CVE-2026-90000']);
@@ -231,4 +231,28 @@ test('missing health telemetry is labelled independently of fresh runtime eviden
   const {run} = page();
   assert.equal(run('healthAge({state:"unknown",runtimeInventory:{freshness:"fresh",observed_at:"2026-01-05T12:00:00Z"}})'), 'Health not reporting');
   assert.equal(run('healthAge({state:"stopped"})'), 'stopped');
+});
+
+
+test('finder totals include absent records and distinguish each reported state without zero counts', () => {
+  const {run} = page();
+  const result = JSON.parse(run(`JSON.stringify((() => {
+    const id = 'CVE-2026-1001';
+    const servers = ['needs_patch','restart_required','awaiting_vendor_fix','candidate','verified_fixed','not_affected','unknown'].map(state=>({patches:[{cve:id,state,category:'application',component:'Java'}]}));
+    servers.push({});
+    const s = cveSummaries(servers,[id])[0];
+    return {total:s.servers,sum:Object.values(s.states).reduce((a,b)=>a+b,0),unknown:s.unknown,text:assessmentCounts(s),title:s.title};
+  })())`));
+  assert.equal(result.total,8); assert.equal(result.sum,8); assert.equal(result.unknown,2);
+  assert.equal(result.title,'Java');
+  assert.equal(result.text,'1 need patch · 1 need restart · 1 awaiting vendor fix · 1 need applicability review · 2 unknown · 1 verified fixed · 1 not affected');
+  assert.equal(run('assessmentCounts(cveSummaries(Array.from({length:69},()=>({})),["CVE-2026-1001"])[0])'),'69 unknown · no assessments received');
+  assert.equal(run('cveChoices(cveSummaries([{}],["CVE-2026-1001"]),"").clear.length'),0);
+});
+
+test('advisory overview scope keeps server filters while ignoring only the selected assessment state', () => {
+  const {run} = page();
+  run(`data={serviceNames:{}}; Object.assign(ui,{patching:true,cve:'CVE-2026-1001',patchState:'needs_patch',runtime:'Java'});`);
+  assert.equal(run('matches({runtimeInventory:{components:[{name:"Java"}]},patches:[{cve:"CVE-2026-1001",state:"unknown"}]},false)'),true);
+  assert.equal(run('matches({runtimeInventory:{components:[{name:"nginx"}]}},false)'),false);
 });
