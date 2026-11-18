@@ -177,7 +177,7 @@ test('CVE finder pins advisories that affect the fleet, matches id, software and
     };
   })())`));
   assert.deepEqual(out.all, [['CVE-2025-5', 'nginx', 0, 0], ['CVE-2026-90000', 'Linux kernel', 1, 1], ['CVE-2026-100000', 'Apache', 1, 1], ['CVE-2007-2243', 'No server assessed', 0, 0]]);
-  assert.deepEqual(out.empty, { active: ['CVE-2026-100000', 'CVE-2026-90000'], clear: ['CVE-2025-5', 'CVE-2007-2243'], untracked: null });
+  assert.deepEqual(out.empty, { active: ['CVE-2026-100000', 'CVE-2026-90000'], clear: ['CVE-2025-5'], untracked: null });
   assert.deepEqual(out.byFamily, ['CVE-2026-100000']);
   assert.deepEqual(out.byPartialId, ['CVE-2026-90000']);
   assert.deepEqual(out.byKernel, ['CVE-2026-90000']);
@@ -199,4 +199,36 @@ test('CVE finder ranks by severity then publication and badges advisories publis
   assert.deepEqual(out.order, ['CVE-2026-1003', 'CVE-2026-1002', 'CVE-2026-1001', 'CVE-2026-1004', 'CVE-2026-1005']);
   assert.deepEqual(out.recent, ['CVE-2026-1001', 'CVE-2026-1003', 'CVE-2026-1004']);
   assert.equal(out.sev['CVE-2026-1005'], null);
+});
+
+
+test('unknown, candidate and absent advisory evidence cannot be counted as affected or clear', () => {
+  const {run} = page();
+  const result = JSON.parse(run(`JSON.stringify((() => {
+    const ids = ['CVE-2026-1001','CVE-2026-1002','CVE-2026-1003'];
+    const summaries = cveSummaries([{patches:[{cve:ids[0],state:'unknown'}, {cve:ids[1],state:'candidate'}]}],ids);
+    const choices = cveChoices(summaries,'');
+    return {active:choices.active.length,clear:choices.clear.length,review:choices.review.length, affected:summaries.map(s=>s.affected)};
+  })())`));
+  assert.deepEqual(result,{active:0,clear:0,review:3,affected:[0,0,0]});
+});
+
+test('application feed coverage distinguishes query failures, unsupported, stale and missing evidence', () => {
+  const {run} = page();
+  run(`globalThis.now = Date.parse('2026-01-05T12:00:00Z');
+    globalThis.server = {runtimeInventory:{freshness:'fresh',advisory_feed:{coverage:'queried',queried_packages:2,failed_queries:0,unsupported_components:0,retrieved_at:'2026-01-05T11:55:00Z'}}};`);
+  assert.equal(run('feedCoverage(server,now)'), 'current');
+  for (const change of [{failed_queries:1},{unsupported_components:1},{assessments_omitted:2},{queried_packages:0}]) {
+    assert.equal(run(`feedCoverage({runtimeInventory:{...server.runtimeInventory,advisory_feed:{...server.runtimeInventory.advisory_feed,...${JSON.stringify(change)}}}},now)`),'partial');
+  }
+  assert.equal(run('feedCoverage({...server,runtimeInventory:{...server.runtimeInventory,freshness:"stale"}},now)'), 'stale');
+  assert.equal(run('feedCoverage(server,now+7200000)'), 'stale');
+  assert.equal(run('feedCoverage({},now)'), 'not received');
+});
+
+
+test('missing health telemetry is labelled independently of fresh runtime evidence', () => {
+  const {run} = page();
+  assert.equal(run('healthAge({state:"unknown",runtimeInventory:{freshness:"fresh",observed_at:"2026-01-05T12:00:00Z"}})'), 'Health not reporting');
+  assert.equal(run('healthAge({state:"stopped"})'), 'stopped');
 });
