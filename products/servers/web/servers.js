@@ -226,22 +226,35 @@ function cveOrder(a, b) {
   return yb - ya || nb - na || (a < b ? -1 : a > b ? 1 : 0);
 }
 function cveSummaries(servers, ids) {
-  const found = new Map((ids || []).map(id => [id, { id, software: new Set(), kernel: false, servers: 0, affected: 0, needs: 0, fixed: 0, review: 0, unknown: 0, severity: null, published: null }]));
-  for (const server of servers || []) for (const p of server.patches || []) {
-    const row = found.get(p.cve); if (!row || p.applicable === false) continue;
-    if (p.category === "application") row.software.add(p.component || "Application"); else row.kernel = true;
-    row.servers += 1;
-    if (Object.hasOwn(SEVERITY_RANK, p.severity) && (!row.severity || SEVERITY_RANK[p.severity] < SEVERITY_RANK[row.severity])) row.severity = p.severity;
-    const published = Date.parse(p.published_at || "");
-    if (Number.isFinite(published) && (row.published === null || published > row.published)) row.published = published;
-    if (PATCH_NEEDS.has(p.state)) row.needs += 1;
-    if (p.state === "verified_fixed") row.fixed += 1;
-    if (PATCH_NEEDS.has(p.state)) row.affected += 1;
-    else if (p.state === "candidate") row.review += 1;
-    else if (!PATCH_CLEAR.has(p.state)) row.unknown += 1;
-  }
-  return [...found.values()].map(r => ({ ...r, software: [...r.software].sort(),
-    title: [...(r.kernel ? ["Linux kernel"] : []), ...[...r.software].sort()].join(", ") || "No server assessed" }));
+  return (ids || []).map(id => {
+    const row = {id, software: new Set(), kernel: false, application: false, servers: 0,
+      assessed: 0, affected: 0, needs: 0, fixed: 0, review: 0, unknown: 0, severity: null, published: null,
+      states: Object.fromEntries(Object.keys(PATCH_WORD).map(state => [state, 0]))};
+    for (const server of servers || []) {
+      const p = (server.patches || []).find(p => p.cve === id);
+      const state = p?.applicable === false ? "not_affected" : Object.hasOwn(row.states, p?.state) ? p.state : "unknown";
+      row.servers += 1; row.states[state] += 1;
+      if (!p) continue;
+      if (state !== "unknown" || p.observed_at || p.advisory_observed_at) row.assessed += 1;
+      if (p.category === "application") { row.application = true; if (p.component) row.software.add(p.component); }
+      else if (p.applicable !== false) row.kernel = true;
+      if (Object.hasOwn(SEVERITY_RANK, p.severity) && (!row.severity || SEVERITY_RANK[p.severity] < SEVERITY_RANK[row.severity])) row.severity = p.severity;
+      const published = Date.parse(p.published_at || "");
+      if (Number.isFinite(published) && (row.published === null || published > row.published)) row.published = published;
+    }
+    row.needs = [...PATCH_NEEDS].reduce((n, state) => n + row.states[state], 0);
+    row.affected = row.needs; row.review = row.states.candidate; row.unknown = row.states.unknown; row.fixed = row.states.verified_fixed;
+    return {...row, software: [...row.software].sort(),
+      title: [...(row.kernel ? ["Linux kernel"] : []), ...[...row.software].sort()].join(", ") || (row.application ? "Application advisory" : "No assessment received")};
+  });
+}
+function assessmentCounts(summary) {
+  const labels = {needs_patch: "need patch", restart_required: "need restart", awaiting_vendor_fix: "awaiting vendor fix",
+    candidate: "need applicability review", unknown: "unknown", verified_fixed: "verified fixed", not_affected: "not affected"};
+  const parts = Object.entries(labels).filter(([state]) => summary.states[state] > 0)
+    .map(([state, label]) => `${summary.states[state]} ${label}`);
+  if (!summary.assessed) parts.push("no assessments received");
+  return parts.join(" · ");
 }
 function cveRecent(summary, now = Date.now()) { return summary.published !== null && now - summary.published >= 0 && now - summary.published <= RECENT_MS; }
 function cveRanking(a, b) {
@@ -260,8 +273,8 @@ function cveChoices(summaries, query) {
     untracked: CVE_ID.test(id) && !summaries.some(s => s.id === id) ? id : null };
 }
 function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
-function matches(s) {
-  if (ui.patching) {
+function matches(s, applyPatch = true) {
+  if (ui.patching && applyPatch) {
     const patch = patchFor(s);
     if (patch?.applicable === false) return false;
     if (ui.patchState && (patch?.state || "unknown") !== ui.patchState) return false;
@@ -886,14 +899,14 @@ function renderCveList() {
         if (cveRecent(s)) tags.append(el("span", "cve-tag cve-new", "New"));
         li.append(tags);
       }
-      li.append(el("span", "cve-counts", `${s.needs} need action · ${s.review} potential matches · ${s.unknown} unknown${s.servers ? "" : " · no assessments"}`));
+      li.append(el("span", "cve-counts", assessmentCounts(s)));
       li.addEventListener("mousedown", e => { e.preventDefault(); chooseCve(s.id); });
       list.append(li); rows.push(s.id);
     }
   };
-  group("Action required", choices.active);
-  group("Needs review or evidence", choices.review);
-  group("Assessed clear", choices.clear);
+  group("Needs attention · fleet totals", choices.active);
+  group("Assessment incomplete · fleet totals", choices.review);
+  group("Assessed fixed or not affected · fleet totals", choices.clear);
   if (choices.untracked) {
     const li = el("li", "cve-option cve-untracked"); li.id = `cve-option-${rows.length}`; li.setAttribute("role", "option");
     li.dataset.id = choices.untracked; li.append(el("b", null, choices.untracked), el("span", "cve-title", "Not tracked yet — open it anyway"));
@@ -919,18 +932,21 @@ function renderPatching() {
   document.getElementById("patch-state").value = ui.patchState || "";
   const section = document.getElementById("patching-overview"); section.hidden = !ui.patching;
   if (!ui.patching) return;
-  const scope = data.servers.filter(s => patchFor(s)?.applicable !== false);
+  const scope = data.servers.filter(s => matches(s, false) && patchFor(s)?.applicable !== false);
   const application = (data.patching?.application_cves || []).includes(current);
   const tracked = choices.includes(current);
   section.replaceChildren(el("h2", null, `${current || "Advisory"} · ${!tracked && current ? "Not tracked yet" : application ? "Host applications" : "Kernel patching"}`));
   if (current && !tracked) section.append(el("p", "muted", "No server has been assessed against this advisory yet. Pulse lists an advisory once a vendor feed or a reviewed record covers it; check back after the next collection."));
   section.append(el("p", "muted", "Advisories shown here are configured for review or received from Cellarum. Unknown and potential matches do not confirm a vulnerable server; no matching advisory does not establish safety."));
+  const selected = cveSummaries(scope, current ? [current] : ["unconfigured"])[0];
+  section.append(el("p", "advisory-summary", `${scope.length} servers in current filters: ${assessmentCounts(selected)}`));
   const coverage = new Map();
   for (const server of data.servers) { const state = feedCoverage(server); coverage.set(state, (coverage.get(state) || 0) + 1); }
-  section.append(el("p", "muted", `Application feed coverage: ${[...coverage].map(([state, count]) => `${count} ${state}`).join(" · ")}. Current means a recent package query, not complete vulnerability coverage.`));
+  section.append(el("p", "muted", `Fleet application feed coverage: ${[...coverage].map(([state, count]) => `${count} ${state}`).join(" · ")}. Current means a recent package query, not complete vulnerability coverage.`));
   const counts = el("div", "patch-counts");
   for (const [state, label] of Object.entries(PATCH_WORD)) {
-    const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
+    const n = selected.states[state];
+    if (!n && ui.patchState !== state) continue;
     const b = el("button", `patch-status patch-${state}`, `${n} ${label}`); b.type="button";
     b.setAttribute("aria-pressed", String(ui.patchState === state));
     b.addEventListener("click", () => {ui.patchState=ui.patchState===state?null:state;writeBinaryUrl();render();});counts.append(b);
