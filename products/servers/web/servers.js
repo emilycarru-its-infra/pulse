@@ -226,7 +226,7 @@ function cveOrder(a, b) {
   return yb - ya || nb - na || (a < b ? -1 : a > b ? 1 : 0);
 }
 function cveSummaries(servers, ids) {
-  const found = new Map((ids || []).map(id => [id, { id, software: new Set(), kernel: false, servers: 0, affected: 0, needs: 0, fixed: 0, severity: null, published: null }]));
+  const found = new Map((ids || []).map(id => [id, { id, software: new Set(), kernel: false, servers: 0, affected: 0, needs: 0, fixed: 0, review: 0, unknown: 0, severity: null, published: null }]));
   for (const server of servers || []) for (const p of server.patches || []) {
     const row = found.get(p.cve); if (!row || p.applicable === false) continue;
     if (p.category === "application") row.software.add(p.component || "Application"); else row.kernel = true;
@@ -236,7 +236,9 @@ function cveSummaries(servers, ids) {
     if (Number.isFinite(published) && (row.published === null || published > row.published)) row.published = published;
     if (PATCH_NEEDS.has(p.state)) row.needs += 1;
     if (p.state === "verified_fixed") row.fixed += 1;
-    if (!PATCH_CLEAR.has(p.state)) row.affected += 1;
+    if (PATCH_NEEDS.has(p.state)) row.affected += 1;
+    else if (p.state === "candidate") row.review += 1;
+    else if (!PATCH_CLEAR.has(p.state)) row.unknown += 1;
   }
   return [...found.values()].map(r => ({ ...r, software: [...r.software].sort(),
     title: [...(r.kernel ? ["Linux kernel"] : []), ...[...r.software].sort()].join(", ") || "No server assessed" }));
@@ -252,7 +254,9 @@ function cveChoices(summaries, query) {
   const hit = s => tokens.every(t => `${s.id} ${s.title}`.toLowerCase().includes(t));
   const shown = summaries.filter(hit).sort(cveRanking);
   const id = text.toUpperCase();
-  return { active: shown.filter(s => s.affected > 0), clear: shown.filter(s => s.affected === 0),
+  return { active: shown.filter(s => s.needs > 0),
+    review: shown.filter(s => !s.needs && (s.review || s.unknown || !s.servers)),
+    clear: shown.filter(s => s.servers > 0 && !s.needs && !s.review && !s.unknown),
     untracked: CVE_ID.test(id) && !summaries.some(s => s.id === id) ? id : null };
 }
 function patchFor(s) { return (s.patches || []).find(p => p.cve === (ui.cve || data?.patching?.cves?.[0])); }
@@ -350,6 +354,20 @@ function bars(m) {
   return wrap;
 }
 
+function healthAge(s) {
+  return s.state === "stopped" ? "stopped" : s.lastCheck ? `Health ${Pulse.ago(s.lastCheck)}` : "Health not reporting";
+}
+
+function feedCoverage(server, now = Date.now()) {
+  const inventory = server.runtimeInventory;
+  const feed = inventory?.advisory_feed;
+  if (!feed || typeof feed !== "object") return "not received";
+  const at = Date.parse(feed.retrieved_at || "");
+  if (inventory.freshness !== "fresh" || !Number.isFinite(at) || now - at > 3600000 || now - at < -120000) return "stale";
+  return feed.coverage === "queried" && feed.queried_packages > 0 && !feed.failed_queries &&
+    !feed.unsupported_components && !feed.assessments_omitted ? "current" : "partial";
+}
+
 function row(s, groupKey, regionId) {
   const li = el("li");
   const b = el("button", "row");
@@ -398,7 +416,7 @@ function row(s, groupKey, regionId) {
   }
   const side = el("span", "side");
   const telemetry = el("span", "telemetry");
-  telemetry.append(bars(s.metrics), el("span", "when", s.state === "stopped" ? "stopped" : Pulse.ago(s.lastCheck)));
+  telemetry.append(bars(s.metrics), el("span", "when", healthAge(s)));
   side.append(platforms, telemetry);
   b.append(tag, who, side);
   const disclosure = el("span", "disclosure");
@@ -551,6 +569,7 @@ function runtimeDetails(inventory, serverId, only = null) {
     return section;
   }
   const current = inventory.freshness === "fresh";
+  if (current) section.append(el("p", "runtime-freshness", `Binaries observed ${Pulse.ago(inventory.observed_at)}`));
   if (!current) section.append(el("p", "runtime-freshness stale",
     `Last observed ${Pulse.ago(inventory.observed_at)}. Binary evidence is stale${inventory.last_attempt === "collection_failed" ? " · latest collection failed" : ""}.`));
   const components = groupedRuntimes((inventory.components || []).filter((c) =>
@@ -802,11 +821,12 @@ function renderTotal() {
 }
 
 function patchDetails(server) {
-  const p = patchFor(server) || {state:"unknown", reason:"Kernel not observed"};
+  const p = patchFor(server) || {category:"application", state:"unknown", reason:"No assessment received for this advisory"};
   const section = el("section", "patch-detail");
   section.append(el("h4", null, `${p.category === "application" ? "Application advisory" : "Kernel patching"} · ${ui.cve || data.patching?.cves?.[0] || "No advisory configured"}`));
   section.append(el("p", `patch-status patch-${p.state}`, PATCH_WORD[p.state] || PATCH_WORD.unknown));
   section.append(el("p", null, p.reason));
+  if (p.last_known_state) section.append(el("p", "muted", `Last known assessment: ${PATCH_WORD[p.last_known_state] || "Unknown"}. Current evidence is required to confirm it.`));
   const list = el("dl");
   for (const [name, value] of (p.category === "application" ? [["Application", p.component || "Not recorded"], ["Scope", p.scope === "host" ? "Host processes; container namespaces need separate evidence" : p.scope || "Not recorded"], ["Assessment", p.assessment_scope === "installed_package" ? "Vendor package match; configuration and reachability are separate" : "Application configuration"], ["Vendor fixed package", p.fixed_version || "Not established"], ["Observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"], ["Severity", p.severity || "Not rated by the vendor"], ["Published", p.published_at ? new Date(p.published_at).toLocaleDateString() : "Not recorded"], ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]] : [["Running kernel", p.kernel], ["Distribution", p.distribution?.pretty_name],
     ["Running package", p.running_package ? `${p.running_package.name} ${p.running_package.version}` : null],
@@ -816,6 +836,14 @@ function patchDetails(server) {
     ["Kernel observed", p.observed_at ? new Date(p.observed_at).toLocaleString() : "Not observed"],
     ["Severity", p.severity || "Not rated by the vendor"], ["Published", p.published_at ? new Date(p.published_at).toLocaleDateString() : "Not recorded"], ["Vendor checked", p.advisory_observed_at ? new Date(p.advisory_observed_at).toLocaleString() : "Not checked"]])) {
     if (value !== undefined && value !== null) list.append(el("dt", null, name), el("dd", null, String(value)));
+  }
+  const feed = server.runtimeInventory?.advisory_feed;
+  list.append(el("dt", null, "Application feed"), el("dd", null, feedCoverage(server)));
+  if (feed) {
+    list.append(el("dt", null, "Feed checked"), el("dd", null, feed.retrieved_at ? new Date(feed.retrieved_at).toLocaleString() : "Not recorded"));
+    for (const [key, label] of [["queried_packages", "Packages queried"], ["unsupported_components", "Unsupported components"], ["failed_queries", "Failed queries"], ["assessments_omitted", "Assessments omitted"]]) {
+      if (Number.isSafeInteger(feed[key]) && feed[key] >= 0) list.append(el("dt", null, label), el("dd", null, String(feed[key])));
+    }
   }
   section.append(list);
   const advisory = el("a", null, "Vendor advisory");
@@ -858,13 +886,14 @@ function renderCveList() {
         if (cveRecent(s)) tags.append(el("span", "cve-tag cve-new", "New"));
         li.append(tags);
       }
-      li.append(el("span", "cve-counts", s.affected ? `${s.affected} affected · ${s.needs} need patch` : s.servers ? `${s.servers} assessed · all clear` : "not assessed"));
+      li.append(el("span", "cve-counts", `${s.needs} need action · ${s.review} potential matches · ${s.unknown} unknown${s.servers ? "" : " · no assessments"}`));
       li.addEventListener("mousedown", e => { e.preventDefault(); chooseCve(s.id); });
       list.append(li); rows.push(s.id);
     }
   };
-  group("Affecting this fleet", choices.active);
-  group("Not affecting this fleet", choices.clear);
+  group("Action required", choices.active);
+  group("Needs review or evidence", choices.review);
+  group("Assessed clear", choices.clear);
   if (choices.untracked) {
     const li = el("li", "cve-option cve-untracked"); li.id = `cve-option-${rows.length}`; li.setAttribute("role", "option");
     li.dataset.id = choices.untracked; li.append(el("b", null, choices.untracked), el("span", "cve-title", "Not tracked yet — open it anyway"));
@@ -895,6 +924,10 @@ function renderPatching() {
   const tracked = choices.includes(current);
   section.replaceChildren(el("h2", null, `${current || "Advisory"} · ${!tracked && current ? "Not tracked yet" : application ? "Host applications" : "Kernel patching"}`));
   if (current && !tracked) section.append(el("p", "muted", "No server has been assessed against this advisory yet. Pulse lists an advisory once a vendor feed or a reviewed record covers it; check back after the next collection."));
+  section.append(el("p", "muted", "Advisories shown here are configured for review or received from Cellarum. Unknown and potential matches do not confirm a vulnerable server; no matching advisory does not establish safety."));
+  const coverage = new Map();
+  for (const server of data.servers) { const state = feedCoverage(server); coverage.set(state, (coverage.get(state) || 0) + 1); }
+  section.append(el("p", "muted", `Application feed coverage: ${[...coverage].map(([state, count]) => `${count} ${state}`).join(" · ")}. Current means a recent package query, not complete vulnerability coverage.`));
   const counts = el("div", "patch-counts");
   for (const [state, label] of Object.entries(PATCH_WORD)) {
     const n = scope.filter(s => (patchFor(s)?.state || "unknown") === state).length;
